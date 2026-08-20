@@ -141,12 +141,85 @@ it needs live humidity. Two conversions, both silent killers:
 
 ---
 
-## Baseline for "unsafe exposure-hours avoided"
+## Baseline for the headline metric — T7
 
-> **T7.** Not yet written. The counterfactual, the formula and its limitations go here.
-> Without a stated baseline the headline number invites "avoided versus what?" and the
-> 40% Impact criterion wobbles.
->
-> Already settled in T2: the number must be reported at **both** 91 °F and 103 °F
-> (`sensitivity_thresholds_f`). A result that only holds at one threshold is a result
-> about the threshold.
+Implemented in [`src/heatguard/metrics.py`](../src/heatguard/metrics.py).
+
+### "Unsafe exposure-hours avoided" is not the metric
+
+The proposal was `avoided = hours implied by the city-wide number − hours in the per-site
+profile`. It was pressure-tested and replaced. Four problems, one fatal:
+
+1. **A forecast high is a scalar.** It does not imply a number of hours. Turning it into
+   hours requires assuming a diurnal shape — the exact thing the product exists to
+   supply. The baseline would have to invent what it is being compared against.
+
+2. **FATAL — the sign flips on the best case.** For the Chase Tower night crew, the
+   city-wide *daytime* high implies roughly zero relevant hours across a 21:00–05:30
+   shift, while the real profile shows several. The formula returns a **negative number
+   for the single strongest case in the project.** The tool did not *avoid* those hours,
+   it **revealed** them, and revealing them is the whole point.
+
+3. **"Avoided" claims credit for a behavioural change that has not happened.** Hours are
+   only avoided if a supervisor acts.
+
+4. **It sums two opposite-signed wins that cancel.** Over-warning corrected (site cooler
+   than the city figure → work proceeds) and under-warning corrected (site hotter or
+   hotter for longer → work stops) are both wins, with opposite signs. Across twelve
+   sites the tool can be right twelve times and net to roughly zero.
+
+### What is measured instead — three numbers, none of which cancel
+
+| metric | meaning | owner |
+|---|---|---|
+| `unsafe_worker_hours_caught` | crew-hours scheduled into hours the site was above threshold **and the city-wide figure said it was not** | safety officer |
+| `productive_worker_hours_recovered` | crew-hours the city-wide figure would have shut down at sites that were actually below threshold | operations |
+| `decisions_changed` | how many (site, shift) pairs got a different call — the honest denominator | both |
+
+Both counters are floored at zero, so for any given site exactly one of them is non-zero.
+That is what stops correct calls from cancelling.
+
+Counted in **worker-hours**, not clock-hours — a 22-person crew and a 4-person crew are
+not the same exposure — and **only inside the crew's shift window**, because hours nobody
+was standing in are not exposure. That is the same correction that put night crews in the
+roster in T1.
+
+### The baseline is not a proxy — it is the actual number
+
+**The official temperature for Phoenix is observed at KPHX: Phoenix Sky Harbor
+International Airport.** When a supervisor hears "Phoenix hit 112 today", that figure came
+from Sky Harbor.
+
+Sky Harbor is **PHX-SKY in our roster** — square kilometres of unshaded concrete,
+predicted `high_peak_long_tail`. So the counterfactual is not modelled or assumed. It is
+one of the twelve sites we already measure, and it is structurally one of the hottest.
+Applying it uniformly over-warns the irrigated sites and, for a night crew, describes a
+shift that had already ended.
+
+The scalar is applied **flat across every hour** of the shift. That is deliberately crude
+and faithful: a supervisor holding one daily high has no shape to apply, so the call is
+binary and covers the whole shift. Assuming anything richer would flatter the baseline
+with information it does not have.
+
+> **Verify in T4:** that PHX-SKY is the station the public Phoenix figure comes from is
+> well-established but has not been confirmed against a source in this repo. It is
+> load-bearing for the entire metric.
+
+### Two implementation details that were quietly wrong
+
+- **Fractional boundary hours.** A 05:00–13:30 shift is 8.5 hours long but contains
+  **nine** hourly readings, because the 13:00 reading covers 13:00–14:00 and only half of
+  it is in the shift. Counting readings as hours inflated every day shift by ~6%, silently
+  and in the direction that flatters the product. Readings are now weighted by their
+  overlap with the shift window, so the count can never exceed the shift length.
+- **Night shifts need two calendar days.** A 21:00–05:30 shift reads hours 21–23 from day
+  D and 00–05 from D+1. Given only one day, `metrics` **raises** rather than returning 3
+  instead of 8.5 — a two-thirds undercount landing on the lead demo site.
+
+### Sensitivity
+
+Per T2, the rollup is reported at **both 91 °F and 103 °F** (`sensitivity_thresholds_f`).
+Neither is neutral: at 91 °F a Phoenix summer *day* shift saturates while *night* shifts
+differentiate sharply; at 103 °F the reverse. A result that only holds at one threshold is
+a result about the threshold. `rollup()` refuses to sum comparisons made at different
+thresholds or on different dates.

@@ -87,7 +87,7 @@ exposure scoring, comfort-hours windows and extreme-heat-day counts
 (`video-insights.md` §3, C1–C7). Fawad also states the alert automation engine is
 *"something we are building ourselves"* `02` `[00:44:01]`.
 
-Asked directly in session 2 Q&A `[00:53:14]`:
+Asked directly in session 2 Q&A `[00:53:19]`–`[00:53:28]`:
 > *"if it's clashing with [FortyGuard's] products, it's fine. **Go ahead, clash it with our
 > products.** […] you won't be hampered or you won't be penalized for it. […] If we are
 > building something and you can do it in a better way than us, I think we would appreciate it."*

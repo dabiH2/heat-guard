@@ -40,14 +40,13 @@ OSHA documents outdoor-worker heat-stroke deaths at a daily maximum heat index o
 
 That is the demo, and it is theirs, not ours. Cite it.
 
-## Judging (weights are exact)
+## Judging
 
-| Criterion | Weight |
-|---|---|
-| Impact & relevance | **40%** |
-| Technical execution | **35%** |
-| Innovation | **15%** |
-| Communication | **10%** |
+> ⚠ **"Weights are exact" was wrong.** Only **two** of the four weights are spoken in any
+> recording. See **Judging — what is actually sourced** below for the verified table.
+> Summary: **40% (impact) and 10% (communication) are verbatim-confirmed; 35% and 15% have
+> no source in 33,500 words of transcript.** They may come from a handbook page not in this
+> pack — but do not present them as quoted fact.
 
 Handbook: *"Judges reward applied relevance over flashy demos."* A winning project needs the platform central not decorative, a clear problem and user, **a measurable outcome** (their example: "−7 °F on this route"), and a path to deployment.
 
@@ -68,13 +67,13 @@ Base `https://api.fortyguard.com` · header `api-key: <key>` · `Content-Type: a
 **Async pattern:** POST → `activity_id` → poll `GET /v1/status/{activity_id}` until `succeeded`/`completed` (result in `data.result`) or `failed`/`error`. **Failed tasks cost nothing** — credits are deducted only on success, so probe freely.
 
 **Hard constraints:**
-- **US-only.** Non-US polygons error or return empty. Fawad `[00:13:14]`: *"this is only limited to the United States […] if you are going to set up the location to Dubai or Berlin […] I don't think it's going to work. And **it's just going to spend your credit**."* — so a non-US AOI is a *silent, billed* failure, not a clean error. Router must reject non-US before `tools.py`.
+- **US-only.** Non-US polygons error or return empty. Fawad `[00:13:14]`–`[00:13:39]`: *"this is only limited to the United States […] if you are going to set up the location to Dubai or Berlin […] I don't think it's going to work. And **it's just going to spend your credit**."* — so a non-US AOI is a *silent, billed* failure, not a clean error. Router must reject non-US before `tools.py`.
 - **Dates 2021-01-01 → now.** Heatmap alone forecasts to **now + 12h**.
-- **⚠ AOI ≤ 15 mi² (~38.8 km²), NOT 50 mi².** Fawad `[00:23:53]`: *"on this plan, I think we have the premium one for you. So the limit is about 15 miles square."* **This contradicts the handbook figure of ~130 km² / 50 mi² previously recorded here — by 3.4×.** Transcript is a live engineer reading the premium plan limit; handbook figure is unsourced. Treat **15 mi² as the working limit** and probe the real ceiling in T4. Getting this wrong sizes every AOI in the demo wrong.
-- **Max 30 days of data returned per call.** Fawad `[00:19:49]`: *"we are giving you the opportunity to get as much as 30 days worth of data."* Caps any multi-week duration analysis at one call per month.
+- **⚠ AOI ≤ 15 mi² (~38.8 km²), NOT 50 mi².** Fawad `[00:23:53]`–`[00:23:58]`: *"on this plan, I think we have the premium one for you. So the limit is about 15 miles square."* **This contradicts the handbook figure of ~130 km² / 50 mi² previously recorded here — by 3.4×.** Transcript is a live engineer reading the premium plan limit; handbook figure is unsourced. Treat **15 mi² as the working limit** and probe the real ceiling in T4. Getting this wrong sizes every AOI in the demo wrong.
+- **Max 30 days of data returned per call.** Fawad `[00:19:53]`: *"we are giving you the opportunity to get as much as 30 days worth of data."* Caps any multi-week duration analysis at one call per month.
 - `granularity`: **60 / 80 / 100 m** — smaller costs more credits.
 - `filter_type`: **1** = single hour · **2** = hour range (+`end_time`) · **3** = entire day · **4** = day range · **5** = single month. Fawad enumerates all five, `[00:19:39]`: *"each of them like single hour, we have range of hours, we have a single day, we have a range of days and then we have a single month."* The vendor client documents only 1–4, so **5 exists per the engineer but is undocumented in code — still probe it in T4.**
-- **Rate limit: ~100 requests/minute, capped hourly, no daily cap.** Fawad `[00:56:17]`: *"hourly, we have put a limit to it, not the daily one […] we're limiting it to not more than I think 100 requests per minute or something. But as such, there's no other limits."* Hedged ("I think", "or something") — treat as approximate. Host adds `[00:56:44]`: *"Let's not test the rate limits and reverse engineer it."*
+- **Rate limit: ~100 requests/minute, capped hourly, no daily cap.** Fawad `[00:56:17]`–`[00:56:31]`: *"hourly, we have put a limit to it, not the daily one […] we're limiting it to not more than I think 100 requests per minute or something. But as such, there's no other limits."* Hedged ("I think", "or something") — treat as approximate. Host adds `[00:56:44]`: *"Let's not test the rate limits and reverse engineer it."*
 - **Credits: 2,000,000 per API key.** Confirmed in both sessions. Real cost anchor from Fawad's own key `[00:22:50]`–`[00:23:08]`: **187,420 credits total** across the whole demo build, of which **72,000 for tile segmentation**. So a full worked case study costs <10% of one key. Budget anxiety is unwarranted; **but** `[00:47:06]` the organisers will top up if you exhaust it.
 
 **`analytic_type` on `/v1/heatmap` — was missing from this file, and it is load-bearing:**
@@ -128,7 +127,7 @@ error and discards a task that was fine.
 
 A judge is literally giving a talk called *"The Builder's Trap: escaping the hype."* Innovation is 15%; Impact is 40%. Do not add surface.
 
-**Competing with FortyGuard's own roadmap is explicitly permitted — stop worrying about it.** Asked directly in the API session Q&A, `02-temperature-api` `[00:53:14]`:
+**Competing with FortyGuard's own roadmap is explicitly permitted — stop worrying about it.** Asked directly in the API session Q&A, `02-temperature-api` `[00:53:19]`–`[00:53:28]`:
 
 > *"I did see one question like if it's clashing with 40 guys [FortyGuard] products, it's fine. **Go ahead, clash it with our products.** It's fine. If you can make something better out of it, you're all means go with all means and you're up for it. It's not, **you won't be hampered or you won't be penalized for it.** We respect the idea that you are bringing in and we will account that as well. […] If we are building something and you can do it in a better way than us, I think we would appreciate it."*
 
@@ -165,10 +164,10 @@ The LLM does not choose the analysis layer. `router.py` does, deterministically.
 ## Submission requirements
 
 - **Live demo link — and it must stay up until 16 September.** `[00:59:31]`: *"Make sure it is live until the judging period has ended, which is **16th of September**. Make sure you have it up until one or two more days because the judges will take their time to review it."* Deadline is 30 Aug; **judging runs ~2.5 weeks past it.** Free-tier hosting that sleeps will fail silently during judging.
-- **⚠ API access is REVOKED when judging ends (16 Sept)** `[01:00:01]`: *"the API access will end after the submission, like when the judging date has ended, which is 16th, and the API access will be revoked since this is an enterprise level API key."* Anything live after that must serve from cached fixtures or it dies. Another reason `data/fixtures/` is not optional.
+- **⚠ API access is REVOKED when judging ends (16 Sept)** `[00:57:16]`: *"the API access will end after the submission, like when the judging date has ended, which is 16th, and the API access will be revoked since this is an enterprise level API key."* Anything live after that must serve from cached fixtures or it dies. Another reason `data/fixtures/` is not optional.
 - **The live link matters more than the repo** `[00:59:19]`: *"the judges won't be opening the GitHub repositories that often. You can expect them to open it. You can expect not to open them, but **what they will 100% open is your pitch, the live link.**"*
-- **Add `Hackathon-FG` as a GitHub collaborator — hard prerequisite, not a nicety.** `[00:50:29]`: *"If it's not added as a collaborator on the GitHub or your repo and we don't have access to your code to see how you have utilized the Fortiguard API, that is like we can't move forward with the judging criteria for you. So the submissions that we send to the judges, **this submission would not be counted.**"* Required for public repos too `[00:59:51]`. Do this now, before the build is finished.
-- ~3-minute demo video. **Do not AI-generate the pitch.** `01-kickoff` `[00:50:55]`, Snehil: *"We want a raw video technically so that we see what you have actually built rather than something which has been uplifted by AI. **We don't want AI.** AI can help you code. AI can help you get in the ideas as well. The pitch is where we want you guys to shine."* Jay softens it `[00:50:02]` (*"If you use an AI tool, we're not gonna limit you"*) — so it is a strong preference, not a rule. Present it yourself. No on-screen face required `[00:33:54]`.
+- **Add `Hackathon-FG` as a GitHub collaborator — hard prerequisite, not a nicety.** `[00:50:29]`–`[00:50:47]`: *"If it's not added as a collaborator on the GitHub or your repo and we don't have access to your code to see how you have utilized the Fortiguard API, that is like we can't move forward with the judging criteria for you. So the submissions that we send to the judges, **this submission would not be counted.**"* Required for public repos too `[00:59:51]`. Do this now, before the build is finished.
+- ~3-minute demo video. **Do not AI-generate the pitch.** `01-kickoff` `[00:50:58]`–`[00:51:07]`, Snehil: *"We want a raw video technically so that we see what you have actually built rather than something which has been uplifted by AI. **We don't want AI.** AI can help you code. AI can help you get in the ideas as well. The pitch is where we want you guys to shine."* Jay softens it `[00:50:02]` (*"If you use an AI tool, we're not gonna limit you"*) — so it is a strong preference, not a rule. Present it yourself. No on-screen face required `[00:33:54]`.
 - **Written summary, max 500 words** — ⚠ *unverified.* **No word limit is stated in any of the four transcripts.** Source unknown. Keep to 500 as a safe ceiling but do not treat it as a quoted rule.
 - Disclose AI tool usage — required, explicitly **not** penalised. `[00:39:35]`: *"disclose any AI tools you use. I have already said it and **you will not be penalized for it.**"*
 - **One submission only.** `[00:54:29]`: *"we're not going to review two applications for you. We're only going to review one. […] your previous applications get written over."* Resubmission before the deadline is fine; the latest overwrites.
@@ -193,7 +192,7 @@ There is a **two-stage screen** before judges see anything — an internal Forty
 
 ## Open questions to resolve by probing, not assuming
 
-1. ~~Is the key on Premium?~~ **ANSWERED — yes, and better than Premium.** Fawad `[00:14:24]`: *"this is the **most premium API key** that we are heading to you guys […] it has all those limit. And actually **the limit is double than what we are normally giving.**"* All five analysis endpoints — including `satellite`, `streetview`, `heat_intelligence` — were demoed live on the hackathon key. Nothing is gated.
+1. ~~Is the key on Premium?~~ **ANSWERED — yes, and better than Premium.** Fawad `[00:14:24]`–`[00:14:42]`: *"this is the **most premium API key** that we are heading to you guys […] it has all those limit. And actually **the limit is double than what we are normally giving.**"* All five analysis endpoints — including `satellite`, `streetview`, `heat_intelligence` — were demoed live on the hackathon key. Nothing is gated.
 2. How does each constraint fail — status code, error shape, loud or silent? **Partly answered:** non-US fails *silently and bills you* (`[00:13:39]`). The rest still needs probing.
 3. Does an inversion day exist? **Highest risk in the project — now substantially de-risked.** Fawad's own client case study shows a near-inversion: 0.7 °C peak spread across six parcels vs 19 h exceedance / 5 h persistence (`[00:36:14]`–`[00:37:23]`). See `docs/demo_day_candidates.md`.
 4. ~~Does `env_params` return heat index directly?~~ **ANSWERED — yes.** Fawad `[00:27:45]`: *"here are these like the **heat index Celsius** […] apparent temperature Celsius."* Confirmed independently from the vendor client (`heat_index_celsius`).

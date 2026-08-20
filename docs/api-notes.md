@@ -177,13 +177,13 @@ Also flagged earlier in the same session, `[00:17:34]`, listing what heatmap ret
 
 | Fact | Verbatim | TS |
 |---|---|---|
-| **On Premium, doubled** | *"this is the **most premium API key** that we are heading to you guys […] And actually **the limit is double than what we are normally giving**."* | `[00:14:24]` |
-| **AOI limit 15 mi²** | *"on this plan, I think we have the premium one for you. So **the limit is about 15 miles square**."* | `[00:23:53]` |
+| **On Premium, doubled** | *"this is the **most premium API key** that we are heading to you guys […] And actually **the limit is double than what we are normally giving**."* | `[00:14:24]`–`[00:14:42]` |
+| **AOI limit 15 mi²** | *"on this plan, I think we have the premium one for you. So **the limit is about 15 miles square**."* | `[00:23:53]`–`[00:23:58]` |
 | **2,000,000 credits/key** | *"you have about 2 million credits per API key."* | `[00:16:16]` |
 | **Real cost anchor** | *"I have used about **187420** […] for tile segmentation, I use **72,000**"* — the entire demo build | `[00:22:50]` |
 | **Failed tasks are free** | *"if a task fails, **it does not cost you any credit**. So just try to experiment freely."* | `[00:16:06]` |
-| **Rate limit** | *"hourly, we have put a limit to it, not the daily one […] not more than **I think 100 requests per minute or something**. But as such, there's no other limits."* | `[00:56:17]` |
-| **Max 30 days per call** | *"we are giving you the opportunity to get as much as **30 days worth of data** return to use for your use case."* | `[00:19:49]` |
+| **Rate limit** ⚠ | *"hourly, we have put a limit to it, not the daily one […] not more than **I think 100 requests per minute or something**. But as such, there's no other limits."* — **the source contradicts itself**: the question asked was requests *per day*, the answer says the cap is *hourly not daily*, then quotes a *per-minute* figure, and at `[00:54:29]` the same speaker says *"there's no limit for a day or something."* **Do not treat any of these as a firm number.** | `[00:56:17]`–`[00:56:31]` |
+| **Max 30 days per call** | *"we are giving you the opportunity to get as much as **30 days worth of data** return to use for your use case."* | `[00:19:53]` |
 | **Celsius everywhere** | *"everything is in Celsius, **including the thresholds you pass**."* | `[00:13:45]` |
 | **Poll every 3–5 s** | *"every five seconds or three seconds, I would assume you can just start polling it."* | `[00:17:05]` |
 | **Credits will be topped up** | *"if you use your credits for the API, unlikely, but if you do so, we will be happy to accommodate that."* | `[00:47:06]` |
@@ -207,13 +207,15 @@ Also flagged earlier in the same session, `[00:17:34]`, listing what heatmap ret
 
 **A parcel is smaller than a tile.** `[00:33:49]`: *"Parcel is basically a more smaller area
 than a tile. Like tile could be 180, 60 meter, it could be even less than that."* The
-worked case study operates on **parcels clipped from tiles** — six parcels totalling
+worked case study operates on **parcels clipped from tiles** — six areas totalling
 **17.38 acres**, `granularity=80`, window **28 Jul – 3 Aug** `[00:34:24]`–`[00:34:52]`.
+*(He says "six **areas**" at `[00:34:40]`; the word "parcels" for the same six appears at
+`[00:36:06]`. "Six parcels" is a reconciliation of the two, not a single quote.)*
 This is the unit HeatGuard's "job site" should map to.
 
 ### Non-US fails silently *and bills you* — **[TRANSCRIPT]**
 
-`[00:13:23]`: *"if you are going to set up the location to Dubai or Berlin or whatever, you
+`[00:13:31]`–`[00:13:39]`: *"if you are going to set up the location to Dubai or Berlin or whatever, you
 are, apart from the US, I don't think it's going to work. And **it's just going to spend
 your credit**. So I would advise not to do that."*
 
@@ -227,7 +229,7 @@ before `tools.py` is ever reached.** Confirm the exact behaviour in T4.
 
 | Source A says | Source B says | Action |
 |---|---|---|
-| CLAUDE.md: **AOI ≤ ~130 km² (50 mi²)** | **[TRANSCRIPT]** `[00:23:53]`: *"about 15 miles square"* | 🔴 **3.4× apart.** Engineer is describing the premium plan live; handbook figure is unsourced. **Assume 15 mi² until probed.** Highest-impact open number — it sizes every demo AOI. |
+| CLAUDE.md: **AOI ≤ ~130 km² (50 mi²)** | **[TRANSCRIPT]** `[00:23:58]`: *"about 15 miles square"* | 🔴 **3.4× apart.** Engineer is describing the premium plan live; handbook figure is unsourced. **Assume 15 mi² until probed.** Highest-impact open number — it sizes every demo AOI. |
 | CLAUDE.md: `filter_type` **5 = single month** | **[VENDOR]** docstring lists only 1–4 | **[TRANSCRIPT]** `[00:19:39]` confirms five: *"single hour […] range of hours […] a single day […] a range of days and then we have a single month."* So 5 exists per the engineer but is **undocumented in the client**. Probe. |
 | CLAUDE.md endpoint table has no `analytic_type` | four analytic types on `/v1/heatmap` | Corrected in CLAUDE.md; **[TRANSCRIPT]** independently confirms |
 | CLAUDE.md: `env_params` returns "heat index" | returns `heat_index_celsius` | Corrected; **[TRANSCRIPT]** `[00:27:45]` confirms *"heat index Celsius"* |
@@ -241,7 +243,7 @@ before `tools.py` is ever reached.** Confirm the exact behaviour in T4.
 
 ## Plan & credits — **[LIVE]**, blocked on T3
 
-- Plan: **[TRANSCRIPT] Premium, at double the normal limits** `[00:14:24]`. Confirm the string the API returns.
+- Plan: **[TRANSCRIPT] Premium, at double the normal limits** `[00:14:24]`–`[00:14:42]`. Confirm the string the API returns.
 - Credits remaining: **[TRANSCRIPT] 2,000,000 issued per key** `[00:16:16]`. Confirm balance.
 - Premium endpoints available (`satellite`, `streetview`, `heat_intelligence`): **[TRANSCRIPT] all three — demoed live on a hackathon key in-session** (`satellite` `[00:29:25]`, `streetview` `[00:30:17]`, `heat_intelligence` `[00:31:54]`). Nothing is gated. Confirm.
 
@@ -263,10 +265,10 @@ loud failure is a bug caught, a silent plausible one is a bug shipped.
 | Date before 2021-01-01 | | | | |
 | Forecast beyond now +12h | | | | |
 | AOI > **15 mi²** (not 130 km² — see divergences) | | | | |
-| Window > 30 days | **[TRANSCRIPT]** 30-day cap stated `[00:19:49]` | ? | ? | `router.py` window guard |
+| Window > 30 days | **[TRANSCRIPT]** 30-day cap stated `[00:19:53]` | ? | ? | `router.py` window guard |
 | `granularity` not in {60,80,100} | | | | |
 | `filter_type=5` | **[TRANSCRIPT]** engineer says it exists; **[VENDOR]** client omits it | ? | ? | |
-| >100 requests/minute | **[TRANSCRIPT]** hourly cap, ~100 rpm `[00:56:17]` | ? | ? | backoff already well under |
+| >100 requests/minute | **[TRANSCRIPT]** hourly cap, ~100 rpm `[00:56:17]`–`[00:56:31]` | ? | ? | backoff already well under |
 | `exceedance` with no `threshold` | client-side `ValueError` | n/a | **loud** | vendor client |
 | `threshold` passed in °F by mistake | **[VENDOR]** returns 0 h everywhere | 200 | **SILENT** | `tools.py` unit guard |
 

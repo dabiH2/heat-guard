@@ -9,6 +9,23 @@ transcribed at least nine ways across the four files (*40 guards, Forte Guard, F
 is quoted as spoken and marked where it is hedged or garbled. Nothing here is silently
 corrected.
 
+**⚠ Speaker names in this document are NOT transcript-sourced.** They come from the file
+manifest. The transcripts never spell any of them correctly:
+- **Snehil Ahuja** → *Snehal* (×5), *Sneha* (×4), *Sinhaal*, *Steve*, *Nino*, and at
+  `01` `[00:14:30]` **"The way *Jesus* described the temperature API"**
+- **Fawad Shah** → *Fawada*, *Fawar*, and at `01` `[00:38:32]` **"Pawaj Shah"**
+- **Aashan Javed** → *Ashon*, *Shahan*
+
+So an attribution like "Fawad Shah, Software Engineering Lead" is a *reconciliation*, not a
+quote. It is almost certainly right — `01` `[00:38:30]` introduces "our software
+engineering lead" immediately before session 2, and `02` `[00:08:23]` confirms the role —
+but **confirm the spelling from Slack or LinkedIn before putting a name on screen in the
+video.** Misspelling a judge's colleague on camera is a cheap, avoidable own goal.
+
+**Timestamp convention:** timestamps point at the cue where the quoted words *begin*.
+Multi-cue quotes are given as a range. These were re-verified against the `.srt`s after
+first draft; an earlier pass was consistently 3–18 s early.
+
 Sessions in descending value:
 
 | # | File | Session | Speaker | Verdict |
@@ -82,7 +99,7 @@ happened in the room.
 |---|---|---|
 | **`[00:24:17]`–`[00:25:16]`** | `filter_type` + `analytic_type` definitions | The correction to the whole thesis. ~1 min. |
 | **`[00:33:37]`–`[00:38:46]`** | The parcel case study, end to end | The inversion demo, using their data. ~5 min. |
-| **`[00:53:14]`–`[00:53:38]`** | "clash with our products, it's fine" | Removes the competitive-overlap worry. ~25 s. |
+| **`[00:53:19]`–`[00:53:28]`** | "clash with our products, it's fine" | Removes the competitive-overlap worry. ~25 s. |
 
 ### ⭐ The worked use case — and the inversion, handed over
 
@@ -183,7 +200,7 @@ I would say"* — and `[00:43:04]` he suggests *"a maybe cloud desktop or any LL
 2. A **bot that shows its reasoning** — *"the [terrace?] question that I asked and it gives you the **evidence to support it** and **the judges know that you can see the reasoning is there** as well."* ⭐ **He is telling you the judges look for visible reasoning.** HeatGuard's rationale string and `decisions.jsonl` are aimed straight at this.
 3. An **alert automation engine** — *"you get alerts to an area that's being above 32 degrees."* ⚠ Immediately preceded by `[00:44:01]`: ***"This is something we are building ourselves."*** → see collisions, §3.
 
-**Closing line, and the best quotable from this session** `[00:44:14]`:
+**Closing line, and the best quotable from this session** `[00:44:18]`:
 > *"the agent AI, we're living in a world I think it's **more easy to build something and
 > more difficult to understand the problem**. So I would assume that whatever you're
 > building, try to understand what you're building, then go towards the development."*
@@ -294,7 +311,7 @@ Nothing in session 3 mentions: **refusal, abstention, "we can't answer that",
 data-sufficiency checks, deterministic layer selection, uncertainty quantification,
 OSHA/NIOSH, acclimatisation, work/rest ratios, or shift scheduling for humans.**
 
-And the one piece of bad-data guidance is the **opposite** of refusal, `[00:36:03]`:
+And the one piece of bad-data guidance is the **opposite** of refusal, `[00:36:10]`:
 > *"the strategy to handle missing data is really simple. If you find some inconsistencies,
 > you can rely on **interpolation** approaches. […] So you can interpolate it."*
 
@@ -305,7 +322,7 @@ safety-critical decision; do not assume the judges already agree.
 
 ### And the release valve
 
-`02-temperature-api` `[00:53:14]`: ***"Go ahead, clash it with our products. It's fine.
+`02-temperature-api` `[00:53:19]`: ***"Go ahead, clash it with our products. It's fine.
 […] you won't be hampered or you won't be penalized for it."***
 
 Overlap is safe. Indistinguishability is not.
@@ -338,7 +355,7 @@ Judging weights and submission mechanics are folded into `CLAUDE.md`. What is le
 `CLAUDE.md` sets an **effective deadline of Aug 29** because connectivity is lost Aug 30.
 That is still correct for *submitting* — but the transcripts add a second, later
 requirement nobody had recorded: **the live link must remain up until 16 September**, and
-**API access is revoked when judging ends on the 16th** (`02` `[00:59:31]`, `[01:00:01]`).
+**API access is revoked when judging ends on the 16th** (`02` `[00:59:31]`, `[00:57:16]`).
 
 → The deploy must survive ~2.5 weeks unattended, then survive key revocation. Cached
 fixtures are load-bearing for the *submission*, not just for tests.
@@ -392,13 +409,21 @@ Two facts worth keeping anyway:
 Ranked by usefulness for the README and the 3-minute video. **All five are real. The one
 you were planning to use is not.**
 
-### Q1 — Aashan Javed, `03-heat-intelligence-cloud` `[00:22:50]` ★★★ BEST
-> *"you can just directly use that information and state pla[in] temperatures as well,
-> pla[in] AQI values as well, **which gives no real information and no real value as well**."*
+### Q1 — Aashan Javed, `03-heat-intelligence-cloud` `[00:22:50]`–`[00:22:59]` ★★★ BEST
+> *"So you can make good use of it as well by combining it or thinking about creative ways,
+> **or you can just directly use that information and state pla[i]ne temperatures as well,
+> pla[i]ne AQI values as well, which gives no real information and no real value as well**."*
 
 A FortyGuard engineer saying, to the entrants, that emitting a raw number **is a failure**.
 This is the closest thing in 33,500 words to the quote you thought you had, and it is
 better — it condemns exactly the output a wrong-layer query produces. **Lead with this.**
+
+⚠ **Two fidelity notes before you quote it.** Whisper writes **"plane"**, not "plain",
+both times — "plain" is an editorial reading, near-certain but still a reading; say
+*"plain"* aloud and don't put brackets on screen. And keep the **"or you can just"**
+lead-in: the full sentence is a caution about *how you use* the data (combine it, or
+dump it raw and get nothing), not a blanket verdict that the data is worthless. Quoting
+from "which gives no real information" alone would misrepresent him.
 
 ### Q2 — Aashan Javed, `03` `[00:19:07]` ★★★
 > *"if you have all the information but you are not able to present it in a way where **a
@@ -407,7 +432,7 @@ better — it condemns exactly the output a wrong-layer query produces. **Lead w
 Almost certainly the true origin of the remembered word "confident". Use it for what it
 actually says: the test is whether a supervisor can act, not whether the data was fetched.
 
-### Q3 — Fawad Shah, `02-temperature-api` `[00:44:14]` ★★★
+### Q3 — Fawad Shah, `02-temperature-api` `[00:44:18]` ★★★
 > *"we're living in a world I think it's **more easy to build something and more difficult
 > to understand the problem**. So I would assume that whatever you're building, try to
 > understand what you're building, then go towards the development."*
@@ -444,7 +469,7 @@ says they are not. **This is the strongest single artefact found. Build the demo
 |---|---|---|---|
 | 1 | Fawad said *"picking the wrong analysis layer will give you a confident wrong answer"* | **Never said. By anyone. In any session.** | 🔴 **Critical** — would have been quoted to its own author |
 | 2 | The wrong layer = `filter_type` | The layer selector is **`analytic_type`**; `filter_type` is the time window | 🔴 Critical — thesis mechanism |
-| 3 | AOI ≤ ~130 km² / 50 mi² | *"the limit is about **15 miles square**"* `02` `[00:23:53]` | 🔴 High — 3.4×, sizes every demo AOI |
+| 3 | AOI ≤ ~130 km² / 50 mi² | *"the limit is about **15 miles square**"* `02` `[00:23:58]` | 🔴 High — 3.4×, sizes every demo AOI |
 | 4 | Session 2 had a "parts that trip people up" segment | **No such segment.** Session over-ran; he apologises three times | 🟠 Medium — expectation deleted |
 | 5 | Judging = 40 / 35 / 15 / 10 | **Only 40% and 10% are ever spoken.** 35% and 15% have no source in any transcript | 🟠 Medium — don't cite as fact |
 | 6 | Written summary max 500 words | **No word limit stated anywhere in 33,500 words.** Source unknown | 🟠 Medium — keep as safe ceiling, not a rule |
@@ -452,7 +477,7 @@ says they are not. **This is the strongest single artefact found. Build the demo
 | 8 | Deadline Aug 30, effective Aug 29 | Still true — but **live link must survive to 16 Sept**, and **API key is revoked on the 16th** | 🟠 Medium — new operational requirement |
 | 9 | Innovation is a risk area (15%, "don't add surface") | Innovation is scored partly as **combining tracks** — Track 4 × Track 6 *earns* the mark | 🟡 Low — reframes, doesn't contradict |
 | 10 | `filter_type=5` unverified (vendor client omits it) | Fawad **enumerates all five** including *"a single month"* `[00:19:39]` | 🟡 Low — still probe |
-| 11 | Overlapping FortyGuard's roadmap is a strategic risk | *"Go ahead, clash it with our products […] you won't be penalized for it"* `[00:53:14]` | 🟢 Resolved in our favour |
+| 11 | Overlapping FortyGuard's roadmap is a strategic risk | *"Go ahead, clash it with our products […] you won't be penalized for it"* `[00:53:19]`–`[00:53:28]` | 🟢 Resolved in our favour |
 
 ---
 

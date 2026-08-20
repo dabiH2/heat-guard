@@ -111,7 +111,30 @@ Any question containing *how long*, *chronically*, *typically*, *this summer* or
 
 Tests are pure logic: zero credits, no network. Get them green before anything else.
 
-## T7 · Close the baseline gap → `docs/routing_spec.md`
+## T7 · Close the baseline gap → `docs/routing_spec.md` — **DONE**
+
+> Pressure-tested and **replaced**. "Unsafe exposure-hours avoided" is signed, and the
+> sign flips on the best case: for the Chase Tower night crew the city-wide *daytime*
+> high implies ~0 relevant hours across a 21:00-05:30 shift while the real profile shows
+> several, so the formula returns a NEGATIVE number for the strongest case in the
+> project. The tool did not avoid those hours, it revealed them. It also sums two
+> opposite-signed wins (over-warning corrected vs under-warning corrected) that cancel,
+> so the tool can be right at twelve sites and net to ~zero.
+>
+> Replaced by three non-cancelling numbers, all in WORKER-hours and all inside the shift
+> window: `unsafe_worker_hours_caught`, `productive_worker_hours_recovered`,
+> `decisions_changed`.
+>
+> **The baseline is not a proxy.** The official Phoenix temperature is observed at KPHX -
+> Sky Harbor - which is PHX-SKY in the roster. The counterfactual is one of the twelve
+> sites we already measure, and structurally one of the hottest.
+>
+> Two quiet bugs fixed on the way: boundary readings are now weighted by their overlap
+> with the shift (counting readings as hours inflated every day shift ~6%), and a night
+> shift given only one calendar day raises instead of undercounting by two thirds.
+>
+> 251 offline tests.
+
 The headline metric "unsafe exposure-hours avoided" has no baseline. Proposal: the
 supervisor's current practice — one city-wide Phoenix forecast high applied uniformly
 to all sites — versus the per-site hourly profile. Pressure-test it, propose better if
