@@ -1,0 +1,272 @@
+# HeatGuard site roster — human-authored source of truth.
+#
+# config/sites.csv and config/sites.geojson are BUILD ARTIFACTS generated from this
+# file by scripts/build_sites.py. Never hand-edit them; edit here and rebuild.
+#
+# Coordinates are not typed in by hand. Each site carries a `query` resolved by the
+# OpenStreetMap Nominatim geocoder, and the resolved lat/lon plus the OSM object id
+# are written into sites.csv. A wrong coordinate is the quietest possible failure in
+# this project: the FortyGuard API returns a perfectly valid thermal profile for the
+# wrong parking lot and raises nothing.
+#
+# That is not hypothetical. During T1 the query "5615 South 91st Avenue, Tolleson, AZ"
+# resolved to the *street centroid* of 91st Avenue, 4.5 km north of the wastewater
+# plant it was meant to find — still inside Maricopa County, still a plausible-looking
+# coordinate, completely wrong. Hence the two guards every site must now pass:
+#
+#   expect_in_name          a substring the geocoder's own display_name must contain.
+#                           Catches "resolved to something else entirely".
+#   allow_street_geocode    a result of OSM class `highway` is REJECTED unless the site
+#                           opts in. A street centroid is the signature of a failed
+#                           address lookup. Only PHX-L202 legitimately is a road.
+#
+# ---------------------------------------------------------------------------
+# SELECTION CRITERION: thermal diversity, evaluated DURING SHIFT HOURS.
+# ---------------------------------------------------------------------------
+# The demo needs two sites whose ranking INVERTS between "peak heat index" and "hours
+# above the danger band". TASKS.md T1 proposes the mechanism: dense downtown clips its
+# peak (shade, low sky-view factor) but stays elevated longer (thermal mass, restricted
+# airflow, anthropogenic heat); exposed desert edge spikes higher and sheds faster.
+#
+# That mechanism is sound. Sky-view factor is the dominant control on nocturnal cooling
+# rate, and Phoenix has a large, well-documented NOCTURNAL urban heat island.
+#
+# The hole in it: Phoenix's heat island is nocturnal. By day the city is roughly
+# neutral-to-cooler than the surrounding desert, because irrigated and shaded surfaces
+# evaporate and bare desert does not. So the downtown site's extra hours above the band
+# land largely in the EVENING. If every crew clocks out at 15:30, those extra hours are
+# real physics and a fake decision — nobody was standing in them, and "unsafe exposure-
+# hours avoided" would be counting hours nobody was ever exposed to.
+#
+# Two corrections, both applied below.
+#
+#   (a) NIGHT SHIFTS ARE REAL, AND ARE INCLUDED. Phoenix genuinely paves roads and does
+#       downtown utility work at night in summer, precisely to dodge daytime heat.
+#       Night shifts here are not a demo convenience; they are what actually happens,
+#       and they make the nocturnal heat island decision-relevant rather than a
+#       curiosity. A night crew downtown is the strongest case in the project: the
+#       city-wide forecast HIGH is a daytime number and says nothing whatsoever about
+#       their shift.
+#
+#   (b) A DAYTIME LEVER IS INCLUDED TOO. The irrigated and open-water sites (oasis
+#       effect) should run measurably cooler at midday, giving a second, independent
+#       contrast inside a normal day shift. The demo must not stand or fall on the
+#       nocturnal mechanism alone.
+#
+# Every site carries a FALSIFIABLE `expected_profile`. T8 tests these against real data.
+# Writing the prediction down before seeing the data is the difference between testing a
+# hypothesis and decorating one. Sites whose prediction FAILS are kept and reported —
+# a roster where all twelve predictions came true would be evidence of tuning, not of
+# a working instrument.
+#
+# ---------------------------------------------------------------------------
+# expected_profile vocabulary
+# ---------------------------------------------------------------------------
+#   high_peak_fast_cool    open, dry, high sky-view factor. Spikes, then dumps heat.
+#   clipped_peak_long_tail shaded / low sky-view factor. Lower max, stays hot late.
+#   high_peak_long_tail    worst case: no shade AND massive thermal mass.
+#   depressed_peak         evaporative (irrigation / open water). Cooler by day.
+#
+# The inversion pair the demo hunts is high_peak_fast_cool vs clipped_peak_long_tail.
+# high_peak_long_tail sites are the "worst site" headline.
+# depressed_peak sites are the "why" — land cover — and the mitigation story.
+
+# Buffer radius in metres around each point, used to build the AOI polygon.
+# 200 m radius -> ~0.126 km^2, three orders of magnitude under the ~130 km^2 cap.
+buffer_m: 200
+
+# No two AOIs may come within this distance of each other. Overlapping polygons would
+# double-count exposure-hours in the headline metric, and two sites sampling the same
+# air are not two observations.
+min_separation_m: 450
+
+sites:
+
+  # ---------------------------------------------------------------- high_peak_long_tail
+  - site_id: PHX-SKY
+    name: Sky Harbor airfield ramp
+    query: "Phoenix Sky Harbor International Airport, Phoenix, Arizona, USA"
+    expect_in_name: "Sky Harbor"
+    archetype: industrial_asphalt
+    crew_size: 14
+    shift_start: "05:00"
+    shift_end: "13:30"
+    expected_profile: high_peak_long_tail
+    why_chosen: >
+      Square kilometres of unshaded concrete and asphalt with ramp crews on it all
+      morning. No canopy to clip the peak, enormous thermal mass to hold it. The
+      benchmark for worst case, and the site where a city-wide forecast high should be
+      most badly optimistic.
+
+  - site_id: PHX-27TH
+    name: 27th Avenue Resource Innovation Campus
+    query: "3060 South 27th Avenue, Phoenix, Arizona, USA"
+    expect_in_name: "27th Avenue"
+    archetype: industrial_asphalt
+    crew_size: 22
+    shift_start: "05:30"
+    shift_end: "14:00"
+    expected_profile: high_peak_long_tail
+    why_chosen: >
+      Municipal solid-waste transfer and materials recovery. Continuous outdoor labour
+      on open asphalt with heavy plant running. Same thermal signature as the airfield
+      but the largest day crew on the roster, so exposure-hours scale hardest here.
+
+  - site_id: PHX-DVT
+    name: Deer Valley airport industrial apron
+    query: "Phoenix Deer Valley Airport, Phoenix, Arizona, USA"
+    expect_in_name: "Deer Valley Airport"
+    archetype: industrial_asphalt
+    crew_size: 8
+    shift_start: "06:00"
+    shift_end: "14:30"
+    expected_profile: high_peak_long_tail
+    why_chosen: >
+      North-valley counterpart to Sky Harbor, and deliberately paired with PHX-UNHL
+      1.7 km away. Two adjacent sites under identical regional weather but different
+      surfaces is the cleanest available test that the API is measuring the SURFACE and
+      not just re-reporting the regional forecast.
+
+  # ------------------------------------------------------------ clipped_peak_long_tail
+  - site_id: PHX-CHASE
+    name: Chase Tower block, N Central Ave
+    query: "Chase Tower, Phoenix, Arizona, USA"
+    expect_in_name: "Chase Tower"
+    archetype: downtown_canyon
+    crew_size: 6
+    shift_start: "21:00"
+    shift_end: "05:30"
+    expected_profile: clipped_peak_long_tail
+    why_chosen: >
+      The tallest building in Arizona, in the deepest street canyon Phoenix has. Low
+      sky-view factor clips the afternoon peak and then suppresses radiative cooling
+      after sunset. Night shift, because downtown utility and street work is done at
+      night. THIS IS THE DEMO'S LEAD SITE — a crew working 21:00 to 05:30 whose entire
+      risk window is invisible to a forecast that reports a daytime maximum.
+
+  - site_id: PHX-JEFF
+    name: Superior Court complex, W Jefferson St
+    query: "101 West Jefferson Street, Phoenix, Arizona, USA"
+    expect_in_name: "Jefferson"
+    archetype: downtown_canyon
+    crew_size: 5
+    shift_start: "21:00"
+    shift_end: "05:30"
+    expected_profile: clipped_peak_long_tail
+    why_chosen: >
+      570 m from PHX-CHASE, in the lower-rise government block. Not an independent
+      replicate — same district, same air mass — and it is not claimed as one. It tests
+      something narrower and still worth knowing: whether the API's 20 m grid resolves
+      intra-district variation at all, or whether both downtown sites return the same
+      numbers. If they are identical, the site-level claim weakens everywhere.
+
+  - site_id: PHX-ROOS
+    name: Roosevelt Row corridor works
+    query: "Roosevelt Row, Phoenix, Arizona, USA"
+    expect_in_name: "Roosevelt Row"
+    archetype: downtown_canyon
+    crew_size: 4
+    shift_start: "20:00"
+    shift_end: "04:30"
+    expected_profile: clipped_peak_long_tail
+    why_chosen: >
+      Lower-rise mixed downtown fabric a kilometre north of Chase Tower — partial
+      enclosure, some canopy. Predicted to land BETWEEN the full canyon and the open
+      sites. A site predicted to be intermediate is the cheapest test that the mechanism
+      is graded rather than binary; if it pins to one extreme, the story is wrong.
+
+  # --------------------------------------------------------------- high_peak_fast_cool
+  - site_id: PHX-SMTN
+    name: South Mountain Park north trailhead
+    query: "10919 South Central Avenue, Phoenix, Arizona, USA"
+    expect_in_name: "South Central Avenue"
+    archetype: desert_edge
+    crew_size: 5
+    shift_start: "05:00"
+    shift_end: "13:00"
+    expected_profile: high_peak_fast_cool
+    why_chosen: >
+      Parks maintenance and trail crews on bare desert soil and rock at the main Central
+      Avenue park entrance. Unobstructed sky, dry air, nothing overhead. Should record
+      close to the highest daily maximum on the roster and then shed it fastest after
+      sunset. Primary candidate for the high-peak half of the inversion pair.
+
+  - site_id: PHX-ESTR
+    name: Estrella Mountain desert-edge yard
+    query: "Estrella Mountain Regional Park, Goodyear, Arizona, USA"
+    expect_in_name: "Estrella Mountain"
+    archetype: desert_edge
+    crew_size: 6
+    shift_start: "05:00"
+    shift_end: "13:00"
+    expected_profile: high_peak_fast_cool
+    why_chosen: >
+      West-valley desert edge, 40 km from the downtown canyon sites. Replicate for the
+      fast-cooling prediction and a control on distance: if PHX-SMTN and PHX-ESTR agree
+      while sitting on opposite sides of the metro, the driver is exposure, not place.
+
+  - site_id: PHX-L202
+    name: Loop 202 South Mountain corridor paving
+    query: "South Mountain Freeway, Arizona, USA"
+    expect_in_name: "Freeway"
+    allow_street_geocode: true      # this site genuinely IS a road; see header
+    archetype: desert_edge
+    crew_size: 18
+    shift_start: "19:00"
+    shift_end: "05:00"
+    expected_profile: high_peak_fast_cool
+    why_chosen: >
+      Freeway corridor on the desert fringe in Ahwatukee, night paving crew of 18 — the
+      largest crew on the roster. The interesting case: an open desert-edge site should
+      cool fast after dark, so this crew may be the SAFEST on the roster despite sitting
+      at one of the highest daytime peaks. If the tool says so it is arguing against the
+      intuition that a hot site means a hot shift, which is the entire point of measuring
+      duration inside the shift window instead of reporting a maximum.
+
+  # ------------------------------------------------------------------- depressed_peak
+  - site_id: PHX-TRES
+    name: Tres Rios wetlands, 91st Ave reclamation
+    query: "Tres Rios Environmental Restoration Project, Arizona, USA"
+    expect_in_name: "Tres Rios"
+    archetype: park_adjacent
+    crew_size: 11
+    shift_start: "06:00"
+    shift_end: "14:30"
+    expected_profile: depressed_peak
+    why_chosen: >
+      Constructed wetland fed by the 91st Avenue wastewater plant — hectares of open
+      water and marsh in the middle of the west-valley desert, with Phoenix Water
+      Services crews on it. Evaporative damping with almost no canopy, which separates
+      the two cooling mechanisms: if this tracks Encanto Park the driver is evaporation,
+      if it tracks the asphalt sites the driver was shade all along.
+
+  - site_id: PHX-ENCA
+    name: Encanto Park grounds
+    query: "Encanto Park, Phoenix, Arizona, USA"
+    expect_in_name: "Encanto Park"
+    archetype: park_adjacent
+    crew_size: 7
+    shift_start: "05:30"
+    shift_end: "14:00"
+    expected_profile: depressed_peak
+    why_chosen: >
+      Flood-irrigated turf, mature canopy and open water, 2.7 km from Chase Tower. The
+      oasis effect should depress the midday heat index measurably against every asphalt
+      site. This is the DAYTIME lever — a contrast that lands inside a normal day shift,
+      so the demo does not depend solely on the nocturnal mechanism.
+
+  # -------------------------------------------------------------------------- control
+  - site_id: PHX-UNHL
+    name: Union Hills Water Treatment Plant
+    query: "23820 North 7th Street, Phoenix, Arizona, USA"
+    expect_in_name: "North 7th Street"
+    archetype: mixed_suburban
+    crew_size: 9
+    shift_start: "06:00"
+    shift_end: "14:30"
+    expected_profile: high_peak_fast_cool
+    why_chosen: >
+      Ordinary north-valley suburban fabric — some hardstanding, some landscaping, no
+      enclosure. The mid-scale control, and the paired partner to PHX-DVT 1.7 km south.
+      Without a site that lands in the middle, any spread this project reports could be
+      an artefact of having sampled only the extremes.

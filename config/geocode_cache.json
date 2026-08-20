@@ -1,0 +1,110 @@
+{
+  "101 West Jefferson Street, Phoenix, Arizona, USA": {
+    "class": "amenity",
+    "display_name": "Maricopa County Superior Court Complex, 101, West Jefferson Street, Warehouse District, Downtown, Central City, Phoenix, Maricopa County, Arizona, 85003, United States",
+    "lat": 33.446552,
+    "lon": -112.076522,
+    "osm_id": 37057892,
+    "osm_type": "way",
+    "type": "courthouse"
+  },
+  "10919 South Central Avenue, Phoenix, Arizona, USA": {
+    "class": "place",
+    "display_name": "10919, South Central Avenue, South Mountain, Phoenix, Maricopa County, Arizona, 85042, United States",
+    "lat": 33.34703,
+    "lon": -112.084448,
+    "osm_id": 334969781,
+    "osm_type": "way",
+    "type": "house"
+  },
+  "23820 North 7th Street, Phoenix, Arizona, USA": {
+    "class": "place",
+    "display_name": "23820, North 7th Street, Deer Valley, Phoenix, Maricopa County, Arizona, 85024, United States",
+    "lat": 33.700836,
+    "lon": -112.065608,
+    "osm_id": 186805496,
+    "osm_type": "way",
+    "type": "house"
+  },
+  "3060 South 27th Avenue, Phoenix, Arizona, USA": {
+    "class": "place",
+    "display_name": "3060, South 27th Avenue, Estrella, Phoenix, Maricopa County, Arizona, 85009, United States",
+    "lat": 33.416661,
+    "lon": -112.117327,
+    "osm_id": 328622421,
+    "osm_type": "way",
+    "type": "house"
+  },
+  "Chase Tower, Phoenix, Arizona, USA": {
+    "class": "building",
+    "display_name": "Chase Tower, 201, North Central Avenue, Downtown, Central City, Phoenix, Maricopa County, Arizona, 85004, United States",
+    "lat": 33.45088,
+    "lon": -112.073191,
+    "osm_id": 37057933,
+    "osm_type": "way",
+    "type": "commercial"
+  },
+  "Encanto Park, Phoenix, Arizona, USA": {
+    "class": "leisure",
+    "display_name": "Encanto Park, 2605, Encanto, Phoenix, Maricopa County, Arizona, 85007, United States",
+    "lat": 33.474992,
+    "lon": -112.08922,
+    "osm_id": 17895897,
+    "osm_type": "relation",
+    "type": "park"
+  },
+  "Estrella Mountain Regional Park, Goodyear, Arizona, USA": {
+    "class": "leisure",
+    "display_name": "Estrella Mountain Regional Park, Avondale, Maricopa County, Arizona, United States",
+    "lat": 33.322065,
+    "lon": -112.353559,
+    "osm_id": 98411420,
+    "osm_type": "way",
+    "type": "nature_reserve"
+  },
+  "Phoenix Deer Valley Airport, Phoenix, Arizona, USA": {
+    "class": "aeroway",
+    "display_name": "Phoenix Deer Valley Airport, East Airport Boulevard, Deer Valley, Phoenix, Maricopa County, Arizona, 85024, United States",
+    "lat": 33.689169,
+    "lon": -112.079804,
+    "osm_id": 201715469,
+    "osm_type": "way",
+    "type": "aerodrome"
+  },
+  "Phoenix Sky Harbor International Airport, Phoenix, Arizona, USA": {
+    "class": "aeroway",
+    "display_name": "Phoenix Sky Harbor International Airport, East University Drive, Central City, Phoenix, Maricopa County, Arizona, 85034, United States",
+    "lat": 33.432849,
+    "lon": -112.006792,
+    "osm_id": 8367318,
+    "osm_type": "relation",
+    "type": "aerodrome"
+  },
+  "Roosevelt Row, Phoenix, Arizona, USA": {
+    "class": "place",
+    "display_name": "Roosevelt Row, Central City, Phoenix, Maricopa County, Arizona, 85004, United States",
+    "lat": 33.458894,
+    "lon": -112.069425,
+    "osm_id": 14064948743,
+    "osm_type": "node",
+    "type": "neighbourhood"
+  },
+  "South Mountain Freeway, Arizona, USA": {
+    "class": "highway",
+    "display_name": "Congressman Ed Pastor Freeway, Foothills Paseo Condominiums, Ahwatukee Foothills, Phoenix, Maricopa County, Arizona, 85044, United States",
+    "lat": 33.29569,
+    "lon": -111.977945,
+    "osm_id": 443910020,
+    "osm_type": "way",
+    "type": "motorway"
+  },
+  "Tres Rios Environmental Restoration Project, Arizona, USA": {
+    "class": "water",
+    "display_name": "Tres Rios Environmental Restoration Project, Estrella, Phoenix, Maricopa County, Arizona, United States",
+    "lat": 33.39303,
+    "lon": -112.256163,
+    "osm_id": 21064933,
+    "osm_type": "relation",
+    "type": "wastewater"
+  }
+}

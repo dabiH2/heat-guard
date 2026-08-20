@@ -5,7 +5,20 @@ Tick items as you go and keep this file current.
 
 ---
 
-## T1 · Lock 12 Phoenix sites → `config/sites.csv` + `config/sites.geojson`
+## T1 · Lock 12 Phoenix sites → `config/sites.csv` + `config/sites.geojson` — **DONE**
+
+> Both files are now BUILD ARTIFACTS. Edit `config/sites_source.yaml`, then run
+> `python scripts/build_sites.py`. Coordinates come from OpenStreetMap Nominatim with
+> the resolved OSM object id recorded, because a hand-typed coordinate that is 400 m
+> wrong returns a valid thermal profile for the wrong parking lot and raises nothing.
+> That is not hypothetical — see `docs/site_selection.md`.
+>
+> The hypothesis below was accepted with one correction: Phoenix's heat island is
+> **nocturnal**, so the downtown site's extra hours land in the evening. Night crews are
+> therefore in the roster (real practice — Phoenix paves at night in summer), and an
+> irrigated site provides a second, daytime contrast. Predictions are recorded per site
+> as `expected_profile` and are tested against real data in T8.
+
 Real locations a contractor or utility would have crews at: substations, city yards,
 road-works corridors, water treatment, logistics depots. Research real coordinates.
 
