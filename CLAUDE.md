@@ -80,6 +80,10 @@ router.py  ** CORE IP ** deterministic. question → layer → params + rational
 tools.py   typed wrappers + cache keyed (endpoint, aoi_hash, date, time, filter_type, granularity)
   ↓
 vendor quickstart client (auth + poll)
+
+bands.py   leaf. heat index → NWS band + OSHA action, from config/thresholds.yaml.
+           Imported by router.py and metrics.py; imports nothing of ours. Total
+           functions — band_for/action_for never return None. (Added T2.)
 ```
 
 The LLM does not choose the analysis layer. `router.py` does, deterministically. Reasons: **auditable** (safety tool), **reproducible** (demo takes must match), **testable with zero credits and no network**. Say this out loud in the video — constraining the LLM to what it is good at reads as maturity to a Google/NVIDIA panel.

@@ -1,47 +1,158 @@
-# Heat-index bands (NWS, used in OSHA employer guidance) mapped to operational calls.
+# Heat-index bands and the operational action ladder.
 #
-# CAVEAT — this is the argument, not a footnote:
-# OSHA documents outdoor-worker heat-stroke deaths at a daily maximum heat index of
-# only 86 F, inside the "caution" band. Peak temperature is therefore a poor predictor
-# of harm; DURATION above a threshold is the real signal. This is why the router treats
-# duration questions differently from snapshot questions.
+# ===========================================================================
+# CAVEAT — this is the argument, not a footnote
+# ===========================================================================
+# OSHA states plainly: "Outdoor workers have died of heat stroke when the day's maximum
+# Heat Index was only 86 F." 86 F sits inside the NWS "Caution" band. Peak temperature is
+# therefore a poor predictor of harm; DURATION above a threshold is the real signal. That
+# is why the router treats duration questions differently from snapshot questions, and it
+# is why `unsafe_from_f` below is 91 and not 103. See the note on that key.
 #
-# LIMITATION to state openly in the pitch: NIOSH recommends WBGT (wet bulb globe
-# temperature) for formal exposure limits. This API exposes heat index, not WBGT.
-# Naming the limitation is stronger than hiding it.
+# ===========================================================================
+# LIMITATION — state this openly in the pitch, do not bury it
+# ===========================================================================
+# OSHA's own occupational thresholds are built on WBGT (wet bulb globe temperature), not
+# heat index, and they move with ACCLIMATISATION and WORKLOAD: at the same WBGT, heavy
+# work by an unacclimatised worker is high risk while moderate work by an acclimatised
+# one is not. OSHA also warns that heat illness can occur below 65 F when the workload is
+# very heavy, and that employers "should not rely solely on public weather service Heat
+# Index reports".
 #
-# Sources: osha.gov/heat-exposure/hazards ; OSHA "Using the Heat Index: A Guide for Employers"
+# The FortyGuard API exposes heat index, not WBGT, and HeatGuard does not model crew
+# acclimatisation or task intensity. So this tool answers "how long was this site above a
+# heat-index threshold" — which a city-wide forecast genuinely cannot answer — and does
+# not answer "is this specific crew safe". Naming that boundary is stronger than hiding
+# it, and it is the honest scope of a 40%-Impact claim.
+#
+# ===========================================================================
+# TWO TABLES, DELIBERATELY SEPARATE
+# ===========================================================================
+# `nws_bands` is the meteorological classification a forecast speaks in. `osha_actions` is
+# the operational ladder an employer acts on. They are NOT the same breakpoints — OSHA
+# splits at 115 F where NWS does not, and OSHA's action ladder starts at 80 F. Collapsing
+# them would make the tool recommend the identical control at 104 F and at 124 F, across a
+# 20 F span where OSHA prescribes different ones. The UI reports both: the band, so it
+# reconciles with the forecast on the radio, and the action, because that is the decision.
+#
+# ===========================================================================
+# INTERVAL CONVENTION: [min_f, max_f) — min inclusive, max EXCLUSIVE
+# ===========================================================================
+# The previous draft used inclusive-inclusive bounds copied from a secondary source and
+# had two silent holes: `extreme_caution` began at 91 while `caution` ended at 90 (so
+# 90.5 F matched nothing), and `extreme_danger` began at 126 while `danger` ended at 124
+# (so 125 F matched nothing). A band lookup returning None in a heat-safety tool is the
+# same class of failure as picking the wrong analysis layer: no error raised, a decision
+# quietly not made. The primary NWS source says Extreme Caution 90-103 and Extreme Danger
+# 125 or higher; the 91/126 variant is a widely-copied transcription error.
+#
+# The tables are contiguous and total: every finite temperature matches exactly one band
+# and exactly one action. tests/test_thresholds.py enforces both properties.
+#
+# Sources:
+#   NWS heat index chart            https://www.weather.gov/ama/heatindex
+#   OSHA heat hazard recognition    https://www.osha.gov/heat-exposure/hazards
+#   OSHA heat index / employer guide https://www.osha.gov/heat/heat-index
 
 units: fahrenheit
-metric: heat_index          # from POST /v1/env_params - confirm in T4
 
-bands:
+# Which quantity these bands are read against. T4 must confirm that /v1/env_params
+# returns heat index directly AND that it returns it in Fahrenheit. If it returns Celsius,
+# every number in this file is wrong by a factor that will look plausible.
+metric: heat_index
+
+# ---------------------------------------------------------------------------
+# NWS meteorological classification. Half-open [min_f, max_f).
+# ---------------------------------------------------------------------------
+nws_bands:
+  - id: below_caution
+    min_f: -100
+    max_f: 80
+    label: "Below the NWS caution range."
   - id: caution
-    min: 80
-    max: 90
-    action: work
-    label: "Normal work. Water and shade available, encourage regular fluid intake."
+    min_f: 80
+    max_f: 90
+    label: "Fatigue possible with prolonged exposure and/or physical activity."
   - id: extreme_caution
-    min: 91
-    max: 103
-    action: rest_breaks
-    label: "Scheduled rest breaks, buddy checks, acclimatisation watch for new crew."
+    min_f: 90
+    max_f: 103
+    label: "Heat stroke, heat cramps or heat exhaustion possible with prolonged exposure and/or physical activity."
   - id: danger
-    min: 103
-    max: 124
-    action: rotate
-    label: "Rotate crews. Shift remaining work to early morning."
+    min_f: 103
+    max_f: 125
+    label: "Heat cramps or heat exhaustion likely; heat stroke possible with prolonged exposure and/or physical activity."
   - id: extreme_danger
-    min: 126
-    max: 999
-    action: stop
-    label: "Stop outdoor work."
+    min_f: 125
+    max_f: 1000
+    label: "Heat stroke highly likely."
 
-# The band at or above which exposure counts toward "unsafe exposure-hours".
-unsafe_from: danger
+# ---------------------------------------------------------------------------
+# OSHA employer action ladder. Half-open [min_f, max_f).
+# These are what HeatGuard actually recommends.
+# ---------------------------------------------------------------------------
+osha_actions:
+  - id: normal
+    min_f: -100
+    max_f: 80
+    action: work
+    label: "Normal work. Standard water and shade provision."
+  - id: basic
+    min_f: 80
+    max_f: 91
+    action: work_with_provision
+    label: >
+      Additional protective measures required. Water every 15 minutes, breaks in shade
+      or air conditioning, brief crews on heat-illness signs.
+  - id: moderate
+    min_f: 91
+    max_f: 103
+    action: rest_breaks_55_5
+    label: >
+      Conditions may limit work. 55:5 work/rest cycles, 4 cups of water per hour, buddy
+      observation, close watch on new and returning crew during acclimatisation.
+  - id: high
+    min_f: 103
+    max_f: 115
+    action: rest_breaks_50_10
+    label: >
+      Conditions will limit work. 50:10 work/rest cycles, buddy system, 4-6 cups of cool
+      water per hour, move work indoors or to shade where possible, supervise new crew
+      closely for their first 7 days.
+  - id: very_high
+    min_f: 115
+    max_f: 1000
+    action: stop_nonessential
+    label: >
+      Reschedule non-essential outdoor work. Essential work only with continuous
+      observation and an emergency response plan on site.
 
-# Framing: decision support that surfaces exposure duration a city-wide forecast hides.
-# NOT a replacement for an employer heat-illness prevention program. Say this once, plainly.
+# ---------------------------------------------------------------------------
+# The threshold that "unsafe exposure-hours" counts above.
+# ---------------------------------------------------------------------------
+# 91 F, not 103 F. This is a deliberate change from the draft and the reasoning matters:
+#
+# The project's central claim is that outdoor workers have died with a daily maximum heat
+# index of 86 F. Counting only hours above 103 F would make the headline metric blind to
+# the entire 86-103 F range where that argument says people actually die — the metric
+# would contradict the thesis it exists to support. The first heat index at which OSHA
+# prescribes a work/rest cycle rather than general advice is 91 F, and a crew moving to
+# 55:5 is a real, costed operational change. That is the honest floor for "unsafe".
+#
+# TENSION, stated rather than hidden: at 91 F a Phoenix summer DAY shift is above
+# threshold almost end to end, so the metric saturates and differentiates day sites
+# poorly. It differentiates NIGHT shifts sharply — which is where the lead case lives.
+# At 103 F day sites spread out and night sites mostly read zero. Neither threshold is
+# neutral, so the number must never be quoted without one.
+#
+# T7 therefore reports the headline metric at BOTH 91 and 103 rather than picking the
+# flattering one. A result that only holds at one threshold is a result about the
+# threshold.
+unsafe_from_f: 91.0
+sensitivity_thresholds_f: [91.0, 103.0]
+
+# Said once, plainly, wherever a number is shown.
 disclaimer: >
-  Decision support only. Surfaces per-site exposure duration that a city-wide forecast
-  hides. Does not replace an employer's heat-illness prevention program.
+  Decision support only. Surfaces per-site, per-hour exposure duration that a city-wide
+  forecast high cannot show. Based on heat index, not WBGT, and does not model crew
+  acclimatisation or workload. Does not replace an employer's heat-illness prevention
+  program.

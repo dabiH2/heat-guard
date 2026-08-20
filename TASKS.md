@@ -34,9 +34,30 @@ building shade and high thermal mass peaks *lower* but stays elevated *longer*
 Schema in `config/sites.csv`. Also emit `sites.geojson`: ~200 m buffer polygon per
 site, `[lon, lat]`, ring closed. Far under the 130 km² cap.
 
-## T2 · Fill in `config/thresholds.yaml`
+## T2 · Fill in `config/thresholds.yaml` — **DONE**
 Already drafted with the NWS/OSHA bands. Verify the numbers, confirm the action
 mapping is sane, keep the sources.
+
+> Verified against primary sources; the draft had three real defects.
+>
+> 1. **Two silent holes.** `caution` ended at 90 and `extreme_caution` began at 91;
+>    `danger` ended at 124 and `extreme_danger` began at 126. So 90.5 °F and 125 °F
+>    matched no band. The draft numbers are the widely-copied *secondary*-source
+>    transcription; [NWS](https://www.weather.gov/ama/heatindex) says Extreme Caution
+>    90–103 and Extreme Danger **125**+. Now half-open `[min, max)`, contiguous, and
+>    validated at load.
+> 2. **`unsafe_from: danger` contradicted the thesis.** The project's central claim is
+>    that workers have died at a daily max heat index of 86 °F; counting only hours above
+>    103 °F makes the headline metric blind to the 86–103 °F range that argument is
+>    about. Now **91 °F** — the first heat index at which OSHA prescribes a work/rest
+>    cycle rather than general advice. T7 must report the number at 91 **and** 103.
+> 3. **One action across a 20 °F span.** NWS `danger` is 103–124, but OSHA splits at 115.
+>    Split into two tables: `nws_bands` (what the forecast says) and `osha_actions`
+>    (what the supervisor does).
+>
+> Lookup lives in `src/heatguard/bands.py` — a leaf module under `router` and `metrics`,
+> both of which need it. `band_for()` / `action_for()` are **total**: they never return
+> `None`. 60 offline tests.
 
 ## T3 · Wire the API
 - **Ask Gabriele for the quickstart repo URL** (pinned in hackathon Slack) and for
