@@ -83,7 +83,26 @@ Typed wrappers over the endpoints, wrapping the quickstart client. Cache keyed o
 `(endpoint, aoi_hash, date, time, filter_type, granularity)` into `data/fixtures/`.
 Backoff 3s → 6s → 12s. Log every `activity_id`.
 
-## T6 · Build `router.py` + `tests/test_router.py` — **the core IP**
+## T6 · Build `router.py` + `tests/test_router.py` — **the core IP** — **DONE**
+
+> Built against the corrected mechanism: `analytic_type`, not `filter_type` alone. The
+> table now selects BOTH, and `analytic_type` is the higher-value decision — `tcm` and
+> `exceedance` are the same endpoint, same `filter_type`, same AOI, one optional string
+> apart. See `docs/routing_spec.md`.
+>
+> The duration-marker rule is an **override on the classifier**, not just a post-check.
+> It caught a real gap: "Tell me about the worst at this site" carries the authoritative
+> marker `worst`, matches no comparison phrasing, fell through to SNAPSHOT, and would
+> have been answered with a single hour. Classifier miss -> escalate and record it in
+> `escalated_from`. Table bug -> `RouterInvariantError`, crash loudly.
+>
+> `WRONG_LAYER_WOULD_MISLEAD` has two real triggers, both refusing questions the API
+> would happily answer: a chronic question scoped to one day, and a duration question
+> scoped to one hour. Added `EXCEEDS_30_DAY_WINDOW` — past 30 days the API truncates
+> quietly.
+>
+> 225 offline tests, zero credits, zero network, zero skips.
+
 Fill in the decision table. Six question types, six refusals, a rationale sentence per
 branch. Deterministic — no LLM call anywhere in this module.
 

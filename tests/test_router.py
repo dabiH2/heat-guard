@@ -68,7 +68,12 @@ def test_refuses_beyond_forecast_horizon():
 
 
 def test_refuses_oversized_aoi():
-    pytest.skip("T6: build once AOI geometry is wired")
+    # AOI geometry is wired (scripts/build_sites.py), so this is now real. The cap is
+    # 15 mi2 / ~38.85 km2 on the hackathon plan, not the handbook's 130 km2.
+    from heatguard.tools import MAX_AOI_KM2
+    c = route("Is it safe right now?", lat=33.45, lon=-112.07, date="2025-07-15",
+              aoi_km2=MAX_AOI_KM2 + 1)
+    assert c.refused and c.refusal is RefusalReason.AOI_TOO_LARGE
 
 
 def test_refuses_too_fine_granularity():

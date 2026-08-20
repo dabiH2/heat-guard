@@ -91,7 +91,7 @@ def test_buffer_ring_stays_within_one_and_a_half_percent_of_a_circle():
 
 
 def test_site_aoi_is_far_under_the_api_cap():
-    """CLAUDE.md, verified: AOI <= ~130 km2. A 200 m buffer is ~0.126 km2."""
+    """Verified plan cap is 15 mi2 (~38.85 km2). A 200 m buffer is ~0.124 km2."""
     ring = buffer_ring(PHOENIX_LAT, PHOENIX_LON, 200)
     assert ring_area_km2(ring, PHOENIX_LAT) < 1.0
 

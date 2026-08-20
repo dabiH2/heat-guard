@@ -26,7 +26,7 @@ Five guards, all of which abort the build loudly rather than emit a plausible fi
   4. separation     no two AOIs may come within min_separation_m. Overlapping polygons
                     would double-count exposure-hours in the headline metric.
   5. geometry       ring closed, exterior ring counter-clockwise (RFC 7946), area under
-                    the ~130 km2 AOI cap.
+                    the AOI cap (15 mi2 / ~38.85 km2 on this plan).
 """
 
 from __future__ import annotations
@@ -43,6 +43,10 @@ import requests
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
+
+from heatguard.tools import MAX_AOI_KM2  # noqa: E402  — needs ROOT on the path first
+
 SOURCE = ROOT / "config" / "sites_source.yaml"
 CACHE = ROOT / "config" / "geocode_cache.json"
 OUT_CSV = ROOT / "config" / "sites.csv"
@@ -55,9 +59,6 @@ RATE_LIMIT_S = 1.1  # Nominatim usage policy: at most 1 request/second.
 # Phoenix metropolitan area, generously drawn. A geocoder that returns Phoenix, Mauritius
 # or drops a pin in the Pacific must fail the build rather than silently poison the AOI.
 METRO_BBOX = {"lat_min": 32.9, "lat_max": 34.0, "lon_min": -113.0, "lon_max": -111.3}
-
-# CLAUDE.md, verified: AOI <= ~130 km2 (50 mi2). We stay three orders of magnitude below.
-MAX_AOI_KM2 = 130.0
 
 CIRCLE_VERTICES = 24  # 24-gon inscribed error at r=200 m is under 1.8 m. Plenty.
 

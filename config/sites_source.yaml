@@ -72,7 +72,9 @@
 # depressed_peak sites are the "why" — land cover — and the mitigation story.
 
 # Buffer radius in metres around each point, used to build the AOI polygon.
-# 200 m radius -> ~0.126 km^2, three orders of magnitude under the ~130 km^2 cap.
+# 200 m radius -> ~0.124 km^2. The plan cap is 15 mi^2 (~38.85 km^2) per FortyGuard
+# engineering, not the ~130 km^2 the handbook states - so we sit ~313x under the real
+# ceiling rather than ~1000x under an unsourced one. See src/heatguard/tools.py.
 buffer_m: 200
 
 # No two AOIs may come within this distance of each other. Overlapping polygons would

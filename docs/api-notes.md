@@ -7,8 +7,14 @@ Two confidence levels, never mixed:
   credits and needs no key. This is what the vendor's own code does and what their own
   captured responses contain. Strong, but it is not our key hitting the live API.
 - **[LIVE]** — observed from an actual call with our key. Blank until T3 runs.
+- **[TRANSCRIPT]** — stated on camera by a FortyGuard engineer in a recorded webinar
+  (added 2026-08-20). Authoritative on *intent and plan limits*, unreliable on *exact
+  numbers* — the source is Whisper output and several figures are audibly hedged. Where
+  [TRANSCRIPT] and [VENDOR] disagree, [VENDOR] wins on code behaviour and [TRANSCRIPT]
+  wins on commercial/plan facts the code cannot know.
 
 Quickstart: `FortyGuard-Tech/temperature-api-quickstart` @ `f6de12d`. See `vendor/NOTICE.md`.
+Transcripts: `../../02-temperature-api.txt` (Fawad Shah, Software Engineering Lead).
 
 ---
 
@@ -142,23 +148,102 @@ spatial variation rather than one number smeared over the AOI.
 
 ---
 
-## Divergences from CLAUDE.md — resolve in T4
+---
 
-| CLAUDE.md says | Vendor client says | Action |
+## What the engineer said on camera — **[TRANSCRIPT]**
+
+Fawad Shah, `02-temperature-api`, 2026-08-18. Independent confirmation of the vendor
+reading above, plus facts the client source cannot contain.
+
+### `analytic_type` — confirmed verbally, and it is the "analysis layer"
+
+`[00:24:30]`–`[00:25:16]`, verbatim:
+
+> *"Then we have also the analytic type. So this is like basically the T same, this is just
+> the simple snapshot. And then we have these other analysis thing like time of measure,
+> exceedance persistence. So **exceedance** is something like for how many hours a certain
+> value was above the threshold. For example, the temperatures you're getting is 25 to 40
+> degrees. And you want to know for how many hours it was above 35 degrees Celsius. So it
+> gets you that. And for **persistence**, it's quite similar but it gives you a continuous
+> long run. Like for example, continuously it stayed above 35 for six hours, seven hours."*
+
+("T same" is Whisper for `tcm`.) The [VENDOR] table is confirmed exactly. Note his example
+threshold — *"35 degrees **Celsius**"* — independently corroborates finding (2) above.
+
+Also flagged earlier in the same session, `[00:17:34]`, listing what heatmap returns:
+*"It is basically **exceedance, persistence, time of measure**."*
+
+### Plan, credits, limits — facts not derivable from the client
+
+| Fact | Verbatim | TS |
 |---|---|---|
-| `filter_type` 1/2/3/4/**5 = single month** | docstring lists only 1–4; no 5 anywhere | **[LIVE]** probe `filter_type=5`. Loud error or silent wrong window? |
-| endpoint table has no `analytic_type` | four analytic types on `/v1/heatmap` | Corrected in CLAUDE.md |
-| `env_params` returns "heat index" | returns `heat_index_celsius` | Corrected; conversion in `tools.py` |
-| granularity 60/80/100 m | client default 100, docstring says 60/80/100 | consistent |
-| "Data measured 2 m above ground at 20 m spatial resolution" | not contradicted | keep |
+| **On Premium, doubled** | *"this is the **most premium API key** that we are heading to you guys […] And actually **the limit is double than what we are normally giving**."* | `[00:14:24]` |
+| **AOI limit 15 mi²** | *"on this plan, I think we have the premium one for you. So **the limit is about 15 miles square**."* | `[00:23:53]` |
+| **2,000,000 credits/key** | *"you have about 2 million credits per API key."* | `[00:16:16]` |
+| **Real cost anchor** | *"I have used about **187420** […] for tile segmentation, I use **72,000**"* — the entire demo build | `[00:22:50]` |
+| **Failed tasks are free** | *"if a task fails, **it does not cost you any credit**. So just try to experiment freely."* | `[00:16:06]` |
+| **Rate limit** | *"hourly, we have put a limit to it, not the daily one […] not more than **I think 100 requests per minute or something**. But as such, there's no other limits."* | `[00:56:17]` |
+| **Max 30 days per call** | *"we are giving you the opportunity to get as much as **30 days worth of data** return to use for your use case."* | `[00:19:49]` |
+| **Celsius everywhere** | *"everything is in Celsius, **including the thresholds you pass**."* | `[00:13:45]` |
+| **Poll every 3–5 s** | *"every five seconds or three seconds, I would assume you can just start polling it."* | `[00:17:05]` |
+| **Credits will be topped up** | *"if you use your credits for the API, unlikely, but if you do so, we will be happy to accommodate that."* | `[00:47:06]` |
+
+### Observed latency — **[TRANSCRIPT]**, live demo
+
+- `heatmap`, single hour, `granularity=100`, small polygon: *"the response is continuously
+  being checked after two, three seconds. So we, and then it completed."* `[00:26:12]` —
+  i.e. **a few seconds**, one or two poll cycles.
+- `env_params`, `filter_type=2`: *"this one ran pretty quickly"* `[00:28:13]`.
+- `heat_intelligence`: *"it takes about **two to three minutes**"* `[00:32:05]`. Output is a
+  **25-page PDF** `[00:33:22]` with **five sections** `[00:18:19]`: geographic, environmental
+  factors, urban factors, events (extreme weather/heat history), anthropogenic factors.
+- ⚠ **Ambiguous line, do not record as latency:** `[00:27:21]` *"maximum it took about, was
+  about six hours and minimum is two."* Spoken immediately after an `exceedance` run over a
+  ~6-day window with `threshold=35, direction=above`. Almost certainly the **exceedance
+  result** (max 6 h above threshold, min 2 h), *not* wall-clock latency. Treated as
+  unresolved; do not cite it either way.
+
+### Terminology — **[TRANSCRIPT]**
+
+**A parcel is smaller than a tile.** `[00:33:49]`: *"Parcel is basically a more smaller area
+than a tile. Like tile could be 180, 60 meter, it could be even less than that."* The
+worked case study operates on **parcels clipped from tiles** — six parcels totalling
+**17.38 acres**, `granularity=80`, window **28 Jul – 3 Aug** `[00:34:24]`–`[00:34:52]`.
+This is the unit HeatGuard's "job site" should map to.
+
+### Non-US fails silently *and bills you* — **[TRANSCRIPT]**
+
+`[00:13:23]`: *"if you are going to set up the location to Dubai or Berlin or whatever, you
+are, apart from the US, I don't think it's going to work. And **it's just going to spend
+your credit**. So I would advise not to do that."*
+
+Contradicts the assumption that failures are free: a *task* failure costs nothing, but an
+out-of-coverage AOI apparently completes and charges. **`router.py` must reject non-US
+before `tools.py` is ever reached.** Confirm the exact behaviour in T4.
+
+---
+
+## Divergences — resolve in T4
+
+| Source A says | Source B says | Action |
+|---|---|---|
+| CLAUDE.md: **AOI ≤ ~130 km² (50 mi²)** | **[TRANSCRIPT]** `[00:23:53]`: *"about 15 miles square"* | 🔴 **3.4× apart.** Engineer is describing the premium plan live; handbook figure is unsourced. **Assume 15 mi² until probed.** Highest-impact open number — it sizes every demo AOI. |
+| CLAUDE.md: `filter_type` **5 = single month** | **[VENDOR]** docstring lists only 1–4 | **[TRANSCRIPT]** `[00:19:39]` confirms five: *"single hour […] range of hours […] a single day […] a range of days and then we have a single month."* So 5 exists per the engineer but is **undocumented in the client**. Probe. |
+| CLAUDE.md endpoint table has no `analytic_type` | four analytic types on `/v1/heatmap` | Corrected in CLAUDE.md; **[TRANSCRIPT]** independently confirms |
+| CLAUDE.md: `env_params` returns "heat index" | returns `heat_index_celsius` | Corrected; **[TRANSCRIPT]** `[00:27:45]` confirms *"heat index Celsius"* |
+| CLAUDE.md: **7 endpoints** in the table | **[TRANSCRIPT]** `[00:10:23]`: *"majorly **six** end points"* | Not a real conflict — Fawad counts 5 analysis + 1 status and omits `fetch-api-key-usage`, which he then uses in the notebook. Keep 7. |
+| CLAUDE.md: poll **3→6→12 backoff** | **[VENDOR]** client polls constant 3.0 s; **[TRANSCRIPT]** advises *"every five seconds or three seconds"* | Keep our backoff — it is strictly gentler than both. No conflict. |
+| CLAUDE.md: **failed tasks cost nothing** | **[TRANSCRIPT]** confirms — *but* non-US AOIs *"spend your credit"* | Both true. Distinguish *task failure* (free) from *out-of-coverage success* (billed). |
+| granularity 60/80/100 m | client default 100, docstring 60/80/100; **[TRANSCRIPT]** `[00:12:56]` confirms | consistent |
+| "2 m above ground, 20 m spatial resolution" | not contradicted by any source | keep |
 
 ---
 
 ## Plan & credits — **[LIVE]**, blocked on T3
 
-- Plan:
-- Credits remaining:
-- Premium endpoints available (`satellite`, `streetview`, `heat_intelligence`):
+- Plan: **[TRANSCRIPT] Premium, at double the normal limits** `[00:14:24]`. Confirm the string the API returns.
+- Credits remaining: **[TRANSCRIPT] 2,000,000 issued per key** `[00:16:16]`. Confirm balance.
+- Premium endpoints available (`satellite`, `streetview`, `heat_intelligence`): **[TRANSCRIPT] all three — demoed live on a hackathon key in-session** (`satellite` `[00:29:25]`, `streetview` `[00:30:17]`, `heat_intelligence` `[00:31:54]`). Nothing is gated. Confirm.
 
 ## Observed async behaviour — **[LIVE]**
 
@@ -174,12 +259,14 @@ loud failure is a bug caught, a silent plausible one is a bug shipped.
 
 | Constraint | How it fails | Status code | Loud or silent? | What the code catches |
 |---|---|---|---|---|
-| Non-US location | | | | |
+| Non-US location | **[TRANSCRIPT]** *"it's just going to spend your credit"* `[00:13:39]` — completes and bills | ? | **likely SILENT** | `router.py` US bounds check, pre-`tools.py` |
 | Date before 2021-01-01 | | | | |
 | Forecast beyond now +12h | | | | |
-| AOI > ~130 km² | | | | |
+| AOI > **15 mi²** (not 130 km² — see divergences) | | | | |
+| Window > 30 days | **[TRANSCRIPT]** 30-day cap stated `[00:19:49]` | ? | ? | `router.py` window guard |
 | `granularity` not in {60,80,100} | | | | |
-| `filter_type=5` | | | | |
+| `filter_type=5` | **[TRANSCRIPT]** engineer says it exists; **[VENDOR]** client omits it | ? | ? | |
+| >100 requests/minute | **[TRANSCRIPT]** hourly cap, ~100 rpm `[00:56:17]` | ? | ? | backoff already well under |
 | `exceedance` with no `threshold` | client-side `ValueError` | n/a | **loud** | vendor client |
 | `threshold` passed in °F by mistake | **[VENDOR]** returns 0 h everywhere | 200 | **SILENT** | `tools.py` unit guard |
 

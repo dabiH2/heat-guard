@@ -27,9 +27,10 @@ Source of truth: [`config/sites_source.yaml`](../config/sites_source.yaml).
 
 Bold shifts are night crews. 125 workers across 12 sites; 33 of them work nights.
 
-Roster spans 34 km. Each AOI is a 200 m-radius polygon, 0.124 km² —
-three orders of magnitude under the ~130 km² cap, so AOI size is never the binding
-constraint on a request.
+Roster spans 34 km. Each AOI is a 200 m-radius polygon of 0.124 km² — about **313×
+under the 15 mi² (38.85 km²) plan cap** that FortyGuard engineering states on camera.
+(The handbook’s ~130 km² / 50 mi² figure is unsourced and 3.4× more generous; we build
+against the smaller number.) AOI size is never the binding constraint on a request.
 
 ---
 

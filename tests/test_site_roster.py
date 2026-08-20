@@ -18,6 +18,7 @@ between them means somebody hand-edited a build artifact.
 import pytest
 
 from build_sites import separation_m
+from heatguard.tools import MAX_AOI_KM2
 
 EXPECTED_SITE_COUNT = 12
 REQUIRED_PROFILES = {
@@ -114,7 +115,7 @@ def test_every_polygon_is_closed_and_under_the_aoi_cap(site_geojson):
     for feature in site_geojson["features"]:
         ring = feature["geometry"]["coordinates"][0]
         assert ring[0] == ring[-1], f"{feature['properties']['site_id']}: ring not closed"
-        assert feature["properties"]["area_km2"] < 130.0
+        assert feature["properties"]["area_km2"] < MAX_AOI_KM2
 
 
 def test_no_two_aois_overlap(site_rows, site_source):
