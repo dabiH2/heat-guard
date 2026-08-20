@@ -52,10 +52,47 @@ Base `https://api.fortyguard.com` · header `api-key: <key>` · `Content-Type: a
 - **Dates 2021-01-01 → now.** Heatmap alone forecasts to **now + 12h**.
 - **AOI ≤ ~130 km² (50 mi²).**
 - `granularity`: **60 / 80 / 100 m** — smaller costs more credits.
-- `filter_type`: **1** = single hour · **2** = hour range (+`end_time`) · **3** = entire day · **4** = day range · **5** = single month.
+- `filter_type`: **1** = single hour · **2** = hour range (+`end_time`) · **3** = entire day · **4** = day range · ~~**5** = single month~~ — **the vendor client documents only 1–4. Probe 5 in T4 before relying on it.**
+
+**`analytic_type` on `/v1/heatmap` — was missing from this file, and it is load-bearing:**
+
+| value | returns | units |
+|---|---|---|
+| `tcm` (default) | snapshot temperature per tile | °F |
+| `time_of_measure` | UTC hour-of-day of each cell's peak | 0–23 |
+| **`exceedance`** | **hours each cell spends past `threshold`** | hour |
+| **`persistence`** | **longest continuous run of such hours** | hour |
+
+The duration metric this project is built on is a first-class API product, not something
+we derive. `exceedance`/`persistence` require `threshold` **and** `direction`.
+
+This makes the layer trap *worse*, which is good for the pitch: `tcm` and `exceedance` are
+the same endpoint, same `filter_type`, same AOI — one optional string apart. So the router
+selects `analytic_type` too, and that is its highest-value decision.
+
+**⚠ UNIT TRAP — `threshold` is in °C while `tcm` tiles are in °F.** Pass `threshold=91`
+meaning °F and the API reads 91 °C = 195.8 °F: exceedance returns **0 hours everywhere**,
+status `succeeded`, credit spent, and the tool reports "no unsafe exposure at any site".
+A confidently-formatted **all-clear** — the worst wrong answer a safety tool can give.
+Conversion happens in `tools.py` and nowhere else; every signature is unit-suffixed
+(`threshold_c`, `heat_index_f`). A bare `threshold` must not exist in our code.
+
+**`env_params` returns `heat_index_celsius`** (open question #4: answered — directly, but
+in °C), plus `wet_bulb_temperature_celsius`, humidity, six AQI series, solar irradiance,
+and 24 **local-time** timestamps. Phoenix is MST year-round, so shift windows — including
+ones wrapping past midnight — map straight onto them.
 - Data is measured **2 m above ground** at **20 m spatial resolution**. Do not claim 2 m spatial resolution.
 
 **The quickstart repo ships a Python client that already does auth and submit-then-poll. Wrap it. Do not rebuild it.** It accepts `wait=False` to return the `activity_id` for agent-driven polling.
+
+Located and vendored: **`github.com/FortyGuard-Tech/temperature-api-quickstart`** @ `f6de12d`
+(MIT). Four files, unmodified, in `vendor/fortyguard/` — see `vendor/NOTICE.md`. Its bundled
+sample responses are offline fixtures in `data/fixtures/vendor_samples/`, which is how
+`docs/api-notes.md` got filled in before a credit was spent.
+
+Also from the client, and not obvious: **`GET /v1/status/{id}` 404s for a short window right
+after submit** — eventual consistency, not failure. A naive poller treats that 404 as an
+error and discards a task that was fine.
 
 ## Scope discipline
 

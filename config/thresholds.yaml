@@ -25,6 +25,27 @@
 # not answer "is this specific crew safe". Naming that boundary is stronger than hiding
 # it, and it is the honest scope of a 40%-Impact claim.
 #
+# Refinement after reading the vendor client (T3): /v1/env_params DOES return
+# `wet_bulb_temperature_celsius` alongside heat index, humidity and solar irradiance.
+# Wet-bulb temperature is not WBGT — outdoor WBGT = 0.7*Tnwb + 0.2*Tg + 0.1*Ta and needs a
+# globe thermometer for Tg — but wet bulb plus air temperature plus solar irradiance puts a
+# WBGT *estimate* within reach. Out of scope for this build. Worth one sentence in the
+# pitch as the honest next step, because WBGT is what OSHA actually regulates against.
+#
+# ===========================================================================
+# UNITS — THE API SPEAKS CELSIUS. THIS FILE SPEAKS FAHRENHEIT.
+# ===========================================================================
+# Confirmed from the vendor client and its sample responses:
+#   /v1/env_params returns `heat_index_celsius`
+#   /v1/heatmap `threshold` is CELSIUS, while `tcm` tile readings are FAHRENHEIT
+#
+# Every number below is Fahrenheit, because NWS and OSHA are Fahrenheit and the users are
+# US supervisors. Conversion happens in tools.py at the API boundary and NOWHERE ELSE, and
+# every signature is unit-suffixed. Getting this wrong is not a rounding error: passing 91
+# to `threshold` meaning 91 F makes the API read 91 C = 195.8 F, return zero exceedance
+# hours everywhere, and report a confident all-clear across all twelve sites.
+# See docs/api-notes.md.
+#
 # ===========================================================================
 # TWO TABLES, DELIBERATELY SEPARATE
 # ===========================================================================
