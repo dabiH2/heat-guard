@@ -1,0 +1,47 @@
+# Heat-index bands (NWS, used in OSHA employer guidance) mapped to operational calls.
+#
+# CAVEAT — this is the argument, not a footnote:
+# OSHA documents outdoor-worker heat-stroke deaths at a daily maximum heat index of
+# only 86 F, inside the "caution" band. Peak temperature is therefore a poor predictor
+# of harm; DURATION above a threshold is the real signal. This is why the router treats
+# duration questions differently from snapshot questions.
+#
+# LIMITATION to state openly in the pitch: NIOSH recommends WBGT (wet bulb globe
+# temperature) for formal exposure limits. This API exposes heat index, not WBGT.
+# Naming the limitation is stronger than hiding it.
+#
+# Sources: osha.gov/heat-exposure/hazards ; OSHA "Using the Heat Index: A Guide for Employers"
+
+units: fahrenheit
+metric: heat_index          # from POST /v1/env_params - confirm in T4
+
+bands:
+  - id: caution
+    min: 80
+    max: 90
+    action: work
+    label: "Normal work. Water and shade available, encourage regular fluid intake."
+  - id: extreme_caution
+    min: 91
+    max: 103
+    action: rest_breaks
+    label: "Scheduled rest breaks, buddy checks, acclimatisation watch for new crew."
+  - id: danger
+    min: 103
+    max: 124
+    action: rotate
+    label: "Rotate crews. Shift remaining work to early morning."
+  - id: extreme_danger
+    min: 126
+    max: 999
+    action: stop
+    label: "Stop outdoor work."
+
+# The band at or above which exposure counts toward "unsafe exposure-hours".
+unsafe_from: danger
+
+# Framing: decision support that surfaces exposure duration a city-wide forecast hides.
+# NOT a replacement for an employer heat-illness prevention program. Say this once, plainly.
+disclaimer: >
+  Decision support only. Surfaces per-site exposure duration that a city-wide forecast
+  hides. Does not replace an employer's heat-illness prevention program.

@@ -1,0 +1,16 @@
+.env
+*.env
+!.env.example
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ipynb_checkpoints/
+.pytest_cache/
+data/fixtures/*.json
+data/decisions.jsonl
+*.mp4
+*.wav
+*.m4a
+*.srt
+.DS_Store

@@ -1,0 +1,6 @@
+site_id,name,lat,lon,archetype,crew_size,shift_start,shift_end,why_chosen
+# T1: replace with 12 researched Phoenix locations.
+# archetype must span the thermal range - the demo needs an inversion between
+# a low-peak/long-duration site and a high-peak/short-duration site.
+# suggested values: downtown_canyon | industrial_asphalt | desert_edge |
+#                   park_adjacent | mixed_suburban
