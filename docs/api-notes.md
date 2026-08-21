@@ -241,37 +241,151 @@ before `tools.py` is ever reached.** Confirm the exact behaviour in T4.
 
 ---
 
-## Plan & credits — **[LIVE]**, blocked on T3
+## Plan & credits — **[LIVE]** ✅ T3, 2026-08-21
 
-- Plan: **[TRANSCRIPT] Premium, at double the normal limits** `[00:14:24]`–`[00:14:42]`. Confirm the string the API returns.
-- Credits remaining: **[TRANSCRIPT] 2,000,000 issued per key** `[00:16:16]`. Confirm balance.
-- Premium endpoints available (`satellite`, `streetview`, `heat_intelligence`): **[TRANSCRIPT] all three — demoed live on a hackathon key in-session** (`satellite` `[00:29:25]`, `streetview` `[00:30:17]`, `heat_intelligence` `[00:31:54]`). Nothing is gated. Confirm.
+| | |
+|---|---|
+| Plan | **`Hackathon`** — that is the plan's actual name, not "Premium" |
+| Subscription | `sub_qr6w3azkh3`, active |
+| Billing period | **Aug 17 2026 – Sep 21 2026** |
+| **Key expiry** | **`2026-09-21T19:04:29Z`** |
+| Credits | **2,000,000** total, matching the transcript exactly |
+| Credits reset | Sep 21 2026 |
+
+**The key outlives judging by five days.** Judging ends 16 Sep; the key expires 21 Sep.
+The "API access is revoked" risk is real but the boundary is the 21st. The live demo must
+still serve from `data/fixtures/` after that date.
+
+### ⚠ Cost model — 4,220 credits per heatmap call, FLAT
+
+Measured across 8 billed calls: `Heatmap Generation — credits=33,760, count=8`.
+
+**Billing is per call, not per tile.** A 3-tile AOI and a 44,690-tile AOI cost exactly the
+same. That inverts the intuition: granularity and AOI size are effectively *free*; the
+number of *calls* is the budget.
+
+```
+2,000,000 / 4,220 = ~474 heatmap calls for the entire hackathon
+```
+
+Not unlimited. One demo day across 12 sites at two analytic types is **24 calls ≈ 5% of
+the budget**. A 30-day sweep of all 12 sites would be 360 calls — 76% of everything.
+Budget T8's search deliberately.
+
+**Failed tasks cost nothing — confirmed.** Seven tasks were accepted and given activity
+ids during T4; one failed; exactly six were billed. `25,320 = 6 × 4,220`.
+
+**But a task that "succeeds" with an empty result IS billed.** See the non-US probe.
 
 ## Observed async behaviour — **[LIVE]**
 
-- Latency, submit → terminal, `env_params` single day:
-- Latency, submit → terminal, `heatmap` `filter_type=3` at 100 m:
-- Terminal status strings actually seen:
-- How long the post-submit 404 window lasts in practice:
+- **Submit → `Completed` in ~24 s** for a 3-tile call, consistently, across ~15 calls.
+  A 44,690-tile call took **42 s**. Tile count barely moves latency.
+- Status strings arrive in **title case**: `"Processing"` → `"Completed"` → `"Failed"`.
+  Compare lowercased, as the vendor client does.
+- `data` carries only `{activity_id, status}` while processing; `result` appears on
+  completion.
+- **The post-submit 404 window was never observed** in ~15 submissions — the first poll at
+  t+3.7 s already returned HTTP 200. The vendor client's `ActivityNotReadyError` guard is
+  kept anyway: 15 calls is not proof it cannot happen.
+- 3/6/12 s backoff puts the first poll at t+3.7 s and terminal at t+23.6 s — three polls
+  per call. Good fit, keep it.
 
-## Constraint failure modes — **[LIVE]**, T4
+## Constraint failure modes — **[LIVE]** ✅ T4
 
-**Failed tasks cost nothing — probe freely.** The column that matters is the fourth: a
-loud failure is a bug caught, a silent plausible one is a bug shipped.
+**The fourth column is the one that matters.** A loud failure is a bug caught; a silent,
+plausible one is a bug shipped.
 
-| Constraint | How it fails | Status code | Loud or silent? | What the code catches |
+| Constraint | How it fails | Status | Loud or silent? | What the code does |
 |---|---|---|---|---|
-| Non-US location | **[TRANSCRIPT]** *"it's just going to spend your credit"* `[00:13:39]` — completes and bills | ? | **likely SILENT** | `router.py` US bounds check, pre-`tools.py` |
-| Date before 2021-01-01 | | | | |
-| Forecast beyond now +12h | | | | |
-| AOI > **15 mi²** (not 130 km² — see divergences) | | | | |
-| Window > 30 days | **[TRANSCRIPT]** 30-day cap stated `[00:19:53]` | ? | ? | `router.py` window guard |
-| `granularity` not in {60,80,100} | | | | |
-| `filter_type=5` | **[TRANSCRIPT]** engineer says it exists; **[VENDOR]** client omits it | ? | ? | |
-| >100 requests/minute | **[TRANSCRIPT]** hourly cap, ~100 rpm `[00:56:17]`–`[00:56:31]` | ? | ? | backoff already well under |
-| `exceedance` with no `threshold` | client-side `ValueError` | n/a | **loud** | vendor client |
-| `threshold` passed in °F by mistake | **[VENDOR]** returns 0 h everywhere | 200 | **SILENT** | `tools.py` unit guard |
+| **Non-US AOI** | `Completed`, **0 tiles**, `error: false` | 200 | 🔴 **SILENT — and billed 4,220** | `OUTSIDE_US`, checked first, before any call |
+| Date < 2021-01-01 | accepted, `Processing` > 188 s, then **`Failed`** | 200 | 🟡 **SLOW** — neither loud nor wrong, just late | `BEFORE_2021`, refused up front |
+| Date ≥ today + 2 | `Field 'date_time.start_date' (…) is in the future. Requests must be for a past or present date.` | **400** | 🟢 loud, free | `BEYOND_FORECAST` |
+| **Date = tomorrow** | accepted, `Completed`, **one flat value for the whole day** | 200 | 🔴 **SILENT — and billed** | `BEYOND_FORECAST` |
+| `filter_type=5` | `Field 'date_time.filter_type' is invalid: Input should be 1, 2, 3 or 4` | **422** | 🟢 loud, free | never emitted |
+| `granularity=10` | `Field 'granularity' is invalid: Input should be 60, 80 or 100` | **422** | 🟢 loud, free | `GRANULARITY_TOO_FINE` |
+| AOI ≈ 447 km² | **accepted**, 44,690 tiles, same 4,220 credits | 200 | ⚪ **not enforced** | self-imposed cap retained |
+| `exceedance` with no `threshold` | `Completed`, **24.0 hours everywhere** | 200 | 🔴 **SILENT** — defaults to 30 °C | router invariant refuses to emit one |
+| Range > 30 days | HTTP **500**, non-JSON body | 500 | 🟡 server fault, not a clean rejection | `EXCEEDS_30_DAY_WINDOW`, refused up front |
 
-## filter_type, verified — **[LIVE]**, T4
+Three silent failures, and **all three are billed**. That is the economic argument for
+refusing in `router.py` instead of letting the API decide.
 
-Same site, same date, `filter_type=1` vs `filter_type=3`, and `tcm` vs `exceedance`:
+### ⚠ The forecast horizon is not "now + 12 h"
+
+Bisected on 2026-08-21:
+
+| offset | accepted at submit? | data returned |
+|---|---|---|
+| −1 d, +0 d | ✅ 200 | real diurnal profile |
+| **+1 d** | ✅ 200 | ⚠ **one flat value** |
+| +2 d and beyond | ❌ 400 | — |
+
+| date | min | avg | max | spread |
+|---|---|---|---|---|
+| 2025-07-15 (history) | 32.72 | 36.92 | 40.20 | **7.48 °C** |
+| 2026-08-21 (today) | 33.72 | 37.86 | 41.94 | **8.22 °C** |
+| **2026-08-22 (tomorrow)** | 34.34 | 34.34 | 34.34 | **0.00** |
+
+A flat 34.34 °C across a Phoenix August day is physically impossible — overnight lows sit
+near 30 °C, afternoon highs near 42 °C. There is no diurnal structure in it.
+
+**This is a third silent trap, and the subtlest yet.** Run `exceedance` against a constant
+and you get exactly 0 hours or exactly 24 hours, never anything between — a confidently
+formatted number with no information in it. So the router's boundary is **where the
+profile stops, not where the API stops accepting requests**:
+`MAX_FUTURE_DAYS_ACCEPTED = 1`, `MAX_FUTURE_DAYS_USABLE = 0`.
+
+### ⚠ AOI cap is not enforced — open question #5, answered
+
+A polygon scaled to ~447 km² — **11.5× the stated 15 mi² (38.85 km²) limit** — was
+accepted and returned 44,690 tiles for the same flat 4,220 credits. The cap is either far
+higher than stated or advisory. Ours stays self-imposed: an unenforced limit is still a
+documented one, and tile count drives response size even when it does not drive price.
+
+### ✅ `filter_type=5` does not exist — open question #6, answered
+
+FortyGuard engineering enumerated five filter types on camera (`[00:19:39]`). The API
+accepts four: `Input should be 1, 2, 3 or 4`. **The vendor client was right and the
+transcript was wrong** — a useful calibration on which source to trust for what.
+
+## `analytic_type`, verified live — **[LIVE]** ✅ T4
+
+Encanto Park (`PHX-ENCA`), 2025-07-15, `filter_type=3`, `granularity=100`:
+
+| call | result |
+|---|---|
+| `tcm` | 3 tiles · min **32.72** · avg **36.92** · max **40.20** |
+| `exceedance`, threshold **35.00 °C**, above | **17.0 hours** · `units: "hour"` |
+| `persistence`, threshold **35.00 °C**, above | **16.0 hours** continuous |
+| `exceedance`, threshold **95** *(sent as if °F)* | **0.0 hours** · status `Completed` |
+
+**Units are CELSIUS. The vendor client docstring saying "tiles in °F" is wrong.**
+Read as °C, 32.72–40.20 is 90.9–104.4 °F — exactly a Phoenix July day. Read as °F it would
+be 0.4–4.6 °C, a hard freeze in July.
+
+### 🔴 THE UNIT TRAP, EXECUTED LIVE
+
+Two calls. Same endpoint, same AOI, same date, same `filter_type`, same `analytic_type`,
+same `direction`. **The only difference is whether the threshold was converted.**
+
+```
+threshold = 35.00   (95 °F, correctly converted)      ->  17.0 hours above threshold
+threshold = 95      (95 °F raw, read as 95 °C = 203 °F) ->   0.0 hours
+```
+
+Both returned `Completed`. Both cost 4,220 credits. Nothing raised, anywhere.
+
+**17 hours of dangerous exposure, reported as zero.** For a heat-safety tool that is a
+confidently formatted all-clear, and it sits one unit conversion away at all times. This
+is the strongest artefact the demo has. It is reproducible from
+`data/fixtures/t4/t4_probes.json` and pinned by
+`tests/test_api_contract.py::test_the_unit_trap_returns_zero_hours_and_reports_success`.
+
+### Spatial resolution reality check
+
+A 200 m-radius AOI at `granularity=100` returns **3 tiles**, and all three read
+identically (standard deviation 0.0). There is no within-site texture at that scale — the
+site is homogeneous, which is fine, because HeatGuard compares *between* sites. Anyone
+wanting intra-site variation needs `granularity=60` and a larger AOI. Since cost is flat
+per call, that is free apart from response size.

@@ -59,7 +59,21 @@ mapping is sane, keep the sources.
 > both of which need it. `band_for()` / `action_for()` are **total**: they never return
 > `None`. 60 offline tests.
 
-## T3 · Wire the API
+## T3 · Wire the API — **DONE**
+
+> Quickstart located by mining competitor repos (`FortyGuard-Tech/temperature-api-quickstart`),
+> vendored at `f6de12d`. `.env` created and confirmed gitignored; the key is read via
+> `os.environ` and never printed — `scripts/t3_probe.py` masks it from every line of
+> output and every fixture it writes.
+>
+> **Plan `Hackathon`, 2,000,000 credits, key expires 2026-09-21T19:04:29Z** — five days
+> after judging ends. Ran the same call both ways: manual POST-then-poll and via the
+> client. Identical results. **Submit -> `Completed` in ~24 s** over three polls at
+> 3/6/12 s backoff. The post-submit 404 window the client guards against was never
+> observed in ~15 calls.
+>
+> Raw payloads in `data/fixtures/t3/`.
+
 - **Ask Gabriele for the quickstart repo URL** (pinned in hackathon Slack) and for
   where to paste the key. Do not read the key into anything committed.
 - `.env` from `.env.example`; confirm `.env` is gitignored.
@@ -67,7 +81,29 @@ mapping is sane, keep the sources.
 - Run one call **both ways** — via the client, and as a manual POST-then-poll — so the
   raw `activity_id` and status payloads are visible once. Note observed latency.
 
-## T4 · Turn constraints into tested facts → `docs/api-notes.md`
+## T4 · Turn constraints into tested facts → `docs/api-notes.md` — **DONE**
+
+> Nine constraints probed. **Three fail SILENTLY and all three are billed**: non-US
+> (`Completed`, 0 tiles), tomorrow's date (`Completed`, one flat value for the whole day),
+> and `exceedance` with no `threshold` (`Completed`, silently defaults to 30 °C, returns
+> 24 h). Loud and free: future dates (400), `filter_type=5` (422), bad granularity (422).
+> A fourth mode found: pre-2021 sits in `Processing` >188 s then turns `Failed` — slow,
+> not loud, not wrong.
+>
+> **THE UNIT TRAP, EXECUTED LIVE.** Same endpoint, same AOI, same date, same filter_type,
+> same analytic_type — the only difference is whether the threshold was converted:
+> `threshold=35.00` (95 °F correctly converted) returns **17.0 hours**;
+> `threshold=95` (sent raw, read as 95 °C) returns **0.0 hours**. Both `Completed`, both
+> billed 4,220 credits, nothing raised. 17 hours of exposure reported as zero.
+>
+> Corrections to CLAUDE.md: the forecast horizon is not +12 h; `filter_type=5` does not
+> exist; the AOI cap is not enforced at 447 km²; granularity does **not** affect cost;
+> **cost is 4,220 credits per call FLAT, so ~474 calls is the whole budget**; the API is
+> **Celsius** and the vendor client docstring saying °F is wrong.
+>
+> Open questions 2, 5 and 6 closed; 7 added. All of it pinned offline in
+> `tests/test_api_contract.py` so it survives the key expiring.
+
 Probe each limit deliberately: non-US location, pre-2021 date, forecast beyond +12h,
 AOI over 130 km². **Failed tasks cost nothing.** Record status code, error shape, and
 crucially whether it fails loudly or returns something empty and plausible-looking.

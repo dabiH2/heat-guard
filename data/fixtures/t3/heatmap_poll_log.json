@@ -1,0 +1,34 @@
+[
+  {
+    "attempt": 1,
+    "elapsed_s": 3.66,
+    "http": 200,
+    "status": "processing",
+    "keys": [
+      "activity_id",
+      "status"
+    ]
+  },
+  {
+    "attempt": 2,
+    "elapsed_s": 11.0,
+    "http": 200,
+    "status": "processing",
+    "keys": [
+      "activity_id",
+      "status"
+    ]
+  },
+  {
+    "attempt": 3,
+    "elapsed_s": 23.64,
+    "http": 200,
+    "status": "completed",
+    "keys": [
+      "activity_id",
+      "result",
+      "status"
+    ],
+    "terminal": true
+  }
+]

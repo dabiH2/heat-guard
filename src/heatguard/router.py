@@ -63,10 +63,11 @@ from enum import Enum
 from .bands import load_thresholds
 from .tools import (
     DEFAULT_GRANULARITY,
-    FORECAST_HORIZON_HOURS,
     GRANULARITIES,
     MAX_AOI_KM2,
     MAX_DAYS_PER_CALL,
+    MAX_FUTURE_DAYS_ACCEPTED,
+    MAX_FUTURE_DAYS_USABLE,
 )
 
 
@@ -451,14 +452,28 @@ def check_refusals(
             f"begins. There is no data to answer this with.",
         )
 
-    horizon = now + timedelta(hours=FORECAST_HORIZON_HOURS)
-    if start > horizon.date():
+    # The forecast boundary is NOT where the API stops accepting requests. It is where
+    # the API stops returning a diurnal profile — one day earlier. See tools.py.
+    usable_through = today + timedelta(days=MAX_FUTURE_DAYS_USABLE)
+    if start > usable_through:
+        accepted_through = today + timedelta(days=MAX_FUTURE_DAYS_ACCEPTED)
+        if start <= accepted_through:
+            return (
+                RefusalReason.BEYOND_FORECAST,
+                f"{date} is tomorrow, and the API will happily accept it and charge you "
+                f"for it — but it returns a single flat value for the whole day. "
+                f"Measured: today came back 33.7-41.9 °C across the day, tomorrow came "
+                f"back 34.34 °C for every hour, minimum equal to maximum. There is no "
+                f"diurnal shape in it, so hours-above-threshold against it is exactly 0 "
+                f"or exactly 24 and never anything in between. Today "
+                f"({today.isoformat()}) or earlier is answerable.",
+            )
         return (
             RefusalReason.BEYOND_FORECAST,
-            f"{date} is beyond the forecast horizon. The heatmap is the only layer that "
-            f"forecasts, and only to {FORECAST_HORIZON_HOURS} h ahead "
-            f"(to {horizon.date().isoformat()}). Anything further would be a historical "
-            f"average dressed up as a forecast.",
+            f"{date} is in the future. FortyGuard rejects any start_date beyond "
+            f"{accepted_through.isoformat()} outright, and only through "
+            f"{usable_through.isoformat()} does it return a real diurnal profile. "
+            f"Anything further would be a historical average dressed up as a forecast.",
         )
 
     if end_date is not None:

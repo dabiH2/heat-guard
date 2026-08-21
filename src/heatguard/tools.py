@@ -56,17 +56,51 @@ GRANULARITIES = (60, 80, 100)
 DEFAULT_GRANULARITY = 100          # cheapest; finer costs more credits
 
 EARLIEST_DATE = "2021-01-01"
-FORECAST_HORIZON_HOURS = 12
 
-#: Max days returned per call. Fawad Shah [00:19:49]: "as much as 30 days worth of data."
-#: A longer span comes back quietly truncated, so the router refuses instead.
+# ---------------------------------------------------------------------------
+# FORECAST HORIZON — measured in T4, and it is NOT "now + 12 h".
+# ---------------------------------------------------------------------------
+# Submit-level rule, measured by bisection on 2026-08-21:
+#   start_date <= today + 1 day   -> HTTP 200, accepted
+#   start_date >= today + 2 days  -> HTTP 400, "Field 'date_time.start_date' (...) is in
+#                                    the future. Requests must be for a past or present
+#                                    date."  (loud, free)
+#
+# But ACCEPTED IS NOT ANSWERED. Tomorrow is accepted, billed, and returns a DEGENERATE
+# result — one flat value for the entire day:
+#
+#   2025-07-15 (history)  min 32.72  avg 36.92  max 40.20   spread 7.48 C
+#   2026-08-21 (today)    min 33.72  avg 37.86  max 41.94   spread 8.22 C
+#   2026-08-22 (tomorrow) min 34.34  avg 34.34  max 34.34   spread 0.00 C  <-- flat
+#
+# A flat 34.34 C across a Phoenix August day is physically impossible (overnight lows are
+# near 30, afternoon highs near 42). There is no diurnal structure in it. Running
+# exceedance against a constant returns exactly 0 hours or exactly 24 hours with nothing
+# in between — a confidently formatted answer with no information in it.
+#
+# So the router refuses anything past TODAY, not past the submit boundary.
+MAX_FUTURE_DAYS_ACCEPTED = 1     # what the API will take
+MAX_FUTURE_DAYS_USABLE = 0       # what actually carries a diurnal profile
+
+#: Max days per call. Fawad Shah [00:19:49]: "as much as 30 days worth of data." Measured:
+#: a 61-day range returns HTTP 500 with a non-JSON body — a server fault, not a clean
+#: rejection, so the router refuses before submitting.
 MAX_DAYS_PER_CALL = 30
 
-#: 15 mi² on the hackathon plan, per FortyGuard engineering [00:23:53]. The handbook's
-#: ~130 km² / 50 mi² figure is unsourced and 3.4x larger. Build against the smaller one.
-#: Open question #5 — probe the real ceiling in T4.
+#: 15 mi² on the hackathon plan, per FortyGuard engineering [00:23:53].
+#: ⚠ MEASURED IN T4: a ~447 km² AOI (11.5x the stated cap) was ACCEPTED and returned
+#: 44,690 tiles for the same flat credit cost. The cap is not enforced server-side at
+#: that size. Kept as a self-imposed limit because an unenforced limit is still a
+#: documented one, and because tile count drives response size, not price.
 MAX_AOI_MI2 = 15.0
 MAX_AOI_KM2 = 38.85
+
+#: MEASURED: 4,220 credits per heatmap call, FLAT — a 3-tile AOI and a 44,690-tile AOI
+#: cost exactly the same. Billing is per call, not per tile.
+#: 2,000,000 / 4,220 = ~474 heatmap calls for the whole hackathon. Not unlimited: one
+#: demo day across 12 sites at two analytic types is 24 calls, ~5% of the budget.
+CREDITS_PER_HEATMAP_CALL = 4_220
+MAX_HEATMAP_CALLS = 474
 
 #: Approximate; hedged by the speaker ("I think 100 requests per minute or something",
 #: [00:56:17]) and the host asked people not to probe it. Treat as a ceiling to stay well
@@ -77,9 +111,22 @@ RATE_LIMIT_PER_MINUTE = 100
 #: under 10% of one key. Budget anxiety is unwarranted; probing failures is free.
 CREDITS_PER_KEY = 2_000_000
 
-#: Terminal statuses from the vendor client.
+#: Terminal statuses. MEASURED: the API sends title case — "Processing", "Completed",
+#: "Failed" — so compare lowercased, as the vendor client does.
 TERMINAL_SUCCESS = ("succeeded", "completed")
 TERMINAL_FAILURE = ("failed", "error")
+
+#: MEASURED over ~15 submissions: a 3-tile call reaches `Completed` in ~24 s; a
+#: 44,690-tile call took ~42 s. A pre-2021 date sat in `Processing` for over three
+#: minutes before turning `Failed` — a third failure mode that is neither loud at submit
+#: nor silently wrong, just slow. Poll budgets must survive it.
+TYPICAL_LATENCY_S = 24
+OBSERVED_MAX_LATENCY_S = 300
+
+#: The vendor client guards against a 404 window right after submit. NOT observed in any
+#: of ~15 submissions during T4 — the first poll at t+3.7 s already returned 200. The
+#: guard is kept because absence of evidence over 15 calls is not evidence of absence.
+POST_SUBMIT_404_OBSERVED = False
 
 
 # ------------------------------------------------------------------- unit conversions

@@ -5,6 +5,81 @@ the submission. Reversals get their own entry rather than an edit.
 
 ---
 
+## D-005 — 2026-08-21 — Adopt the judge's 4-point checklist as a submission gate
+
+**Status:** decided
+**Trigger:** `05-builders-trap` — **Ahmed Abdelkhalek (Google Cloud) is a judge**, and he
+published the filter he runs ideas through `[00:26:44]`: *"one takeaway is this checklist.
+So run every feature or project idea through this."*
+
+**Decision.** The README and the 3-minute video must answer all four of his questions
+explicitly, in his vocabulary, before anything else is said:
+
+1. **Hero** — the exact person and role. Not "outdoor workers". A Phoenix crew supervisor deciding whether to pull a crew.
+2. **Pain** — the manual/slow/expensive thing they do now: read a peak-temperature forecast and guess.
+3. **AI justification** — *"Is AI **generally** required to solve this? Or are we just using it to earn high points at the expense of latency and cost?"* Answer: **no, and that is why the router is deterministic.** The LLM parses and narrates.
+4. **Kill switch** — the 24-hour simplest version: one site, one date, two analysis layers side by side.
+
+Also adopt his problem formula `[00:13:10]` as **the opening line of the 500-word summary**:
+*"Specific user group struggles to perform a specific task because of this core obstacle,
+which results in measurable negative outcome."* He gates code on it — *"If you cannot fill
+out every variable cleanly, then we're not really ready to write a single line of code."*
+
+⚠ **Caveat, do not overreach.** He presents the checklist as advice, and the host presents
+him as a judge. We do **not** know it is the shared scoring instrument. Answer it because it
+is good and because one judge demonstrably thinks in it — never claim in the submission that
+it *is* the rubric.
+
+**Consequence:** no code change. This is a submission-artefact gate. Add the four answers to
+the README before the architecture section, and put item 3 in the video's first minute.
+
+---
+
+## D-004 — 2026-08-21 — The architecture rule is now externally validated; lead with it
+
+**Status:** decided — **promotes an assumption in `CLAUDE.md` to a sourced fact**
+**Trigger:** `05-builders-trap`.
+
+### What changed
+
+`CLAUDE.md`'s architecture rule closed with a guess: *"constraining the LLM to what it is
+good at **reads as** maturity to a Google/NVIDIA panel."* The Google panelist has now said it
+himself, unprompted, on camera:
+
+> `[00:25:12]` *"please be responsible with your resource budget. There's nothing free in the
+> world. **Traditional deterministic code is faster, cheaper and entirely predictable.**"*
+> `[00:21:28]` *"**evaluate AI choices critically**, ensuring that we're **not introducing
+> unnecessary latency and cost just for the hype**."*
+> `[00:23:30]` *"It's incredibly powerful. But it's not a silver bullet for everything.
+> **It could, but should it?**"*
+
+### Decision
+
+- **`router.py` stops being a choice we defend and becomes the headline.** It is the answer
+  to checklist item 3, given before the question is asked.
+- **Q0 replaces Q1 as the lead quote** in the README and video (`video-insights.md` §6).
+  Ahmed's *"It could, but should it?"* outranks the FortyGuard engineer quotes because it
+  endorses the *architecture*, not the metric — and D-003 already established that the metric
+  is not ours to claim.
+- **Say the cost/latency argument out loud**, not just the auditability one. His framing is
+  economic (*"at what cost?"*), ours was correctness-first. Use both; his lands harder with him.
+- **Mention `data/fixtures/` and the backoff in the video.** His Q&A instinct on rate limits
+  was *"why are you getting into those limits? What are you trying to do?"* `[00:52:44]` —
+  a demo that hammers the API invites that question. Pre-empt it.
+
+### Rejected alternatives
+
+| Option | Why not |
+|---|---|
+| Keep the architecture as a footnote and lead with the heat thesis | The thesis is FortyGuard's own metric (D-003). The architecture is genuinely ours, and a judge just described it as the correct instinct. Lead with what is both ours and endorsed. |
+| Lead with "we use AI agents" to score the Agentic track | Directly inverts what this judge filters for. He mocks *"we're just using it to earn high points at the expense of latency and cost."* Track 6 is satisfied by the agent parsing and narrating; it does not require the LLM to make the safety decision. |
+| Rewrite the architecture to use more LLM reasoning now that Innovation is 15% | No. Innovation is scored as **track combination** (`01` `[00:36:02]`), which Track 4 × Track 6 already earns. Adding LLM surface would cost on impact and on this judge's checklist simultaneously. |
+
+**Confidence:** high. Verbatim, on camera, from a named judge, corroborated by his own worked
+example (`[00:21:58]`–`[00:22:50]` — the Gemini image-resize story, *"why do you want AI to do that?"* at `[00:22:36]`).
+
+---
+
 ## D-003 — 2026-08-20 — Stop claiming HeatGuard "measures" exposure duration
 
 **Status:** decided

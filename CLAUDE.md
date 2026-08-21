@@ -68,13 +68,22 @@ Base `https://api.fortyguard.com` · header `api-key: <key>` · `Content-Type: a
 
 **Hard constraints:**
 - **US-only.** Non-US polygons error or return empty. Fawad `[00:13:14]`–`[00:13:39]`: *"this is only limited to the United States […] if you are going to set up the location to Dubai or Berlin […] I don't think it's going to work. And **it's just going to spend your credit**."* — so a non-US AOI is a *silent, billed* failure, not a clean error. Router must reject non-US before `tools.py`.
-- **Dates 2021-01-01 → now.** Heatmap alone forecasts to **now + 12h**.
-- **⚠ AOI ≤ 15 mi² (~38.8 km²), NOT 50 mi².** Fawad `[00:23:53]`–`[00:23:58]`: *"on this plan, I think we have the premium one for you. So the limit is about 15 miles square."* **This contradicts the handbook figure of ~130 km² / 50 mi² previously recorded here — by 3.4×.** Transcript is a live engineer reading the premium plan limit; handbook figure is unsourced. Treat **15 mi² as the working limit** and probe the real ceiling in T4. Getting this wrong sizes every AOI in the demo wrong.
-- **Max 30 days of data returned per call.** Fawad `[00:19:53]`: *"we are giving you the opportunity to get as much as 30 days worth of data."* Caps any multi-week duration analysis at one call per month.
-- `granularity`: **60 / 80 / 100 m** — smaller costs more credits.
-- `filter_type`: **1** = single hour · **2** = hour range (+`end_time`) · **3** = entire day · **4** = day range · **5** = single month. Fawad enumerates all five, `[00:19:39]`: *"each of them like single hour, we have range of hours, we have a single day, we have a range of days and then we have a single month."* The vendor client documents only 1–4, so **5 exists per the engineer but is undocumented in code — still probe it in T4.**
+- **Dates 2021-01-01 → now.** ⚠ **"Forecasts to now + 12h" is WRONG — measured T4.** The
+  API accepts `start_date` up to **today + 1 day** (HTTP 400 beyond that, loud and free),
+  but **tomorrow returns one flat value for the whole day** — measured 34.34 °C with
+  min = avg = max, against 33.7–41.9 °C for today. No diurnal structure, so `exceedance`
+  against it is exactly 0 h or exactly 24 h. Accepted ≠ answered, and it is billed.
+  Router refuses past **today**: `MAX_FUTURE_DAYS_ACCEPTED=1`, `MAX_FUTURE_DAYS_USABLE=0`.
+- ⚠ **A pre-2021 date fails SLOWLY** — accepted, `Processing` for >188 s, then `Failed`.
+  Third failure mode: not loud, not silently wrong, just late. Free.
+- **AOI: 15 mi² (~38.85 km²) stated — but NOT ENFORCED, measured T4.** A polygon scaled to **~447 km², 11.5× the stated cap, was accepted** and returned 44,690 tiles for the same flat credit cost. Fawad `[00:23:53]`: *"the limit is about 15 miles square."* The handbook said ~130 km²/50 mi². We keep **15 mi² as a self-imposed limit** — an unenforced limit is still a documented one, and tile count drives response size even when it does not drive price.
+- **Max 30 days of data returned per call.** Fawad `[00:19:53]`: *"as much as 30 days worth of data."* ⚠ **Measured T4: a 61-day range returns HTTP 500 with a non-JSON body** — a server fault, not a clean rejection. The router refuses before submitting rather than relying on it.
+- `granularity`: **60 / 80 / 100 m** only (HTTP 422 otherwise, loud and free). ⚠ **"Smaller costs more credits" is WRONG — measured T4: cost is flat per call regardless of tile count.** Finer granularity is free; it only costs response size. Note the data is measured at **20 m** native resolution, so 60 m is the finest the API will resample to.
+- `filter_type`: **1** = single hour · **2** = hour range (+`end_time`) · **3** = entire day · **4** = day range. ⚠ **`5` DOES NOT EXIST — measured T4.** The API returns HTTP 422 `Field 'date_time.filter_type' is invalid: Input should be 1, 2, 3 or 4`. Fawad enumerates five on camera `[00:19:39]` (*"…and then we have a single month"*); the vendor client documents four. **The client was right and the transcript was wrong** — a useful calibration on which source to trust for what.
 - **Rate limit: ~100 requests/minute, capped hourly, no daily cap.** Fawad `[00:56:17]`–`[00:56:31]`: *"hourly, we have put a limit to it, not the daily one […] we're limiting it to not more than I think 100 requests per minute or something. But as such, there's no other limits."* Hedged ("I think", "or something") — treat as approximate. Host adds `[00:56:44]`: *"Let's not test the rate limits and reverse engineer it."*
-- **Credits: 2,000,000 per API key.** Confirmed in both sessions. Real cost anchor from Fawad's own key `[00:22:50]`–`[00:23:08]`: **187,420 credits total** across the whole demo build, of which **72,000 for tile segmentation**. So a full worked case study costs <10% of one key. Budget anxiety is unwarranted; **but** `[00:47:06]` the organisers will top up if you exhaust it.
+- **Credits: 2,000,000 per API key — confirmed live.** Plan name is literally `Hackathon`; billing period **Aug 17 – Sep 21 2026**; **key expires `2026-09-21T19:04:29Z`**, five days after judging ends.
+  ⚠ **MEASURED COST: 4,220 credits per heatmap call, FLAT — per call, not per tile.** A 3-tile AOI and a 44,690-tile AOI cost exactly the same. So granularity and AOI size are effectively free and **the number of calls is the budget**: `2,000,000 / 4,220 = ~474 heatmap calls` for the whole hackathon. One demo day across 12 sites at two analytic types is 24 calls ≈ 5% of budget; a 30-day sweep of all 12 sites would be 360 calls ≈ 76%. **Budget T8's search deliberately.**
+  **Failed tasks cost nothing — confirmed** (7 tasks accepted, 1 failed, exactly 6 billed: 25,320 = 6 × 4,220). **But a task that "succeeds" with an empty result IS billed** — the non-US probe returned `Completed` with zero tiles and cost 4,220.
 
 **`analytic_type` on `/v1/heatmap` — was missing from this file, and it is load-bearing:**
 
@@ -125,7 +134,28 @@ error and discards a task that was fine.
 | Stretch only | `heat_intelligence` PDF as a compliance artefact |
 | Explicitly out | `streetview` — pretty, changes no decision |
 
-A judge is literally giving a talk called *"The Builder's Trap: escaping the hype."* Innovation is 15%; Impact is 40%. Do not add surface.
+A judge is literally giving a talk called *"The Builder's Trap."* Innovation is 15%; Impact is 40%. Do not add surface.
+
+**We now have that talk. The judge is Ahmed Abdelkhalek (goes by "A.K."), Google Cloud — startups & VC ecosystem lead for UAE / North African Levant.** Host confirms `05` `[00:58:14]`–`[00:58:20]`: *"Ahmed right here is **a judge** again in the hackathon itself. He's not just a mentor."* Full extract in `docs/video-insights.md` §9.
+
+**The trap is over-engineering** `[00:05:02]`: *"The trap is over-engineering and we'll discuss how to focus on real problems to secure your first-paying customer."* And `[00:07:00]`: *"you're basically built a **monument** over engineering, but not the actual product that is required in the market."*
+
+### ⭐ His 4-point pre-build checklist — treat this as a scoring rubric
+
+`05` `[00:26:52]`–`[00:27:34]`. He calls it *"one takeaway"* and *"run every feature or project idea through this."* A judge published his own filter. **Answer all four, in these words, in the README and the video.**
+
+| # | His question, verbatim | HeatGuard's answer |
+|---|---|---|
+| 1 | **Hero** — *"Who's the hero? Name the exact person, role, industry, who will actually use this."* | Phoenix outdoor-crew supervisor deciding whether to pull a crew. Name a role, not "workers". |
+| 2 | **Pain** — *"What is the manual, slow or expensive thing they're doing right now."* | Reading a peak-temperature forecast and guessing. |
+| 3 | **AI justification** — *"Is AI **generally** required to solve this? Or are we just using it to earn high points at the expense of latency and cost?"* | **The router is deterministic precisely because AI is not required for the decision.** The LLM parses and narrates only. |
+| 4 | **Kill switch** — *"What is the absolute simplest version of this product we can build to prove our hypothesis within the next 24 hours?"* | One site, one date, two layers, side by side. |
+
+His problem formula, `[00:13:10]`, which at `[00:12:54]` he calls a *"programmatic [guardrail]"* — *"If you cannot fill out every variable cleanly, then we're not really ready to write a single line of code"*:
+
+> *"**Specific user group** struggles to perform a **specific task** because of this **core obstacle**, which results in **measurable negative outcome**."*
+
+Fill that sentence in exactly once, and make it the first line of the 500-word summary.
 
 **Competing with FortyGuard's own roadmap is explicitly permitted — stop worrying about it.** Asked directly in the API session Q&A, `02-temperature-api` `[00:53:19]`–`[00:53:28]`:
 
@@ -152,6 +182,26 @@ bands.py   leaf. heat index → NWS band + OSHA action, from config/thresholds.y
 ```
 
 The LLM does not choose the analysis layer. `router.py` does, deterministically. Reasons: **auditable** (safety tool), **reproducible** (demo takes must match), **testable with zero credits and no network**. Say this out loud in the video — constraining the LLM to what it is good at reads as maturity to a Google/NVIDIA panel.
+
+### ✅ That last sentence was a guess. It is now confirmed by the Google judge, almost verbatim.
+
+Ahmed Abdelkhalek, `05-builders-trap` `[00:25:12]`:
+
+> *"please be responsible with your resource budget. There's nothing free in the world. **Traditional deterministic code is faster, cheaper and entirely predictable.**"*
+
+And `[00:21:28]`:
+
+> *"you need to **evaluate AI choices critically**, ensuring that we're **not introducing unnecessary latency and cost just for the hype**."*
+
+And the line to build the video around, `[00:23:05]`–`[00:23:36]`:
+
+> *"AI can solve everything, in fact, to some extent. But **should** it be actually used to solve everything? And the follow-up question is **at what cost?** […] It's incredibly powerful. But it's not a silver bullet for everything. **It could, but should it?**"*
+
+At `[00:25:48]`–`[00:25:55]` he lists the trade-off as *"[regex] versus LLMs, cognitive reasoning, autonomous action […] there's always the quality to cost balance."* ("Regrics" in the transcript — Whisper, almost certainly *regex*.)
+
+**This is the strongest strategic finding in six sessions.** The architecture rule is no longer a defensible choice we have to justify — it is the exact thing a judge stands on stage and asks for. Checklist item 3 (*"Is AI generally required?"*) is answered by the design itself.
+
+**Consequence for the video:** do not bury this. State plainly that the layer decision is deterministic *because* an LLM is the wrong tool for it — auditable, reproducible, testable at zero cost — and that the LLM is confined to parsing and narration. Use his framing, not ours: *it could, but should it?*
 
 ## Conventions
 
@@ -193,8 +243,9 @@ There is a **two-stage screen** before judges see anything — an internal Forty
 ## Open questions to resolve by probing, not assuming
 
 1. ~~Is the key on Premium?~~ **ANSWERED — yes, and better than Premium.** Fawad `[00:14:24]`–`[00:14:42]`: *"this is the **most premium API key** that we are heading to you guys […] it has all those limit. And actually **the limit is double than what we are normally giving.**"* All five analysis endpoints — including `satellite`, `streetview`, `heat_intelligence` — were demoed live on the hackathon key. Nothing is gated.
-2. How does each constraint fail — status code, error shape, loud or silent? **Partly answered:** non-US fails *silently and bills you* (`[00:13:39]`). The rest still needs probing.
+2. ~~How does each constraint fail?~~ **ANSWERED — T4, all nine probed.** Full table in `docs/api-notes.md`. **Three silent failures, all billed:** non-US (`Completed`, 0 tiles), tomorrow's date (`Completed`, one flat value for the whole day), and `exceedance` with no `threshold` (`Completed`, defaults to 30 °C, returns 24 h). Loud and free: future dates (400), `filter_type=5` (422), bad granularity (422). Slow: pre-2021 sits in `Processing` >188 s then `Failed`.
 3. Does an inversion day exist? **Highest risk in the project — now substantially de-risked.** Fawad's own client case study shows a near-inversion: 0.7 °C peak spread across six parcels vs 19 h exceedance / 5 h persistence (`[00:36:14]`–`[00:37:23]`). See `docs/demo_day_candidates.md`.
 4. ~~Does `env_params` return heat index directly?~~ **ANSWERED — yes.** Fawad `[00:27:45]`: *"here are these like the **heat index Celsius** […] apparent temperature Celsius."* Confirmed independently from the vendor client (`heat_index_celsius`).
-5. **NEW — what is the real AOI ceiling?** Fawad says 15 mi²; the handbook figure was 50 mi². 3.4× apart. Probe before sizing demo AOIs.
-6. **NEW — does `filter_type=5` (single month) work?** The engineer enumerates it; the vendor client does not document it.
+5. ~~What is the real AOI ceiling?~~ **ANSWERED — T4: not enforced at 447 km².** 11.5× the stated 15 mi² cap was accepted, 44,690 tiles, same flat cost. Ours stays self-imposed.
+6. ~~Does `filter_type=5` (single month) work?~~ **ANSWERED — NO.** HTTP 422, `Input should be 1, 2, 3 or 4`. The vendor client was right; the transcript was wrong.
+7. **NEW — the vendor client docstring says `tcm` tiles are °F. They are °C.** Measured live: Encanto Park 2025-07-15 returned min 32.72 / avg 36.92 / max 40.20, which is 91–104 °F as Celsius and an impossible hard freeze as Fahrenheit. `env_params` likewise returns `heat_index_celsius`. **Treat the whole API as Celsius**; the docstring is the outlier. Worth one line in the pitch — finding a unit error in the vendor's own client is exactly the kind of thing this project claims to catch.

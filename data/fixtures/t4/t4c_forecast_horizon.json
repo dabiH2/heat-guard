@@ -1,0 +1,103 @@
+{
+  "probed_at": "2026-08-21T20:28:10.124972+00:00",
+  "acceptance": {
+    "+0d": {
+      "date": "2026-08-21",
+      "http": 200,
+      "accepted": true,
+      "message": "Heatmap Submitted Successfully"
+    },
+    "+1d": {
+      "date": "2026-08-22",
+      "http": 200,
+      "accepted": true,
+      "message": "Heatmap Submitted Successfully"
+    },
+    "+2d": {
+      "date": "2026-08-23",
+      "http": 400,
+      "accepted": false,
+      "message": "Field 'date_time.start_date' (2026-08-23) is in the future. Requests must be for a past or present date."
+    },
+    "+3d": {
+      "date": "2026-08-24",
+      "http": 400,
+      "accepted": false,
+      "message": "Field 'date_time.start_date' (2026-08-24) is in the future. Requests must be for a past or present date."
+    },
+    "+7d": {
+      "date": "2026-08-28",
+      "http": 400,
+      "accepted": false,
+      "message": "Field 'date_time.start_date' (2026-08-28) is in the future. Requests must be for a past or present date."
+    },
+    "+14d": {
+      "date": "2026-09-04",
+      "http": 400,
+      "accepted": false,
+      "message": "Field 'date_time.start_date' (2026-09-04) is in the future. Requests must be for a past or present date."
+    },
+    "+30d": {
+      "date": "2026-09-20",
+      "http": 400,
+      "accepted": false,
+      "message": "Field 'date_time.start_date' (2026-09-20) is in the future. Requests must be for a past or present date."
+    },
+    "+90d": {
+      "date": "2026-11-19",
+      "http": 400,
+      "accepted": false,
+      "message": "Field 'date_time.start_date' (2026-11-19) is in the future. Requests must be for a past or present date."
+    },
+    "+365d": {
+      "date": "2027-08-21",
+      "http": 400,
+      "accepted": false,
+      "message": "Field 'date_time.start_date' (2027-08-21) is in the future. Requests must be for a past or present date."
+    }
+  },
+  "data_quality": {
+    "+0d": {
+      "offset_days": 0,
+      "status": "completed",
+      "n_tiles": 3,
+      "temperature_stats": {
+        "minimum": 37.86,
+        "maximum": 37.86,
+        "mean": 37.86,
+        "standard_deviation": 0.0
+      },
+      "tile0": {
+        "tile_id": 0,
+        "average_temperature": 37.86,
+        "min_temperature": 33.72,
+        "max_temperature": 41.94
+      }
+    },
+    "+1d": {
+      "offset_days": 1,
+      "status": "completed",
+      "n_tiles": 3,
+      "temperature_stats": {
+        "minimum": 34.34,
+        "maximum": 34.34,
+        "mean": 34.34,
+        "standard_deviation": 0.0
+      },
+      "tile0": {
+        "tile_id": 0,
+        "average_temperature": 34.34,
+        "min_temperature": 34.34,
+        "max_temperature": 34.34
+      }
+    }
+  },
+  "credits_after": {
+    "total_available_credits": 2000000,
+    "cycle_credits_used": 63300,
+    "cycle_remaining_credits": 1936700,
+    "cycle_usage_percentage": 3.2,
+    "total_credits_used": 63300,
+    "total_remaining_credits": 1936700
+  }
+}

@@ -299,14 +299,40 @@ def test_accepts_the_first_day_of_coverage():
     assert not r("Is it safe right now?", date="2021-01-01").refused
 
 
-def test_refuses_beyond_the_twelve_hour_forecast_horizon():
+def test_refuses_dates_the_api_rejects_outright():
+    """MEASURED: start_date >= today+2 returns HTTP 400 'is in the future'."""
     beyond = (NOW + timedelta(days=3)).date().isoformat()
     c = r("Will we cross the threshold?", date=beyond)
     assert c.refused and c.refusal is RefusalReason.BEYOND_FORECAST
 
 
-def test_accepts_inside_the_forecast_horizon():
+def test_refuses_tomorrow_even_though_the_api_accepts_and_bills_for_it():
+    """The finding that matters most from T4.
+
+    Tomorrow is accepted (HTTP 200), costs 4,220 credits, and returns ONE FLAT VALUE for
+    the whole day — measured 34.34 °C with minimum equal to maximum, against 33.7-41.9 °C
+    for today. Exceedance against a constant is exactly 0 or exactly 24 hours. The
+    boundary that matters is where the diurnal profile stops, not where the API stops
+    accepting requests.
+    """
+    tomorrow = (NOW + timedelta(days=1)).date().isoformat()
+    c = r("Will we cross the threshold?", date=tomorrow)
+    assert c.refused and c.refusal is RefusalReason.BEYOND_FORECAST
+    assert "flat" in c.refusal_message
+    assert "charge you" in c.refusal_message
+
+
+def test_accepts_today():
     assert not r("Will we cross the threshold?", date=NOW.date().isoformat()).refused
+
+
+def test_the_two_future_refusals_explain_themselves_differently():
+    """Tomorrow and next week fail for different reasons and must say so."""
+    tomorrow = r("Will it?", date=(NOW + timedelta(days=1)).date().isoformat())
+    next_week = r("Will it?", date=(NOW + timedelta(days=7)).date().isoformat())
+    assert tomorrow.refusal_message != next_week.refusal_message
+    assert "flat" in tomorrow.refusal_message
+    assert "rejects" in next_week.refusal_message
 
 
 def test_refuses_a_span_longer_than_thirty_days():
