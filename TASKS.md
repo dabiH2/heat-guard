@@ -207,7 +207,25 @@ dry pre-monsoon June days spike higher and fall away faster. Verify before relyi
 **Highest risk in the project.** If no inversion exists, the fallback is contrasting the
 *same* site under two layers rather than two sites. Find out early.
 
-## T9 · `agent.py` — thin
+## T9 · `agent.py` — thin — **DONE**
+
+> route -> execute -> narrate -> log. Routing happens BEFORE any call, so a refusal costs
+> nothing and the layer is fixed before a byte of data is seen.
+>
+> **The LLM is inert by construction.** With no ANTHROPIC_API_KEY the templated narration
+> is used and the answer is identical apart from wording — enforced by a test that runs
+> the same question with and without a model and asserts every decisive field matches.
+> A safety tool whose recommendation depends on whether a language model was reachable is
+> not a safety tool. It also has to keep working after the key expires on 21 September.
+>
+> The heat-index -> air-temperature conversion lives here rather than in the router,
+> because it needs the site's live humidity. `env_params` failing falls back to a stated
+> Phoenix default rather than pretending to have measured it.
+>
+> An empty API result is never narrated as an all-clear — it says "coverage gap, not a
+> safe reading", which matters because two separate silent failures produce exactly that
+> shape. 16 offline tests; 334 total.
+
 LLM parses intent and narrates. Calls `router.classify()` first, then executes the
 returned plan via `tools.py`. Never selects a layer itself.
 
