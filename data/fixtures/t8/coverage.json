@@ -1,0 +1,76 @@
+{
+  "site": "PHX-CHASE",
+  "findings": [
+    {
+      "date": "2021-07-15",
+      "n_cells": 0,
+      "has_data": false
+    },
+    {
+      "date": "2021-10-15",
+      "n_cells": 0,
+      "has_data": false
+    },
+    {
+      "date": "2022-01-15",
+      "n_cells": 10,
+      "has_data": true,
+      "peak_f": 68.27,
+      "mean_f": 54.95,
+      "min_f": 44.91
+    },
+    {
+      "date": "2022-04-15",
+      "n_cells": 10,
+      "has_data": true,
+      "peak_f": 89.58,
+      "mean_f": 70.15,
+      "min_f": 50.97
+    },
+    {
+      "date": "2022-07-15",
+      "n_cells": 10,
+      "has_data": true,
+      "peak_f": 106.96,
+      "mean_f": 99.83,
+      "min_f": 91.16
+    },
+    {
+      "date": "2023-07-15",
+      "n_cells": 10,
+      "has_data": true,
+      "peak_f": 108.57,
+      "mean_f": 102.95,
+      "min_f": 95.47
+    },
+    {
+      "date": "2024-07-15",
+      "n_cells": 10,
+      "has_data": true,
+      "peak_f": 104.91,
+      "mean_f": 96.82,
+      "min_f": 84.67
+    },
+    {
+      "date": "2025-07-15",
+      "n_cells": 10,
+      "has_data": true,
+      "peak_f": 104.44,
+      "mean_f": 98.59,
+      "min_f": 91.1
+    }
+  ],
+  "dates_with_data": [
+    "2022-01-15",
+    "2022-04-15",
+    "2022-07-15",
+    "2023-07-15",
+    "2024-07-15",
+    "2025-07-15"
+  ],
+  "dates_empty": [
+    "2021-07-15",
+    "2021-10-15"
+  ],
+  "credits_spent": 21100
+}
