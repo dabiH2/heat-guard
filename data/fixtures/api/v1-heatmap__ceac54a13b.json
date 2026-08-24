@@ -1,0 +1,11 @@
+{
+  "map_data": {
+    "type": "FeatureCollection",
+    "features": []
+  },
+  "stats_data": {
+    "activity_id": "d1b64705-99c5-4eb1-83c3-3b7446c73f0f",
+    "analytic_type": "exceedance",
+    "n_cells": 0
+  }
+}
