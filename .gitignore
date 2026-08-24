@@ -14,3 +14,6 @@ data/decisions.jsonl
 *.m4a
 *.srt
 .DS_Store
+
+# runtime logs (local); the API cache under data/fixtures/api/ IS committed on purpose
+data/activity_log.jsonl

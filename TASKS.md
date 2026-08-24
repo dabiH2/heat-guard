@@ -114,7 +114,26 @@ Then confirm `filter_type` semantics against real responses — run the same sit
 date under `filter_type=1` and `filter_type=3` and show how results differ in shape
 and value. Confirm `env_params` returns heat index directly.
 
-## T5 · Build `tools.py`
+## T5 · Build `tools.py` — **DONE**
+
+> Typed wrappers over the vendored client, plus the cache. Validated end to end against
+> the live API: one call spent 4,220 credits, the identical second call was served from
+> cache for **zero**, offline mode serves hits and raises `CacheMiss` on a miss, and the
+> Fahrenheit-threshold guard refuses before anything reaches the wire.
+>
+> **The cache is the deployment strategy, not an optimisation.** The key expires
+> 2026-09-21 and the live link must outlive it, so `data/fixtures/api/` is the production
+> data store and ships with the repo. `HEATGUARD_OFFLINE=1` makes the network path
+> unreachable.
+>
+> `threshold_c` is written to the wire in exactly one place, and three guards sit in
+> front of it: missing threshold (the raw API silently defaults to 30 °C and returns 24 h),
+> missing direction, and any threshold above 60 °C — which is the live-measured trap that
+> returned 0.0 hours where the truth was 17.0.
+>
+> The cache key includes `threshold_c`. Without it the trapped call and the correct call
+> collide and the cache serves the wrong one. 40 offline tests; 314 total.
+
 Typed wrappers over the endpoints, wrapping the quickstart client. Cache keyed on
 `(endpoint, aoi_hash, date, time, filter_type, granularity)` into `data/fixtures/`.
 Backoff 3s → 6s → 12s. Log every `activity_id`.

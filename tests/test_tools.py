@@ -54,7 +54,12 @@ def test_the_two_numbers_from_the_live_trap():
 
 
 def test_heat_index_below_eighty_uses_the_simple_form():
-    assert heat_index_f(70.0, 50.0) == pytest.approx(69.7, abs=0.5)
+    """NWS uses a linear approximation below 80 °F rather than the Rothfusz regression,
+    which is only fitted above it. Assert the formula, not a remembered constant."""
+    t, r = 70.0, 50.0
+    simple = 0.5 * (t + 61.0 + (t - 68.0) * 1.2 + r * 0.094)
+    assert heat_index_f(t, r) == pytest.approx(simple)
+    assert heat_index_f(t, r) == pytest.approx(69.05, abs=0.01)
 
 
 def test_heat_index_exceeds_air_temp_in_humid_air():
