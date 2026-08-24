@@ -36,8 +36,19 @@ SITE = "PHX-CHASE"
 
 # Mid-July every year: reliably hot, so an empty result means missing data rather than
 # a legitimately unremarkable day.
+#
+# The first pass established 2021-07-15 EMPTY and 2022-07-15 with data, so the boundary
+# lies between them and the extra dates bisect it. Worth the calls: shipping "data starts
+# 2021-01-01" unverified is exactly the class of unchecked claim this project keeps
+# finding, and the router's coverage refusal should state a date we actually measured.
+# Cached probes cost nothing, so re-running is cheap.
 PROBE_DATES = [
-    "2021-07-15", "2022-07-15", "2023-07-15", "2024-07-15", "2025-07-15",
+    "2021-07-15",   # measured EMPTY
+    "2021-10-15",
+    "2022-01-15",
+    "2022-04-15",
+    "2022-07-15",   # measured 10 tiles
+    "2023-07-15", "2024-07-15", "2025-07-15",
 ]
 
 

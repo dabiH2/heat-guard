@@ -300,17 +300,64 @@ def _session() -> requests.Session:
     return s
 
 
-def submit_and_poll(endpoint: str, payload: dict, *, timeout_s: int = 600,
+#: Transient-network retry budget. A bulk run is now ~1.5 h at observed latency, and a
+#: single DNS blip killed one mid-flight during T8. Completed calls survive in the cache,
+#: but the run does not.
+NETWORK_RETRIES = 4
+NETWORK_RETRY_BACKOFF_S = (5, 15, 45, 90)
+
+
+def _retry_network(what: str, call, *, idempotent: bool):
+    """Retry a request through transient CONNECTION failures only.
+
+    The idempotent/non-idempotent split matters financially. A connection-level error —
+    DNS failure, refused connection — means the request never reached the server, so no
+    task was created and retrying is free. A READ TIMEOUT is ambiguous: the submit may
+    have landed and be running, in which case retrying submits a second task and bills
+    4,220 credits twice. So a POST retries only on connection errors, while polling — a
+    GET, and idempotent — retries on both.
+    """
+    last: Exception | None = None
+    for attempt in range(NETWORK_RETRIES):
+        try:
+            return call()
+        except requests.exceptions.ConnectionError as exc:
+            last = exc
+        except requests.exceptions.Timeout as exc:
+            if not idempotent:
+                raise ToolsError(
+                    f"{what}: timed out after the request was sent. Not retrying — the "
+                    f"task may already be running, and a duplicate submit costs another "
+                    f"{CREDITS_PER_HEATMAP_CALL:,} credits. Re-run to pick it up from "
+                    f"cache."
+                ) from exc
+            last = exc
+        if attempt < NETWORK_RETRIES - 1:
+            time.sleep(NETWORK_RETRY_BACKOFF_S[attempt])
+    raise ToolsError(
+        f"{what}: network unreachable after {NETWORK_RETRIES} attempts ({last}). "
+        f"Anything already completed is cached, so re-running resumes rather than repeats."
+    ) from last
+
+
+def submit_and_poll(endpoint: str, payload: dict, *, timeout_s: int = 900,
                     label: str = "") -> dict:
     """POST, then poll GET /v1/status/{id} to terminal with 3 → 6 → 12 s backoff.
 
     A 404 right after submit is treated as pending, not failure. It was never observed in
     ~15 T4 calls, but the vendor client guards against it and 15 calls is not proof.
+
+    The default budget is 900 s, not 600 s: API latency was ~24 s per call during T4 and
+    degraded to ~230 s during T8, presumably deadline-week load from other entrants.
     """
     session = _session()
     started = time.monotonic()
 
-    response = session.post(f"{BASE_URL}{endpoint}", json=payload, timeout=60)
+    response = _retry_network(
+        f"POST {endpoint}",
+        lambda: session.post(f"{BASE_URL}{endpoint}", json=payload, timeout=60),
+        idempotent=False,
+    )
     try:
         body = response.json()
     except ValueError:
@@ -332,8 +379,12 @@ def submit_and_poll(endpoint: str, payload: dict, *, timeout_s: int = 600,
     while time.monotonic() - started < timeout_s:
         time.sleep(delays[min(attempt, len(delays) - 1)])
         attempt += 1
-        status_response = session.get(
-            f"{BASE_URL}/v1/status/{activity_id}", timeout=60)
+        # Polling is a GET and idempotent, so it may retry through read timeouts too.
+        status_response = _retry_network(
+            f"GET /v1/status/{activity_id}",
+            lambda: session.get(f"{BASE_URL}/v1/status/{activity_id}", timeout=60),
+            idempotent=True,
+        )
 
         if status_response.status_code == 404:
             continue                       # eventual consistency, not failure

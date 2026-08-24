@@ -206,6 +206,70 @@ def test_offline_never_reaches_the_network(monkeypatch):
         heatmap(AOI, "2025-07-15", 3)
 
 
+# ------------------------------------------------------- transient network handling
+
+def test_a_dns_failure_on_submit_is_retried(monkeypatch):
+    """A connection-level error means the request never reached the server, so no task
+    was created and retrying is free. A DNS blip killed a T8 bulk run mid-flight."""
+    import requests as rq
+    from heatguard import tools as t
+
+    monkeypatch.setattr(t, "NETWORK_RETRY_BACKOFF_S", (0, 0, 0, 0))
+    calls = {"n": 0}
+
+    def flaky():
+        calls["n"] += 1
+        if calls["n"] < 3:
+            raise rq.exceptions.ConnectionError("getaddrinfo failed")
+        return "ok"
+
+    assert t._retry_network("POST /v1/heatmap", flaky, idempotent=False) == "ok"
+    assert calls["n"] == 3
+
+
+def test_a_read_timeout_on_submit_is_NOT_retried():
+    """Ambiguous: the submit may already be running, and a duplicate costs another
+    4,220 credits. Refuse and let the cache resume instead."""
+    import requests as rq
+    from heatguard import tools as t
+
+    def timed_out():
+        raise rq.exceptions.Timeout("read timeout")
+
+    with pytest.raises(t.ToolsError, match="duplicate submit"):
+        t._retry_network("POST /v1/heatmap", timed_out, idempotent=False)
+
+
+def test_a_read_timeout_while_polling_IS_retried(monkeypatch):
+    """Polling is a GET and idempotent, so a timeout there costs nothing to retry."""
+    import requests as rq
+    from heatguard import tools as t
+
+    monkeypatch.setattr(t, "NETWORK_RETRY_BACKOFF_S", (0, 0, 0, 0))
+    calls = {"n": 0}
+
+    def flaky():
+        calls["n"] += 1
+        if calls["n"] < 2:
+            raise rq.exceptions.Timeout("read timeout")
+        return "ok"
+
+    assert t._retry_network("GET /v1/status/x", flaky, idempotent=True) == "ok"
+
+
+def test_exhausted_retries_say_the_cache_will_resume(monkeypatch):
+    import requests as rq
+    from heatguard import tools as t
+
+    monkeypatch.setattr(t, "NETWORK_RETRY_BACKOFF_S", (0, 0, 0, 0))
+
+    def always_down():
+        raise rq.exceptions.ConnectionError("down")
+
+    with pytest.raises(t.ToolsError, match="resumes rather than repeats"):
+        t._retry_network("POST /v1/heatmap", always_down, idempotent=False)
+
+
 # ------------------------------------------------------------------ reading results
 
 def test_tile_temperatures_are_read_as_celsius():
