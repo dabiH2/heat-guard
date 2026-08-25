@@ -25,7 +25,7 @@ every decisive field is identical. A safety tool whose recommendation depends on
 model was reachable is not a safety tool.
 
 **Simplest version to prove the hypothesis in 24 hours.** One site, one date, two layers
-side by side — the "⚠️ The trap" tab, and it still runs.
+side by side — the "⚠️ The trap" tab. It still runs.
 
 ## What it does
 
@@ -43,7 +43,7 @@ would mislead.
 
 ## Measured result
 
-Twelve Phoenix sites, 2025-07-15, 107 workers, at OSHA's high-risk band:
+Twelve Phoenix sites, 2025-07-15, 107 workers, OSHA high-risk band:
 
 | | |
 |---|---|
@@ -55,8 +55,7 @@ Twelve Phoenix sites, 2025-07-15, 107 workers, at OSHA's high-risk band:
 
 The dangerous window ran 14:00–21:00; nearly every shift falls outside it. Eight sites tie
 at 7.0 h — identical on any heat map. Scoped to shifts only four carry exposure, and the
-worst is not the hottest site but the one with **22 people standing in that hour instead
-of 18**.
+worst is not the hottest site but the one with **22 people in that hour instead of 18**.
 
 **What we got wrong, reported not buried:** our per-site predictions scored 2 of 11,
 worse than chance — the API separates urban core from periphery, not surface type. Also
