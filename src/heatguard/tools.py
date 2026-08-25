@@ -511,8 +511,17 @@ def heatmap(aoi_geojson: dict, date: str, filter_type: int,
                     granularity=granularity, threshold_c=threshold_c,
                     direction=direction)
 
+    described = {
+        "endpoint": "/v1/heatmap", "label": label, "date": date, "end_date": end_date,
+        "filter_type": filter_type, "analytic_type": analytic_type,
+        "granularity": granularity, "threshold_c": threshold_c, "direction": direction,
+    }
     if not refresh:
         if (hit := cache_read(key)) is not None:
+            # Backfill: entries cached before the index existed are otherwise invisible
+            # to the offline UI, which has to know what it can answer before offering it.
+            if key not in cache_index():
+                _index_write(key, described)
             return hit
     if offline():
         raise CacheMiss(
@@ -540,11 +549,7 @@ def heatmap(aoi_geojson: dict, date: str, filter_type: int,
 
     result = submit_and_poll("/v1/heatmap", payload,
                              label=label or f"{analytic_type}:{date}")
-    cache_write(key, result, params={
-        "endpoint": "/v1/heatmap", "label": label, "date": date, "end_date": end_date,
-        "filter_type": filter_type, "analytic_type": analytic_type,
-        "granularity": granularity, "threshold_c": threshold_c, "direction": direction,
-    })
+    cache_write(key, result, params=described)
     return result
 
 
@@ -570,8 +575,14 @@ def env_params(lat: float, lon: float, air_temp_c: float, date: str,
                     air_temp_c=round(air_temp_c, 3), date=date, end_date=end_date,
                     filter_type=filter_type)
 
+    described = {
+        "endpoint": "/v1/env_params", "label": label, "date": date,
+        "lat": round(lat, 6), "lon": round(lon, 6), "filter_type": filter_type,
+    }
     if not refresh:
         if (hit := cache_read(key)) is not None:
+            if key not in cache_index():
+                _index_write(key, described)
             return hit
     if offline():
         raise CacheMiss(f"HEATGUARD_OFFLINE is set and {key} is not cached.")
@@ -584,10 +595,7 @@ def env_params(lat: float, lon: float, air_temp_c: float, date: str,
         "latitude": lat, "longitude": lon,
         "temperature": air_temp_c, "date_time": date_time,
     }, label=label or f"env_params:{date}")
-    cache_write(key, result, params={
-        "endpoint": "/v1/env_params", "label": label, "date": date,
-        "lat": round(lat, 6), "lon": round(lon, 6), "filter_type": filter_type,
-    })
+    cache_write(key, result, params=described)
     return result
 
 

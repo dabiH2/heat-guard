@@ -1,0 +1,444 @@
+{
+  "v1-env_params__4dc2ec92b9": {
+    "date": "2025-07-15",
+    "endpoint": "/v1/env_params",
+    "filter_type": 3,
+    "label": "demo-env:PHX-CHASE:2025-07-15",
+    "lat": 33.45088,
+    "lon": -112.073191
+  },
+  "v1-env_params__56f3685bf3": {
+    "date": "2025-07-15",
+    "endpoint": "/v1/env_params",
+    "filter_type": 3,
+    "label": "demo-env:PHX-L202:2025-07-15",
+    "lat": 33.29569,
+    "lon": -111.977945
+  },
+  "v1-env_params__5992149484": {
+    "date": "2025-07-15",
+    "endpoint": "/v1/env_params",
+    "filter_type": 3,
+    "label": "demo-env:PHX-UNHL:2025-07-15",
+    "lat": 33.700836,
+    "lon": -112.065608
+  },
+  "v1-env_params__5bcfa56bc7": {
+    "date": "2025-07-15",
+    "endpoint": "/v1/env_params",
+    "filter_type": 3,
+    "label": "demo-env:PHX-SKY:2025-07-15",
+    "lat": 33.432849,
+    "lon": -112.006792
+  },
+  "v1-env_params__62124fbeac": {
+    "date": "2025-07-15",
+    "endpoint": "/v1/env_params",
+    "filter_type": 3,
+    "label": "demo-env:PHX-TRES:2025-07-15",
+    "lat": 33.39303,
+    "lon": -112.256163
+  },
+  "v1-env_params__7cdf801322": {
+    "date": "2025-07-15",
+    "endpoint": "/v1/env_params",
+    "filter_type": 3,
+    "label": "demo-env:PHX-27TH:2025-07-15",
+    "lat": 33.416661,
+    "lon": -112.117327
+  },
+  "v1-env_params__82d65fe40e": {
+    "date": "2025-07-15",
+    "endpoint": "/v1/env_params",
+    "filter_type": 3,
+    "label": "demo-env:PHX-SMTN:2025-07-15",
+    "lat": 33.34703,
+    "lon": -112.084448
+  },
+  "v1-env_params__8530e08c59": {
+    "date": "2025-07-15",
+    "endpoint": "/v1/env_params",
+    "filter_type": 3,
+    "label": "demo-env:PHX-ROOS:2025-07-15",
+    "lat": 33.458894,
+    "lon": -112.069425
+  },
+  "v1-env_params__d9f409cdf6": {
+    "date": "2025-07-15",
+    "endpoint": "/v1/env_params",
+    "filter_type": 3,
+    "label": "demo-env:PHX-ESTR:2025-07-15",
+    "lat": 33.322065,
+    "lon": -112.353559
+  },
+  "v1-env_params__f05cb43b0f": {
+    "date": "2025-07-15",
+    "endpoint": "/v1/env_params",
+    "filter_type": 3,
+    "label": "demo-env:PHX-JEFF:2025-07-15",
+    "lat": 33.446552,
+    "lon": -112.076522
+  },
+  "v1-env_params__fa41e64d39": {
+    "date": "2025-07-15",
+    "endpoint": "/v1/env_params",
+    "filter_type": 3,
+    "label": "demo-env:PHX-ENCA:2025-07-15",
+    "lat": 33.474992,
+    "lon": -112.08922
+  },
+  "v1-heatmap__029d2980ed": {
+    "analytic_type": "tcm",
+    "date": "2025-07-15",
+    "endpoint": "/v1/heatmap",
+    "filter_type": 3,
+    "granularity": 100,
+    "label": "demo-tcm:PHX-ROOS:2025-07-15"
+  },
+  "v1-heatmap__071fc23a41": {
+    "analytic_type": "exceedance",
+    "date": "2025-07-15",
+    "direction": "above",
+    "endpoint": "/v1/heatmap",
+    "filter_type": 2,
+    "granularity": 100,
+    "label": "t8-shift:day shift 05:00-14:00",
+    "threshold_c": 38.91
+  },
+  "v1-heatmap__1bad31e283": {
+    "analytic_type": "exceedance",
+    "date": "2025-07-15",
+    "direction": "above",
+    "endpoint": "/v1/heatmap",
+    "filter_type": 3,
+    "granularity": 100,
+    "label": "demo-exc91:PHX-CHASE:2025-07-15",
+    "threshold_c": 34.17
+  },
+  "v1-heatmap__1e0a649287": {
+    "analytic_type": "exceedance",
+    "date": "2025-07-15",
+    "direction": "above",
+    "endpoint": "/v1/heatmap",
+    "filter_type": 3,
+    "granularity": 100,
+    "label": "demo-exc103:PHX-ENCA:2025-07-15",
+    "threshold_c": 38.92
+  },
+  "v1-heatmap__1e60bd8bd0": {
+    "analytic_type": "tcm",
+    "date": "2025-07-15",
+    "endpoint": "/v1/heatmap",
+    "filter_type": 3,
+    "granularity": 100,
+    "label": "demo-tcm:PHX-SKY:2025-07-15"
+  },
+  "v1-heatmap__26e519e437": {
+    "analytic_type": "tcm",
+    "date": "2025-07-15",
+    "endpoint": "/v1/heatmap",
+    "filter_type": 3,
+    "granularity": 100,
+    "label": "demo-tcm:PHX-SMTN:2025-07-15"
+  },
+  "v1-heatmap__2707c8fc96": {
+    "analytic_type": "tcm",
+    "date": "2025-07-15",
+    "endpoint": "/v1/heatmap",
+    "filter_type": 3,
+    "granularity": 100,
+    "label": "demo-tcm:PHX-ESTR:2025-07-15"
+  },
+  "v1-heatmap__2e4e8d2ac9": {
+    "analytic_type": "exceedance",
+    "date": "2025-07-15",
+    "direction": "above",
+    "endpoint": "/v1/heatmap",
+    "filter_type": 3,
+    "granularity": 100,
+    "label": "demo-exc91:PHX-27TH:2025-07-15",
+    "threshold_c": 34.1
+  },
+  "v1-heatmap__35b4d19dce": {
+    "analytic_type": "exceedance",
+    "date": "2025-07-15",
+    "direction": "above",
+    "endpoint": "/v1/heatmap",
+    "filter_type": 3,
+    "granularity": 100,
+    "label": "demo-exc91:PHX-SKY:2025-07-15",
+    "threshold_c": 34.16
+  },
+  "v1-heatmap__3f3f3955fe": {
+    "analytic_type": "exceedance",
+    "date": "2025-07-15",
+    "direction": "above",
+    "endpoint": "/v1/heatmap",
+    "filter_type": 3,
+    "granularity": 100,
+    "label": "demo-exc91:PHX-ESTR:2025-07-15",
+    "threshold_c": 33.84
+  },
+  "v1-heatmap__4f83d0d598": {
+    "analytic_type": "tcm",
+    "date": "2025-07-15",
+    "endpoint": "/v1/heatmap",
+    "filter_type": 3,
+    "granularity": 100,
+    "label": "demo-tcm:PHX-ENCA:2025-07-15"
+  },
+  "v1-heatmap__596ba7d5ac": {
+    "analytic_type": "tcm",
+    "date": "2025-07-15",
+    "endpoint": "/v1/heatmap",
+    "filter_type": 3,
+    "granularity": 100,
+    "label": "demo-tcm:PHX-UNHL:2025-07-15"
+  },
+  "v1-heatmap__640976aed5": {
+    "analytic_type": "exceedance",
+    "date": "2025-07-15",
+    "direction": "above",
+    "endpoint": "/v1/heatmap",
+    "filter_type": 3,
+    "granularity": 100,
+    "label": "demo-exc91:PHX-JEFF:2025-07-15",
+    "threshold_c": 34.16
+  },
+  "v1-heatmap__66a5ca8c49": {
+    "analytic_type": "exceedance",
+    "date": "2025-07-15",
+    "direction": "above",
+    "endpoint": "/v1/heatmap",
+    "filter_type": 3,
+    "granularity": 100,
+    "label": "demo-exc91:PHX-ENCA:2025-07-15",
+    "threshold_c": 34.17
+  },
+  "v1-heatmap__6f785ab17f": {
+    "analytic_type": "exceedance",
+    "date": "2025-07-15",
+    "direction": "above",
+    "endpoint": "/v1/heatmap",
+    "filter_type": 3,
+    "granularity": 100,
+    "label": "demo-exc103:PHX-SMTN:2025-07-15",
+    "threshold_c": 38.47
+  },
+  "v1-heatmap__75cd077ab0": {
+    "analytic_type": "exceedance",
+    "date": "2025-07-15",
+    "direction": "above",
+    "endpoint": "/v1/heatmap",
+    "filter_type": 3,
+    "granularity": 100,
+    "label": "demo-exc103:PHX-JEFF:2025-07-15",
+    "threshold_c": 38.9
+  },
+  "v1-heatmap__790eb9d32b": {
+    "analytic_type": "exceedance",
+    "date": "2025-07-15",
+    "direction": "above",
+    "endpoint": "/v1/heatmap",
+    "filter_type": 3,
+    "granularity": 100,
+    "label": "demo-exc103:PHX-27TH:2025-07-15",
+    "threshold_c": 38.8
+  },
+  "v1-heatmap__79652f4603": {
+    "analytic_type": "exceedance",
+    "date": "2025-07-15",
+    "direction": "above",
+    "endpoint": "/v1/heatmap",
+    "filter_type": 3,
+    "granularity": 100,
+    "label": "demo-exc91:PHX-SMTN:2025-07-15",
+    "threshold_c": 33.91
+  },
+  "v1-heatmap__798bb8b3a7": {
+    "analytic_type": "tcm",
+    "date": "2025-07-15",
+    "endpoint": "/v1/heatmap",
+    "filter_type": 3,
+    "granularity": 100,
+    "label": "demo-tcm:PHX-DVT:2025-07-15"
+  },
+  "v1-heatmap__7e385c8707": {
+    "analytic_type": "exceedance",
+    "date": "2025-07-15",
+    "direction": "above",
+    "endpoint": "/v1/heatmap",
+    "filter_type": 3,
+    "granularity": 100,
+    "label": "demo-exc91:PHX-ROOS:2025-07-15",
+    "threshold_c": 34.17
+  },
+  "v1-heatmap__838511240e": {
+    "analytic_type": "exceedance",
+    "date": "2025-07-15",
+    "direction": "above",
+    "endpoint": "/v1/heatmap",
+    "filter_type": 3,
+    "granularity": 100,
+    "label": "demo-exc103:PHX-CHASE:2025-07-15",
+    "threshold_c": 38.92
+  },
+  "v1-heatmap__83b3a0201b": {
+    "analytic_type": "exceedance",
+    "date": "2025-07-15",
+    "direction": "above",
+    "endpoint": "/v1/heatmap",
+    "filter_type": 3,
+    "granularity": 100,
+    "label": "demo-exc91:PHX-L202:2025-07-15",
+    "threshold_c": 33.78
+  },
+  "v1-heatmap__89bb030781": {
+    "analytic_type": "exceedance",
+    "date": "2025-07-15",
+    "direction": "above",
+    "endpoint": "/v1/heatmap",
+    "filter_type": 3,
+    "granularity": 100,
+    "label": "demo-exc103:PHX-SKY:2025-07-15",
+    "threshold_c": 38.9
+  },
+  "v1-heatmap__9b68a975b9": {
+    "analytic_type": "tcm",
+    "date": "2025-07-15",
+    "endpoint": "/v1/heatmap",
+    "filter_type": 3,
+    "granularity": 100,
+    "label": ""
+  },
+  "v1-heatmap__9f3ddf39b3": {
+    "analytic_type": "exceedance",
+    "date": "2025-07-15",
+    "direction": "above",
+    "endpoint": "/v1/heatmap",
+    "filter_type": 3,
+    "granularity": 100,
+    "label": "demo-exc91:PHX-UNHL:2025-07-15",
+    "threshold_c": 34.08
+  },
+  "v1-heatmap__a13dca479b": {
+    "analytic_type": "exceedance",
+    "date": "2025-07-15",
+    "direction": "above",
+    "endpoint": "/v1/heatmap",
+    "filter_type": 3,
+    "granularity": 100,
+    "label": "demo-exc91:PHX-TRES:2025-07-15",
+    "threshold_c": 34.08
+  },
+  "v1-heatmap__a6df99553a": {
+    "analytic_type": "exceedance",
+    "date": "2025-07-15",
+    "direction": "above",
+    "endpoint": "/v1/heatmap",
+    "filter_type": 3,
+    "granularity": 100,
+    "label": "demo-exc103:PHX-ESTR:2025-07-15",
+    "threshold_c": 38.37
+  },
+  "v1-heatmap__aa3d9500d8": {
+    "analytic_type": "exceedance",
+    "date": "2025-07-15",
+    "direction": "above",
+    "endpoint": "/v1/heatmap",
+    "filter_type": 3,
+    "granularity": 100,
+    "label": "demo-exc103:PHX-L202:2025-07-15",
+    "threshold_c": 38.26
+  },
+  "v1-heatmap__ad56df78fb": {
+    "analytic_type": "exceedance",
+    "date": "2025-07-15",
+    "direction": "above",
+    "endpoint": "/v1/heatmap",
+    "filter_type": 2,
+    "granularity": 100,
+    "label": "t8-shift:night shift evening 21:00-23:00",
+    "threshold_c": 38.91
+  },
+  "v1-heatmap__b39449397f": {
+    "analytic_type": "exceedance",
+    "date": "2025-07-15",
+    "direction": "above",
+    "endpoint": "/v1/heatmap",
+    "filter_type": 3,
+    "granularity": 100,
+    "label": "t8-shift:whole day (filter_type=3)",
+    "threshold_c": 38.91
+  },
+  "v1-heatmap__b9698983a3": {
+    "analytic_type": "exceedance",
+    "date": "2025-07-15",
+    "direction": "above",
+    "endpoint": "/v1/heatmap",
+    "filter_type": 3,
+    "granularity": 100,
+    "label": "demo-exc103:PHX-ROOS:2025-07-15",
+    "threshold_c": 38.92
+  },
+  "v1-heatmap__cc7d189854": {
+    "analytic_type": "exceedance",
+    "date": "2025-07-15",
+    "direction": "above",
+    "endpoint": "/v1/heatmap",
+    "filter_type": 3,
+    "granularity": 100,
+    "label": "demo-exc103:PHX-UNHL:2025-07-15",
+    "threshold_c": 38.76
+  },
+  "v1-heatmap__d941e9eb15": {
+    "analytic_type": "tcm",
+    "date": "2025-07-15",
+    "endpoint": "/v1/heatmap",
+    "filter_type": 3,
+    "granularity": 100,
+    "label": "demo-tcm:PHX-JEFF:2025-07-15"
+  },
+  "v1-heatmap__dad3aca0fe": {
+    "analytic_type": "tcm",
+    "date": "2025-07-15",
+    "endpoint": "/v1/heatmap",
+    "filter_type": 3,
+    "granularity": 100,
+    "label": "demo-tcm:PHX-L202:2025-07-15"
+  },
+  "v1-heatmap__ecaeb6a59f": {
+    "analytic_type": "tcm",
+    "date": "2025-07-15",
+    "endpoint": "/v1/heatmap",
+    "filter_type": 3,
+    "granularity": 100,
+    "label": "demo-tcm:PHX-CHASE:2025-07-15"
+  },
+  "v1-heatmap__f511104693": {
+    "analytic_type": "tcm",
+    "date": "2025-07-15",
+    "endpoint": "/v1/heatmap",
+    "filter_type": 3,
+    "granularity": 100,
+    "label": "demo-tcm:PHX-TRES:2025-07-15"
+  },
+  "v1-heatmap__f6ef8adeab": {
+    "analytic_type": "exceedance",
+    "date": "2025-07-15",
+    "direction": "above",
+    "endpoint": "/v1/heatmap",
+    "filter_type": 3,
+    "granularity": 100,
+    "label": "demo-exc103:PHX-TRES:2025-07-15",
+    "threshold_c": 38.76
+  },
+  "v1-heatmap__f76d751a35": {
+    "analytic_type": "tcm",
+    "date": "2025-07-15",
+    "endpoint": "/v1/heatmap",
+    "filter_type": 3,
+    "granularity": 100,
+    "label": "demo-tcm:PHX-27TH:2025-07-15"
+  }
+}
