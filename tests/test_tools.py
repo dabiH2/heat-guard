@@ -107,7 +107,7 @@ def test_a_correctly_converted_threshold_passes_the_guard(monkeypatch):
 
     monkeypatch.setattr("heatguard.tools.submit_and_poll", fake)
     monkeypatch.setattr("heatguard.tools.cache_read", lambda k: None)
-    monkeypatch.setattr("heatguard.tools.cache_write", lambda k, v: None)
+    monkeypatch.setattr("heatguard.tools.cache_write", lambda k, v, params=None: None)
 
     heatmap(AOI, "2025-07-15", 3, analytic_type="exceedance",
             threshold_c=f_to_c(95.0), direction="above")

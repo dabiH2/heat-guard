@@ -293,11 +293,41 @@ def cache_read(key: str) -> dict | None:
     return None
 
 
-def cache_write(key: str, payload: dict) -> Path:
+CACHE_INDEX = CACHE_DIR / "_index.json"
+
+
+def cache_write(key: str, payload: dict, params: dict | None = None) -> Path:
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     path = _cache_path(key)
     path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    if params is not None:
+        _index_write(key, params)
     return path
+
+
+def _index_write(key: str, params: dict) -> None:
+    """Record what each hashed cache key stands for.
+
+    The keys are digests, so without this the cache is unreadable — you cannot ask it
+    what it can answer. The deployed app runs offline against exactly these files, so it
+    needs to know which site/date pairs it can serve before offering them in a dropdown.
+    """
+    index = cache_index()
+    index[key] = {k: v for k, v in params.items() if v is not None}
+    CACHE_INDEX.write_text(json.dumps(index, indent=2, sort_keys=True) + "\n",
+                           encoding="utf-8")
+
+
+def cache_index() -> dict[str, dict]:
+    if CACHE_INDEX.exists():
+        return json.loads(CACHE_INDEX.read_text(encoding="utf-8"))
+    return {}
+
+
+def cached_combinations() -> list[dict]:
+    """Every (site-ish) request the cache can serve. Used by the offline UI."""
+    return sorted(cache_index().values(),
+                  key=lambda p: (str(p.get("date")), str(p.get("analytic_type"))))
 
 
 def _log_activity(record: dict) -> None:
@@ -510,7 +540,11 @@ def heatmap(aoi_geojson: dict, date: str, filter_type: int,
 
     result = submit_and_poll("/v1/heatmap", payload,
                              label=label or f"{analytic_type}:{date}")
-    cache_write(key, result)
+    cache_write(key, result, params={
+        "endpoint": "/v1/heatmap", "label": label, "date": date, "end_date": end_date,
+        "filter_type": filter_type, "analytic_type": analytic_type,
+        "granularity": granularity, "threshold_c": threshold_c, "direction": direction,
+    })
     return result
 
 
@@ -550,7 +584,10 @@ def env_params(lat: float, lon: float, air_temp_c: float, date: str,
         "latitude": lat, "longitude": lon,
         "temperature": air_temp_c, "date_time": date_time,
     }, label=label or f"env_params:{date}")
-    cache_write(key, result)
+    cache_write(key, result, params={
+        "endpoint": "/v1/env_params", "label": label, "date": date,
+        "lat": round(lat, 6), "lon": round(lon, 6), "filter_type": filter_type,
+    })
     return result
 
 
@@ -575,7 +612,10 @@ def satellite(lat: float, lon: float, date: str, filter_type: int = 3,
         "date_time": {"start_date": date, "filter_type": filter_type},
         "granularity": granularity,
     }, label=label or f"satellite:{date}")
-    cache_write(key, result)
+    cache_write(key, result, params={
+        "endpoint": "/v1/satellite", "label": label, "date": date,
+        "lat": round(lat, 6), "lon": round(lon, 6), "granularity": granularity,
+    })
     return result
 
 
