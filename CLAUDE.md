@@ -69,6 +69,7 @@ Base `https://api.fortyguard.com` · header `api-key: <key>` · `Content-Type: a
 **Hard constraints:**
 - **US-only.** Non-US polygons error or return empty. Fawad `[00:13:14]`–`[00:13:39]`: *"this is only limited to the United States […] if you are going to set up the location to Dubai or Berlin […] I don't think it's going to work. And **it's just going to spend your credit**."* — so a non-US AOI is a *silent, billed* failure, not a clean error. Router must reject non-US before `tools.py`.
 - **⚠ Dates: coverage starts ~Q4 2021, NOT 2021-01-01 — measured T8.** Probed on PHX-CHASE one date per quarter: `2021-07-15` and `2021-10-15` both returned `Completed` with **n_cells = 0** and were **billed 4,220 credits each**; `2022-01-15` onward returned 10 tiles. **The documented start date is out by about a year**, and a date inside the gap is a *silent, billed empty* — the same shape as a non-US AOI. Router refuses before `2022-01-01` (the conservative edge of the measured bracket).
+- **⚠ Forward edge: "forecasts to now + 12h" is WRONG — measured T4.** The
   API accepts `start_date` up to **today + 1 day** (HTTP 400 beyond that, loud and free),
   but **tomorrow returns one flat value for the whole day** — measured 34.34 °C with
   min = avg = max, against 33.7–41.9 °C for today. No diurnal structure, so `exceedance`
