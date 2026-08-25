@@ -61,6 +61,7 @@ from datetime import datetime, timedelta, timezone
 from enum import Enum
 
 from .bands import load_thresholds
+from .tools import EARLIEST_DATE as _EARLIEST
 from .tools import (
     DEFAULT_GRANULARITY,
     GRANULARITIES,
@@ -124,7 +125,9 @@ class RouterInvariantError(AssertionError):
 
 #: The API constants live in tools.py — the API boundary module — and are imported here.
 #: A safety limit that exists in three files is a limit that will disagree with itself.
-EARLIEST_DATE = _date(2021, 1, 1)
+#: MEASURED, not documented: coverage starts in Q4 2021, not 2021-01-01. A date before it
+#: returns Completed with zero cells and is billed full price. See tools.EARLIEST_DATE.
+EARLIEST_DATE = _date(*(int(p) for p in _EARLIEST.split("-")))
 
 # Coarse coverage boxes. A pre-flight check, not a border. The API is the authority — but
 # a non-US AOI fails SILENTLY AND BILLS YOU (Fawad [00:13:39]: "it's just going to spend
@@ -448,8 +451,11 @@ def check_refusals(
     if start < EARLIEST_DATE:
         return (
             RefusalReason.BEFORE_2021,
-            f"{date} is before {EARLIEST_DATE.isoformat()}, where FortyGuard's record "
-            f"begins. There is no data to answer this with.",
+            f"{date} is before {EARLIEST_DATE.isoformat()}, where FortyGuard's coverage "
+            f"actually begins. The documentation says 2021-01-01, but 2021-07-15 and "
+            f"2021-10-15 both came back Completed with zero tiles — and were billed "
+            f"4,220 credits each. An empty result is not a safe reading, so this is "
+            f"refused rather than sent.",
         )
 
     # The forecast boundary is NOT where the API stops accepting requests. It is where

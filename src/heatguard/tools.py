@@ -64,7 +64,29 @@ POLL_BACKOFF_SECONDS = (3, 6, 12)
 GRANULARITIES = (60, 80, 100)
 DEFAULT_GRANULARITY = 100          # cheapest; finer costs more credits
 
-EARLIEST_DATE = "2021-01-01"
+# ---------------------------------------------------------------------------
+# EARLIEST USABLE DATE — measured, and it is NOT 2021-01-01.
+# ---------------------------------------------------------------------------
+# CLAUDE.md recorded coverage as starting 2021-01-01. Probed on PHX-CHASE, mid-month,
+# one date per quarter:
+#
+#   2021-07-15   Completed, n_cells = 0   <-- EMPTY, and billed 4,220 credits
+#   2021-10-15   Completed, n_cells = 0   <-- EMPTY, and billed 4,220 credits
+#   2022-01-15   10 tiles, peak  68.3 F   ok
+#   2022-04-15   10 tiles, peak  89.6 F   ok
+#   2022-07-15   10 tiles, peak 107.0 F   ok
+#   2023 / 2024 / 2025 mid-July           ok
+#
+# So the real boundary is somewhere in Q4 2021, and the documented one was out by about
+# a year. A date before it does not error — it returns Completed with zero cells and
+# charges full price, which is the same silent-and-billed shape as a non-US AOI.
+#
+# 2022-01-01 is the conservative edge of the measured bracket. Refusing a valid date
+# costs a user nothing; accepting an empty one costs a credit and risks an empty result
+# being read as an all-clear.
+EARLIEST_DATE = "2022-01-01"
+EARLIEST_DATE_MEASURED_EMPTY = "2021-10-15"
+EARLIEST_DATE_MEASURED_OK = "2022-01-15"
 
 # ---------------------------------------------------------------------------
 # FORECAST HORIZON — measured in T4, and it is NOT "now + 12 h".

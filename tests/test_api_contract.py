@@ -179,6 +179,25 @@ def test_a_range_over_thirty_days_is_a_server_error(results):
     assert results["range_over_30_days"]["submit_http"] == 500
 
 
+def test_coverage_starts_a_year_later_than_documented():
+    """CLAUDE.md said 2021-01-01. Measured on PHX-CHASE, one date per quarter: both 2021
+    probes returned Completed with zero cells and were billed; 2022-01-15 onward returned
+    10 tiles. A date inside that gap is a silent, billed empty — the same shape as a
+    non-US AOI, and the reason the router refuses before sending."""
+    coverage = load(T4.parent / "t8" / "coverage.json")
+    empty = {f["date"] for f in coverage["findings"] if f["has_data"] is False}
+    ok = {f["date"] for f in coverage["findings"] if f["has_data"]}
+
+    assert {"2021-07-15", "2021-10-15"} <= empty
+    assert {"2022-01-15", "2022-07-15", "2025-07-15"} <= ok
+    assert max(empty) < min(ok), "the boundary must be a clean split, not interleaved"
+
+    from heatguard.tools import EARLIEST_DATE
+    assert max(empty) < EARLIEST_DATE <= min(ok), (
+        "the refusal boundary must sit inside the measured bracket"
+    )
+
+
 def test_a_pre_2021_date_fails_slowly_rather_than_at_submit():
     """A third failure mode: accepted at submit, then `Processing` for over three minutes
     before turning `Failed`. Not loud, not silently wrong — just slow. Poll budgets have

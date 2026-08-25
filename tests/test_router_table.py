@@ -295,8 +295,23 @@ def test_refuses_before_2021():
     assert c.refused and c.refusal is RefusalReason.BEFORE_2021
 
 
-def test_accepts_the_first_day_of_coverage():
-    assert not r("Is it safe right now?", date="2021-01-01").refused
+def test_accepts_the_first_day_of_MEASURED_coverage():
+    """2022-01-01, not the documented 2021-01-01. Measured on PHX-CHASE: 2021-07-15 and
+    2021-10-15 both returned Completed with zero tiles and were billed 4,220 credits
+    each; 2022-01-15 returned 10 tiles."""
+    from heatguard.tools import EARLIEST_DATE
+    assert EARLIEST_DATE == "2022-01-01"
+    assert not r("Is it safe right now?", date="2022-01-01").refused
+
+
+def test_refuses_the_documented_but_empty_2021_dates():
+    """The documented start date is a year early. A date inside that gap does not
+    error — it returns an empty result at full price, which is the same silent-and-billed
+    shape as a non-US AOI."""
+    for date in ("2021-01-01", "2021-07-15", "2021-10-15", "2021-12-31"):
+        choice = r("Is it safe right now?", date=date)
+        assert choice.refused and choice.refusal is RefusalReason.BEFORE_2021, date
+        assert "billed" in choice.refusal_message
 
 
 def test_refuses_dates_the_api_rejects_outright():
