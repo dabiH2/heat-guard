@@ -1,0 +1,50 @@
+{
+  "site": "PHX-CHASE",
+  "threshold_f_heat_index": 103.0,
+  "threshold_c_air": 38.91,
+  "cases": {
+    "whole day (filter_type=3)": {
+      "n_cells": 10,
+      "units": "hour",
+      "mean_hours": 7.0,
+      "kwargs": {
+        "date": "2025-07-15",
+        "filter_type": "3"
+      }
+    },
+    "day shift 05:00-14:00": {
+      "n_cells": 10,
+      "units": "hour",
+      "mean_hours": 1.0,
+      "kwargs": {
+        "date": "2025-07-15",
+        "filter_type": "2",
+        "start_time": "05:00",
+        "end_time": "14:00"
+      }
+    },
+    "night shift evening 21:00-23:00": {
+      "n_cells": 10,
+      "units": "hour",
+      "mean_hours": 0.0,
+      "kwargs": {
+        "date": "2025-07-15",
+        "filter_type": "2",
+        "start_time": "21:00",
+        "end_time": "23:00"
+      }
+    },
+    "night shift morning 00:00-05:00": {
+      "n_cells": 10,
+      "units": "hour",
+      "mean_hours": 0.0,
+      "kwargs": {
+        "date": "2025-07-16",
+        "filter_type": "2",
+        "start_time": "00:00",
+        "end_time": "05:00"
+      }
+    }
+  },
+  "verdict": "filter_type=2 scopes exceedance to the hour range"
+}

@@ -195,7 +195,25 @@ supervisor's current practice — one city-wide Phoenix forecast high applied un
 to all sites — versus the per-site hourly profile. Pressure-test it, propose better if
 better exists, then implement in `metrics.py`.
 
-## T8 · Find the demo day → `docs/demo_day_candidates.md`
+## T8 · Find the demo day → `docs/demo_day_candidates.md` — **DONE**
+
+> 610 Phoenix summer days shortlisted from free Open-Meteo history for zero credits, then
+> 2025-07-15 fetched across all 12 sites.
+>
+> **The thesis is confirmed on our own data.** Peak spread 1.96 °F (1.09 °C) across 11
+> sites — 1.9% relative. Duration spread 2.62 h at the 103 °F band — 37% relative.
+> **Duration discriminates 20x better than peak.** Close to FortyGuard's own case study
+> (0.7 °C peak spread vs 19 h), reproduced independently.
+>
+> **`filter_type=2` scopes exceedance to an hour range** — so exposure can be measured
+> inside the shift a crew actually works. That is the T1 correction in code.
+>
+> **MY T1 PREDICTIONS FAILED — 2 of 11, worse than chance.** Reported, not dropped, as
+> `docs/site_selection.md` committed to. What the API separates is urban core from
+> periphery, not surface type: the three sites that differ are the three outermost, while
+> canyon, asphalt and irrigated park inside the core return identical numbers. The project
+> thesis survives; the site-selection hypothesis does not.
+
 One historical date (2021→now) where two sites invert: one higher peak, the other far
 longer above the danger band.
 
@@ -229,12 +247,38 @@ dry pre-monsoon June days spike higher and fall away faster. Verify before relyi
 LLM parses intent and narrates. Calls `router.classify()` first, then executes the
 returned plan via `tools.py`. Never selects a layer itself.
 
-## T10 · `app.py` — deploy a skeleton early
+## T10 · `app.py` — deploy a skeleton early — **BUILT, DEPLOY PENDING**
+
+> Four tabs: the morning call (roster-wide headline), an interactive question, the unit
+> trap, and the decision table. See `DEPLOY.md`.
+>
+> **Offline by DEFAULT — opt in to spending, never out.** A deployed app that can reach
+> the API can be made to spend 4,220 credits per click, and there is no rate limit between
+> a curious judge and the budget. `HEATGUARD_ONLINE=1` is required to go live, which only
+> happens on a dev machine. The deployed instance needs no API key at all.
+>
+> Streamlit Community Cloud connection needs Gabriele's GitHub OAuth — see `DEPLOY.md`.
+
 Streamlit. Site picker, date picker, the call, the chosen layer + rationale, the
 refusal path. **Deploy a hardcoded version to a public URL on Aug 24**, then keep
 shipping to it. The live URL is a submission gate — turn the cliff into a slope.
 
-## T11 · The money shot
+## T11 · The money shot — **FOUND**
+
+> Not the shape predicted. Better.
+>
+> **701 worker-hours vs 58.** Applying the city-wide figure uniformly across 107 workers
+> implies 701 unsafe worker-hours. Scoped to the shifts those crews actually work: 58.
+> **643 worker-hours — 92% — of "unsafe exposure" nobody was ever standing in**, because
+> the dangerous window runs ~14:00-21:00 and almost every shift on the roster is outside
+> it.
+>
+> And a real inversion in the metric that matters: 8 of 11 sites tie at 7.0 h above
+> threshold and are indistinguishable by heat; scoped to shifts only 4 carry exposure at
+> all, and PHX-27TH tops it at 22 worker-hours against PHX-L202's 18 — the same 1 hour of
+> overlap, but 22 people standing in it rather than 18. **Heat maps rank tiles. Crews are
+> what get hurt.**
+
 Two sites, same day, opposite conclusions under `filter_type=1` vs `filter_type=3`.
 Screenshot it. Report exposure-hours avoided.
 

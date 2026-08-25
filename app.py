@@ -31,6 +31,20 @@ import streamlit as st
 
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
+# ---------------------------------------------------------------------------
+# OFFLINE BY DEFAULT. Opt IN to spending money, never opt out.
+# ---------------------------------------------------------------------------
+# A deployed app that can reach the API is a deployed app that can be made to spend
+# 4,220 credits per click. Twelve sites and a few dates of idle clicking by a judge would
+# be tens of thousands of credits, and there is no rate limit between them and the budget.
+#
+# So the default is offline, and going online requires setting HEATGUARD_ONLINE=1
+# explicitly — which only ever happens on a developer machine. The deployed instance
+# therefore needs no API key at all: nothing to leak, nothing to appear in a video frame,
+# and nothing that breaks when the key expires on 2026-09-21.
+if os.environ.get("HEATGUARD_ONLINE", "").strip().lower() not in ("1", "true", "yes"):
+    os.environ["HEATGUARD_OFFLINE"] = "1"
+
 from heatguard import tools                                    # noqa: E402
 from heatguard.agent import answer, load_sites                 # noqa: E402
 from heatguard.bands import action_for, band_for, load_thresholds  # noqa: E402
@@ -88,9 +102,139 @@ st.markdown(
     "of harm. Duration above a threshold is the signal.**"
 )
 
-decision_tab, trap_tab, roster_tab, method_tab = st.tabs(
-    ["Decision", "⚠️ The trap", "The twelve sites", "How it decides"]
+today_tab, decision_tab, trap_tab, method_tab = st.tabs(
+    ["📋 The morning call", "Ask a question", "⚠️ The trap", "How it decides"]
 )
+
+
+@st.cache_data
+def shift_exposure(date: str) -> dict | None:
+    path = (Path(__file__).parent / "data" / "fixtures" / "t8"
+            / f"shift_exposure_{date}.json")
+    if not path.exists():
+        return None
+    import json
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+# ========================================================== the roster-wide headline
+
+with today_tab:
+    data = shift_exposure(DEMO_DATE)
+    if data is None:
+        st.warning("Roster exposure for the demo day has not been captured yet.")
+    else:
+        rows = [r for r in data["rows"] if r["whole_day_hours"] > 0]
+        naive = sum(r["whole_day_hours"] * r["crew"] for r in rows)
+        actual = sum(r["worker_hours"] for r in rows)
+        crews = sum(r["crew"] for r in rows)
+
+        st.subheader(f"{DEMO_DATE} — {len(rows)} sites, {crews} workers")
+        st.markdown(
+            f"Every site on the roster peaked between **102.6 and 104.5 °F** — a spread "
+            f"of **1.9 °F**. By peak alone they are the same day at the same place, and "
+            f"a city-wide figure would call all of them dangerous."
+        )
+
+        a, b, c = st.columns(3)
+        a.metric("If the city-wide figure is applied uniformly",
+                 f"{naive:,.0f} worker-hours",
+                 help=f"{data['threshold_f_heat_index']:.0f} °F heat index, whole day, "
+                      f"every crew.")
+        b.metric("Scoped to the shifts crews actually work",
+                 f"{actual:,.0f} worker-hours",
+                 delta=f"-{naive - actual:,.0f}", delta_color="inverse")
+        c.metric("Over-count", f"{(naive - actual) / naive * 100:.0f}%",
+                 help="Exposure nobody was ever standing in.")
+
+        st.success(
+            f"**{naive - actual:,.0f} worker-hours of 'unsafe exposure' that nobody was "
+            f"standing in.** The dangerous window on this day runs roughly 14:00–21:00 — "
+            f"almost entirely outside every shift on the roster. A city-wide call to stop "
+            f"work would have been {(naive - actual) / naive * 100:.0f}% wrong, and "
+            f"expensive.",
+            icon="✅",
+        )
+
+        st.markdown("#### Where the exposure actually is")
+        st.dataframe(
+            [
+                {
+                    "Site": r["name"],
+                    "Shift": r["shift"] + (" 🌙" if r["night"] else ""),
+                    "Crew": r["crew"],
+                    "Whole day (h)": r["whole_day_hours"],
+                    "In shift (h)": r["in_shift_hours"],
+                    "Worker-hours": r["worker_hours"],
+                }
+                for r in sorted(rows, key=lambda x: -x["worker_hours"])
+            ],
+            use_container_width=True, hide_index=True,
+        )
+
+        top_whole = max(r["whole_day_hours"] for r in rows)
+        tied = [r for r in rows if abs(r["whole_day_hours"] - top_whole) < 0.05]
+        exposed = sorted([r for r in rows if r["worker_hours"] > 0],
+                         key=lambda r: -r["worker_hours"])
+
+        if len(tied) > 1 and exposed:
+            worst, second = exposed[0], (exposed[1] if len(exposed) > 1 else None)
+            st.info(
+                f"**Ranking by heat and ranking by harm give different answers.**\n\n"
+                f"**{len(tied)} of {len(rows)} sites tie** at {top_whole:.0f} hours above "
+                f"threshold for the day — by that measure they are indistinguishable, and "
+                f"a heat map would colour them identically. Scoped to shifts, only "
+                f"**{len(exposed)}** carry any exposure at all."
+                + (
+                    f"\n\n**{worst['name']}** carries the most: "
+                    f"{worst['worker_hours']:.0f} worker-hours against "
+                    f"{second['worker_hours']:.0f} at {second['name']} — the same "
+                    f"{worst['in_shift_hours']:.0f} hour of overlap, but "
+                    f"**{worst['crew']} people standing in it** rather than "
+                    f"{second['crew']}."
+                    if second else ""
+                )
+                + "\n\nHeat maps rank tiles. Crews are what get hurt.",
+                icon="🎯",
+            )
+
+        st.caption(
+            f"Threshold {data['threshold_f_heat_index']:.0f} °F heat index, converted "
+            f"per site to the equivalent air temperature at that site's measured "
+            f"humidity. Night shifts are measured across two calls because a shift "
+            f"crossing midnight cannot be one hour range."
+        )
+
+        st.markdown("---")
+        st.markdown("#### The twelve sites and their predictions")
+        st.markdown(
+            "Each site carried a **falsifiable prediction** written before any data was "
+            "fetched. **Two of eleven came true — worse than chance.** They are reported "
+            "rather than dropped, because `docs/site_selection.md` committed to reporting "
+            "them and a roster where every prediction held would be evidence of tuning."
+        )
+        roster_all = sites()
+        st.dataframe(
+            [
+                {
+                    "Site": s["name"], "Archetype": s["archetype"],
+                    "Predicted": s["expected_profile"], "Crew": int(s["crew_size"]),
+                    "Shift": f"{s['shift_start']}–{s['shift_end']}",
+                    "Night": "🌙" if s["night_shift"] == "True" else "",
+                }
+                for s in roster_all.values()
+            ],
+            use_container_width=True, hide_index=True,
+        )
+        st.markdown(
+            "**What the data actually separates is urban core from periphery, not "
+            "surface type.** The three sites that differ — South Mountain, Estrella, "
+            "Union Hills — are the three outermost. Downtown canyon, airfield asphalt "
+            "and irrigated park within the core return the same numbers as each other. "
+            "At 20 m native resolution over a 400 m area, the regional heat-island "
+            "gradient dominates street-level surface differences. The thesis survives "
+            "that; the site-selection hypothesis does not."
+        )
 
 
 # ========================================================================== decision
@@ -308,41 +452,6 @@ with trap_tab:
             "Silently defaults to 30 °C — a threshold nobody chose",
         ],
     })
-
-
-# ============================================================================ roster
-
-with roster_tab:
-    st.subheader("Twelve sites, chosen for thermal diversity during shift hours")
-    st.markdown(
-        "Each site carries a **falsifiable prediction** written before any data was "
-        "fetched. Sites whose prediction fails are kept and reported — a roster where "
-        "all twelve came true would be evidence of tuning, not of a working instrument."
-    )
-    roster = sites()
-    st.dataframe(
-        [
-            {
-                "Site": s["name"],
-                "Archetype": s["archetype"],
-                "Predicted": s["expected_profile"],
-                "Crew": int(s["crew_size"]),
-                "Shift": f"{s['shift_start']}–{s['shift_end']}",
-                "Night": "🌙" if s["night_shift"] == "True" else "",
-            }
-            for s in roster.values()
-        ],
-        use_container_width=True, hide_index=True,
-    )
-    st.markdown(
-        "**Why night crews.** Phoenix's urban heat island is *nocturnal*. A downtown "
-        "site's extra hours above the band land in the evening — so if every crew "
-        "clocked out at 15:30, those hours would be real physics and a fake decision. "
-        "Phoenix genuinely paves roads and does downtown utility work at night in "
-        "summer. **A night crew downtown is the strongest case here: the city-wide "
-        "forecast *high* is a daytime number and says nothing about a 21:00–05:30 "
-        "shift.**"
-    )
 
 
 # ============================================================================ method

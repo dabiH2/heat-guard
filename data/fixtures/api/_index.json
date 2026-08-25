@@ -1,4 +1,36 @@
 {
+  "v1-env_params__183d088b81": {
+    "date": "2025-07-15",
+    "endpoint": "/v1/env_params",
+    "filter_type": 3,
+    "label": "",
+    "lat": 33.700836,
+    "lon": -112.065608
+  },
+  "v1-env_params__3798f3e76a": {
+    "date": "2025-07-15",
+    "endpoint": "/v1/env_params",
+    "filter_type": 3,
+    "label": "",
+    "lat": 33.29569,
+    "lon": -111.977945
+  },
+  "v1-env_params__44b86e1846": {
+    "date": "2025-07-15",
+    "endpoint": "/v1/env_params",
+    "filter_type": 3,
+    "label": "",
+    "lat": 33.416661,
+    "lon": -112.117327
+  },
+  "v1-env_params__48b607e888": {
+    "date": "2025-07-15",
+    "endpoint": "/v1/env_params",
+    "filter_type": 3,
+    "label": "",
+    "lat": 33.322065,
+    "lon": -112.353559
+  },
   "v1-env_params__4dc2ec92b9": {
     "date": "2025-07-15",
     "endpoint": "/v1/env_params",
@@ -6,6 +38,14 @@
     "label": "demo-env:PHX-CHASE:2025-07-15",
     "lat": 33.45088,
     "lon": -112.073191
+  },
+  "v1-env_params__56a7cbf5ae": {
+    "date": "2025-07-15",
+    "endpoint": "/v1/env_params",
+    "filter_type": 3,
+    "label": "",
+    "lat": 33.689169,
+    "lon": -112.079804
   },
   "v1-env_params__56f3685bf3": {
     "date": "2025-07-15",
@@ -31,6 +71,14 @@
     "lat": 33.432849,
     "lon": -112.006792
   },
+  "v1-env_params__5bdcc533fa": {
+    "date": "2025-07-15",
+    "endpoint": "/v1/env_params",
+    "filter_type": 3,
+    "label": "",
+    "lat": 33.474992,
+    "lon": -112.08922
+  },
   "v1-env_params__62124fbeac": {
     "date": "2025-07-15",
     "endpoint": "/v1/env_params",
@@ -38,6 +86,30 @@
     "label": "demo-env:PHX-TRES:2025-07-15",
     "lat": 33.39303,
     "lon": -112.256163
+  },
+  "v1-env_params__685867f15e": {
+    "date": "2025-07-15",
+    "endpoint": "/v1/env_params",
+    "filter_type": 3,
+    "label": "",
+    "lat": 33.34703,
+    "lon": -112.084448
+  },
+  "v1-env_params__69fb7f2eb1": {
+    "date": "2025-07-15",
+    "endpoint": "/v1/env_params",
+    "filter_type": 3,
+    "label": "",
+    "lat": 33.458894,
+    "lon": -112.069425
+  },
+  "v1-env_params__766f8177e7": {
+    "date": "2025-07-15",
+    "endpoint": "/v1/env_params",
+    "filter_type": 3,
+    "label": "",
+    "lat": 33.432849,
+    "lon": -112.006792
   },
   "v1-env_params__7cdf801322": {
     "date": "2025-07-15",
@@ -62,6 +134,22 @@
     "label": "demo-env:PHX-ROOS:2025-07-15",
     "lat": 33.458894,
     "lon": -112.069425
+  },
+  "v1-env_params__9c2c31e17b": {
+    "date": "2025-07-15",
+    "endpoint": "/v1/env_params",
+    "filter_type": 3,
+    "label": "",
+    "lat": 33.39303,
+    "lon": -112.256163
+  },
+  "v1-env_params__bd3d85e37c": {
+    "date": "2025-07-15",
+    "endpoint": "/v1/env_params",
+    "filter_type": 3,
+    "label": "",
+    "lat": 33.45088,
+    "lon": -112.073191
   },
   "v1-env_params__d9f409cdf6": {
     "date": "2025-07-15",
@@ -105,6 +193,36 @@
     "label": "t8-shift:day shift 05:00-14:00",
     "threshold_c": 38.91
   },
+  "v1-heatmap__08081a0419": {
+    "analytic_type": "exceedance",
+    "date": "2025-07-15",
+    "direction": "above",
+    "endpoint": "/v1/heatmap",
+    "filter_type": 2,
+    "granularity": 100,
+    "label": "shift-eve:PHX-ROOS:2025-07-15",
+    "threshold_c": 38.92
+  },
+  "v1-heatmap__0b8b9c6060": {
+    "analytic_type": "exceedance",
+    "date": "2025-07-15",
+    "direction": "above",
+    "endpoint": "/v1/heatmap",
+    "filter_type": 3,
+    "granularity": 100,
+    "label": "shift-whole:PHX-DVT:2025-07-15",
+    "threshold_c": 38.76
+  },
+  "v1-heatmap__1b5462ea89": {
+    "analytic_type": "exceedance",
+    "date": "2025-07-16",
+    "direction": "above",
+    "endpoint": "/v1/heatmap",
+    "filter_type": 2,
+    "granularity": 100,
+    "label": "shift-morn:PHX-ROOS:2025-07-16",
+    "threshold_c": 38.92
+  },
   "v1-heatmap__1bad31e283": {
     "analytic_type": "exceedance",
     "date": "2025-07-15",
@@ -114,6 +232,16 @@
     "granularity": 100,
     "label": "demo-exc91:PHX-CHASE:2025-07-15",
     "threshold_c": 34.17
+  },
+  "v1-heatmap__1cdd82e633": {
+    "analytic_type": "exceedance",
+    "date": "2025-07-15",
+    "direction": "above",
+    "endpoint": "/v1/heatmap",
+    "filter_type": 2,
+    "granularity": 100,
+    "label": "shift-day:PHX-SMTN:2025-07-15",
+    "threshold_c": 38.47
   },
   "v1-heatmap__1e0a649287": {
     "analytic_type": "exceedance",
@@ -149,6 +277,16 @@
     "granularity": 100,
     "label": "demo-tcm:PHX-ESTR:2025-07-15"
   },
+  "v1-heatmap__297d730dbf": {
+    "analytic_type": "exceedance",
+    "date": "2025-07-15",
+    "direction": "above",
+    "endpoint": "/v1/heatmap",
+    "filter_type": 2,
+    "granularity": 100,
+    "label": "shift-day:PHX-ENCA:2025-07-15",
+    "threshold_c": 38.92
+  },
   "v1-heatmap__2e4e8d2ac9": {
     "analytic_type": "exceedance",
     "date": "2025-07-15",
@@ -158,6 +296,16 @@
     "granularity": 100,
     "label": "demo-exc91:PHX-27TH:2025-07-15",
     "threshold_c": 34.1
+  },
+  "v1-heatmap__359630fd62": {
+    "analytic_type": "exceedance",
+    "date": "2025-07-15",
+    "direction": "above",
+    "endpoint": "/v1/heatmap",
+    "filter_type": 2,
+    "granularity": 100,
+    "label": "shift-day:PHX-SKY:2025-07-15",
+    "threshold_c": 38.9
   },
   "v1-heatmap__35b4d19dce": {
     "analytic_type": "exceedance",
@@ -195,6 +343,16 @@
     "granularity": 100,
     "label": "demo-tcm:PHX-UNHL:2025-07-15"
   },
+  "v1-heatmap__5eeaed5a47": {
+    "analytic_type": "exceedance",
+    "date": "2025-07-15",
+    "direction": "above",
+    "endpoint": "/v1/heatmap",
+    "filter_type": 2,
+    "granularity": 100,
+    "label": "shift-eve:PHX-L202:2025-07-15",
+    "threshold_c": 38.26
+  },
   "v1-heatmap__640976aed5": {
     "analytic_type": "exceedance",
     "date": "2025-07-15",
@@ -214,6 +372,16 @@
     "granularity": 100,
     "label": "demo-exc91:PHX-ENCA:2025-07-15",
     "threshold_c": 34.17
+  },
+  "v1-heatmap__6c053158d0": {
+    "analytic_type": "exceedance",
+    "date": "2025-07-16",
+    "direction": "above",
+    "endpoint": "/v1/heatmap",
+    "filter_type": 2,
+    "granularity": 100,
+    "label": "shift-morn:PHX-CHASE:2025-07-16",
+    "threshold_c": 38.92
   },
   "v1-heatmap__6f785ab17f": {
     "analytic_type": "exceedance",
@@ -273,6 +441,16 @@
     "label": "demo-exc91:PHX-ROOS:2025-07-15",
     "threshold_c": 34.17
   },
+  "v1-heatmap__81655a2340": {
+    "analytic_type": "exceedance",
+    "date": "2025-07-16",
+    "direction": "above",
+    "endpoint": "/v1/heatmap",
+    "filter_type": 2,
+    "granularity": 100,
+    "label": "shift-morn:PHX-JEFF:2025-07-16",
+    "threshold_c": 38.9
+  },
   "v1-heatmap__838511240e": {
     "analytic_type": "exceedance",
     "date": "2025-07-15",
@@ -303,6 +481,16 @@
     "label": "demo-exc103:PHX-SKY:2025-07-15",
     "threshold_c": 38.9
   },
+  "v1-heatmap__98df86d41a": {
+    "analytic_type": "exceedance",
+    "date": "2025-07-16",
+    "direction": "above",
+    "endpoint": "/v1/heatmap",
+    "filter_type": 2,
+    "granularity": 100,
+    "label": "shift-morn:PHX-L202:2025-07-16",
+    "threshold_c": 38.26
+  },
   "v1-heatmap__9b68a975b9": {
     "analytic_type": "tcm",
     "date": "2025-07-15",
@@ -320,6 +508,16 @@
     "granularity": 100,
     "label": "demo-exc91:PHX-UNHL:2025-07-15",
     "threshold_c": 34.08
+  },
+  "v1-heatmap__9fe9f595b7": {
+    "analytic_type": "exceedance",
+    "date": "2025-07-15",
+    "direction": "above",
+    "endpoint": "/v1/heatmap",
+    "filter_type": 2,
+    "granularity": 100,
+    "label": "shift-eve:PHX-JEFF:2025-07-15",
+    "threshold_c": 38.9
   },
   "v1-heatmap__a13dca479b": {
     "analytic_type": "exceedance",
@@ -341,6 +539,16 @@
     "label": "demo-exc103:PHX-ESTR:2025-07-15",
     "threshold_c": 38.37
   },
+  "v1-heatmap__a99f27894a": {
+    "analytic_type": "exceedance",
+    "date": "2025-07-15",
+    "direction": "above",
+    "endpoint": "/v1/heatmap",
+    "filter_type": 2,
+    "granularity": 100,
+    "label": "shift-eve:PHX-CHASE:2025-07-15",
+    "threshold_c": 38.92
+  },
   "v1-heatmap__aa3d9500d8": {
     "analytic_type": "exceedance",
     "date": "2025-07-15",
@@ -350,6 +558,16 @@
     "granularity": 100,
     "label": "demo-exc103:PHX-L202:2025-07-15",
     "threshold_c": 38.26
+  },
+  "v1-heatmap__ab0ca10400": {
+    "analytic_type": "exceedance",
+    "date": "2025-07-15",
+    "direction": "above",
+    "endpoint": "/v1/heatmap",
+    "filter_type": 2,
+    "granularity": 100,
+    "label": "shift-day:PHX-UNHL:2025-07-15",
+    "threshold_c": 38.76
   },
   "v1-heatmap__ad56df78fb": {
     "analytic_type": "exceedance",
@@ -381,6 +599,26 @@
     "label": "demo-exc103:PHX-ROOS:2025-07-15",
     "threshold_c": 38.92
   },
+  "v1-heatmap__bd57938642": {
+    "analytic_type": "exceedance",
+    "date": "2025-07-15",
+    "direction": "above",
+    "endpoint": "/v1/heatmap",
+    "filter_type": 2,
+    "granularity": 100,
+    "label": "shift-day:PHX-ESTR:2025-07-15",
+    "threshold_c": 38.37
+  },
+  "v1-heatmap__c5ee2459d2": {
+    "analytic_type": "exceedance",
+    "date": "2025-07-15",
+    "direction": "above",
+    "endpoint": "/v1/heatmap",
+    "filter_type": 2,
+    "granularity": 100,
+    "label": "shift-day:PHX-DVT:2025-07-15",
+    "threshold_c": 38.76
+  },
   "v1-heatmap__cc7d189854": {
     "analytic_type": "exceedance",
     "date": "2025-07-15",
@@ -406,6 +644,36 @@
     "filter_type": 3,
     "granularity": 100,
     "label": "demo-tcm:PHX-L202:2025-07-15"
+  },
+  "v1-heatmap__dda40af160": {
+    "analytic_type": "exceedance",
+    "date": "2025-07-15",
+    "direction": "above",
+    "endpoint": "/v1/heatmap",
+    "filter_type": 2,
+    "granularity": 100,
+    "label": "shift-day:PHX-TRES:2025-07-15",
+    "threshold_c": 38.76
+  },
+  "v1-heatmap__df1367d54c": {
+    "analytic_type": "exceedance",
+    "date": "2025-07-15",
+    "direction": "above",
+    "endpoint": "/v1/heatmap",
+    "filter_type": 2,
+    "granularity": 100,
+    "label": "shift-day:PHX-27TH:2025-07-15",
+    "threshold_c": 38.8
+  },
+  "v1-heatmap__e8d8437ce3": {
+    "analytic_type": "exceedance",
+    "date": "2025-07-16",
+    "direction": "above",
+    "endpoint": "/v1/heatmap",
+    "filter_type": 2,
+    "granularity": 100,
+    "label": "t8-shift:night shift morning 00:00-05:00",
+    "threshold_c": 38.91
   },
   "v1-heatmap__ecaeb6a59f": {
     "analytic_type": "tcm",
