@@ -2,6 +2,8 @@
 
 *FortyGuard Hackathon'26 · Track 4 (Government & Environment) × Track 6 (Agentic)*
 
+**Live demo: https://heat-fortyguard.streamlit.app/**
+
 ---
 
 **Phoenix outdoor-crew supervisors struggle to decide which crews can safely work,

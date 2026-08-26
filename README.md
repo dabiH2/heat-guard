@@ -5,7 +5,9 @@ Temperature API®.**
 
 *FortyGuard Hackathon'26 · Track 4 (Government & Environment) × Track 6 (Agentic)*
 
-**▶ Live demo: _<paste the Streamlit URL here>_**
+### ▶ **[Live demo](https://heat-fortyguard.streamlit.app/)**
+
+*Runs entirely from committed fixtures — no API key, nothing to break when the FortyGuard key expires on 21 September.*
 
 ---
 

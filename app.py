@@ -138,13 +138,14 @@ with today_tab:
         )
 
         a, b, c = st.columns(3)
-        a.metric("If the city-wide figure is applied uniformly",
-                 f"{naive:,.0f} worker-hours",
+        # Units live in the label, not the value: Streamlit truncates long metric
+        # values in narrow columns, and "701 worker-…" is useless in a video frame.
+        a.metric("City-wide figure · worker-hours", f"{naive:,.0f}",
                  help=f"{data['threshold_f_heat_index']:.0f} °F heat index, whole day, "
-                      f"every crew.")
-        b.metric("Scoped to the shifts crews actually work",
-                 f"{actual:,.0f} worker-hours",
-                 delta=f"-{naive - actual:,.0f}", delta_color="inverse")
+                      f"every crew, applied uniformly.")
+        b.metric("Scoped to real shifts · worker-hours", f"{actual:,.0f}",
+                 delta=f"-{naive - actual:,.0f}", delta_color="inverse",
+                 help="Only the hours crews were actually outside.")
         c.metric("Over-count", f"{(naive - actual) / naive * 100:.0f}%",
                  help="Exposure nobody was ever standing in.")
 
