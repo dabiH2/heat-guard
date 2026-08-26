@@ -53,7 +53,7 @@ Twelve Phoenix sites, 2025-07-15, 107 workers, OSHA high-risk band:
 | Scoped to shifts crews actually work | **58** |
 | **Phantom exposure removed** | **643 worker-hours — 92%** |
 
-The dangerous window ran 14:00–21:00; nearly every shift falls outside it. Eight sites tie
+The dangerous window ran 13:00–20:00; nearly every shift falls outside it. Eight sites tie
 at 7.0 h — identical on any heat map. Scoped to shifts only four carry exposure, and the
 worst is not the hottest site but the one with **22 people in that hour instead of 18**.
 

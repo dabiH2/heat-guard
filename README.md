@@ -29,7 +29,7 @@ Twelve Phoenix sites, 2025-07-15, 107 workers, at OSHA's high-risk band:
 | Scoped to the shifts crews actually work | **58 worker-hours** |
 | **Phantom exposure removed** | **643 worker-hours — 92%** |
 
-The dangerous window ran roughly **14:00–21:00** — outside nearly every shift on the
+The dangerous window ran roughly **13:00–20:00** — outside nearly every shift on the
 roster. A city-wide "stop work" call would have been 92% wrong, and **over-warning is the
 expensive error**.
 

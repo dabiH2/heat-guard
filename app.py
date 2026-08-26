@@ -47,6 +47,7 @@ if os.environ.get("HEATGUARD_ONLINE", "").strip().lower() not in ("1", "true", "
 
 from heatguard import tools                                    # noqa: E402
 from heatguard.agent import answer, load_sites                 # noqa: E402
+from heatguard import charts                                  # noqa: E402
 from heatguard.bands import action_for, band_for, load_thresholds  # noqa: E402
 from heatguard.router import AnalyticType, RefusalReason       # noqa: E402
 
@@ -149,12 +150,29 @@ with today_tab:
 
         st.success(
             f"**{naive - actual:,.0f} worker-hours of 'unsafe exposure' that nobody was "
-            f"standing in.** The dangerous window on this day runs roughly 14:00–21:00 — "
+            f"standing in.** The dangerous window on this day runs roughly 13:00–20:00 — "
             f"almost entirely outside every shift on the roster. A city-wide call to stop "
             f"work would have been {(naive - actual) / naive * 100:.0f}% wrong, and "
             f"expensive.",
             icon="✅",
         )
+
+        st.markdown("#### The day, hour by hour")
+        st.markdown(
+            "Each bar is one crew's shift. The red band is the only window that was "
+            "actually above threshold. **Almost every shift misses it** — that is the "
+            "92% in one picture."
+        )
+        st.markdown(charts.the_day(rows,
+                                   threshold_f=data["threshold_f_heat_index"]),
+                    unsafe_allow_html=True)
+        st.caption(
+            "Night shifts cross midnight and are drawn as two segments on a single "
+            "00:00–24:00 axis — the crew really is outside during both."
+        )
+
+        st.markdown("#### What the city-wide figure claims, against what is real")
+        st.markdown(charts.phantom_bars(rows), unsafe_allow_html=True)
 
         st.markdown("#### Where the exposure actually is")
         st.dataframe(
@@ -400,18 +418,12 @@ with trap_tab:
         "before it was sent."
     )
 
-    a, b = st.columns(2)
-    with a:
-        st.success("**Converted correctly**", icon="✅")
-        st.code('threshold = 35.00   # 95 °F → °C', language="python")
-        st.metric("Hours above threshold", "17.0 h")
-        st.caption("Encanto Park, 2025-07-15. Persistence says 16 of those 17 hours "
-                   "were *continuous*.")
-    with b:
-        st.error("**Sent as Fahrenheit**", icon="🔥")
-        st.code('threshold = 95      # read as 95 °C = 203 °F', language="python")
-        st.metric("Hours above threshold", "0.0 h", delta="-17.0 h")
-        st.caption("Status `Completed`. Credit spent. Nothing raised anywhere.")
+    st.markdown(charts.unit_trap(), unsafe_allow_html=True)
+    st.caption(
+        "Encanto Park, 2025-07-15. Persistence says 16 of those 17 hours were "
+        "*continuous* — which is the number that matters, because heat stroke follows "
+        "uninterrupted exposure rather than a day's scattered total."
+    )
 
     st.error(
         "**17 hours of dangerous exposure, reported as zero — as a confidently "

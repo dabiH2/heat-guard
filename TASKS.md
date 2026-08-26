@@ -270,7 +270,7 @@ shipping to it. The live URL is a submission gate — turn the cliff into a slop
 > **701 worker-hours vs 58.** Applying the city-wide figure uniformly across 107 workers
 > implies 701 unsafe worker-hours. Scoped to the shifts those crews actually work: 58.
 > **643 worker-hours — 92% — of "unsafe exposure" nobody was ever standing in**, because
-> the dangerous window runs ~14:00-21:00 and almost every shift on the roster is outside
+> the dangerous window runs ~13:00-20:00 and almost every shift on the roster is outside
 > it.
 >
 > And a real inversion in the metric that matters: 8 of 11 sites tie at 7.0 h above
