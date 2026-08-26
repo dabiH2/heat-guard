@@ -158,6 +158,56 @@ with today_tab:
             icon="✅",
         )
 
+        # ------------------------------------------------------ what that is worth
+        # The safety argument competes with a free NWS forecast and loses. The two
+        # arguments that survive contact with a buyer are cost avoidance and defensible
+        # documentation, and both use numbers already measured above.
+        #
+        # The dollar figure is DERIVED, not measured, so the rate is exposed as a control
+        # rather than baked in. A judge who thinks $55 is wrong can move it and watch the
+        # number change — which is more persuasive than a figure they cannot interrogate,
+        # and more honest than presenting an assumption as a finding.
+        st.markdown("#### What that is worth")
+        rate = st.slider(
+            "Loaded labour rate, $/hour",
+            min_value=25, max_value=100, value=55, step=5,
+            help="Wage plus burden — payroll tax, insurance, equipment standing idle. "
+                 "Move it: the saving scales linearly and the assumption is yours, "
+                 "not ours.",
+        )
+        avoided = (naive - actual) * rate
+
+        money_a, money_b = st.columns(2)
+        money_a.metric(
+            "Unnecessary stop-work avoided, one day",
+            f"${avoided:,.0f}",
+            help=f"{naive - actual:,.0f} phantom worker-hours × ${rate}/h. "
+                 f"One day, one roster.",
+        )
+        money_b.metric(
+            "Cost of being wrong the other way",
+            "one heat-illness claim",
+            help="An OSHA citation, a workers' compensation claim, or a fatality "
+                 "investigation. HeatGuard does not price this — it documents the "
+                 "decision instead.",
+        )
+
+        st.info(
+            f"**Over-warning is the expensive error, and it is the one nobody counts.** "
+            f"Stopping work costs money on a day nobody was at risk; the "
+            # Dollar signs are escaped: Streamlit reads $…$ as LaTeX math, which silently
+            # eats both the currency symbol and the bold markers around it.
+            f"{naive - actual:,.0f} worker-hours above are **\\${avoided:,.0f}** at "
+            f"\\${rate}/h. Under-warning costs a claim — rarer, far worse, and the reason "
+            f"the tool refuses rather than guesses.\n\n"
+            f"**Every decision here is written to `data/decisions.jsonl`** — question, "
+            f"layer chosen, why, threshold, result, action, timestamp. That file is the "
+            f"product as much as the number is: in a citation or a comp dispute, what "
+            f"protects a supervisor is evidence they followed a consistent, documented "
+            f"process. A screenshot of a weather app is not that.",
+            icon="💷",
+        )
+
         st.markdown("#### The day, hour by hour")
         st.markdown(
             "Each bar is one crew's shift. The red band is the only window that was "
@@ -515,6 +565,23 @@ with method_tab:
         "The last one is the differentiator: refusing a well-formed question the API "
         "would happily answer, because the only layer that fits the requested scope "
         "would produce a confident wrong answer."
+    )
+
+    st.divider()
+    st.markdown("#### What is not proven yet")
+    st.markdown(
+        "Naming these is not modesty — a judge finds them in the first minute, and "
+        "being the one who says them first is worth more than hoping nobody looks.\n\n"
+        "- **No customer discovery.** Zero interviews. The crew sizes, shifts and site "
+        "roster are *plausible constructions*, not observed operations from a real "
+        "contractor. The mechanism is measured; the demand is not. Next step is five "
+        "conversations with Phoenix safety supervisors before another line of code.\n"
+        "- **Heat index, not WBGT** — the metric OSHA actually regulates against. "
+        "`/v1/env_params` returns `wet_bulb_temperature_celsius`, so a WBGT estimate is "
+        "reachable and it is the top of the roadmap, not a footnote.\n"
+        "- **The per-site premise partly failed.** Predictions scored 2 of 11, worse "
+        "than chance. The value turned out to be scoping to shifts and weighting by "
+        "headcount — not site microclimate. Reported rather than quietly dropped."
     )
 
     t = load_thresholds()

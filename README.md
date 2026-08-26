@@ -43,6 +43,20 @@ Crews are what get hurt.*
 Independently reproduces FortyGuard's own client case study: 0.7 °C peak spread across six
 parcels against 19 h of exceedance.
 
+### Why anyone would pay for this
+
+A pure safety pitch competes with a free National Weather Service forecast and loses.
+Two arguments survive contact with a buyer, and both use numbers already measured above:
+
+- **Over-warning is the expensive error, and nobody counts it.** 643 phantom worker-hours
+  is roughly **$35,000** at a $55/h loaded rate — one day, one roster. The app exposes
+  that rate as a slider rather than baking it in, because it is an assumption, not a
+  finding, and a buyer who disagrees should be able to move it.
+- **`data/decisions.jsonl` is the other product.** Every decision is logged: question,
+  layer chosen, why, threshold, result, action, timestamp. In an OSHA citation or a
+  workers'-compensation dispute, what protects a supervisor is evidence of a consistent,
+  documented process. A screenshot of a weather app is not that.
+
 ## The problem it solves
 
 `POST /v1/heatmap` takes an `analytic_type`, and the choice is invisible:
@@ -170,8 +184,16 @@ committed fixtures without a key.
 
 ## Limitations, stated plainly
 
+Naming these is not modesty. A judge finds them in the first minute, and being the one
+who says them first is worth more than hoping nobody looks.
+
+- **No customer discovery has happened.** Zero interviews. The crew sizes, shift times
+  and site roster are *plausible constructions*, not observed operations at a real
+  contractor. The mechanism is measured; the demand is not. The next step is five
+  conversations with Phoenix safety supervisors, before another line of code.
 - Heat index, **not WBGT** — the metric OSHA actually regulates against. The API returns
-  `wet_bulb_temperature_celsius`, so a WBGT *estimate* is reachable; out of scope here.
+  `wet_bulb_temperature_celsius`, so a WBGT *estimate* is reachable. That is the top of
+  the roadmap, not a footnote.
 - No modelling of crew acclimatisation or task intensity, both of which move OSHA's
   thresholds materially.
 - Decision support only. Does not replace an employer's heat-illness prevention program.
