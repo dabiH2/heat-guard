@@ -1,0 +1,96 @@
+# Keeps the live demo awake, and shouts if it is not.
+#
+# WHY THIS EXISTS
+# Streamlit Community Cloud puts an app to sleep after roughly 7 days without traffic,
+# and a sleeping app wakes with a 30-60 s cold start. Judging runs until 16 September —
+# about three weeks after submission — so an app nobody visits in week two greets a judge
+# with a spinner, and a judge with a spinner is a judge who assumes it is broken.
+#
+# FortyGuard were explicit that the link is what actually gets opened: "the judges won't
+# be opening the GitHub repositories that often […] what they will 100% open is your
+# pitch, the live link."
+#
+# This is a CHECK, not just a ping. A blind curl that follows redirects will report
+# success against almost anything, including a 404 page. So it asserts three things, each
+# chosen from a measured signature:
+#
+#   healthy app      HTTP 200, ~9.4 KB shell, contains "streamlit"
+#   missing app      HTTP 404, ~101 bytes
+#
+# The cookie jar is required. Community Cloud answers the first request with a 303 to
+# share.streamlit.io/-/auth/app, which sets an anonymous session cookie and redirects
+# back. A browser resolves that transparently; curl without -c/-b loops until it gives up
+# with exit 47. That loop is not a fault in the app — do not "fix" it by removing the
+# checks.
+#
+# Free and unlimited: scheduled workflows cost nothing on public repositories. Note that
+# GitHub disables schedules after 60 days of repository inactivity — irrelevant here,
+# since judging ends well inside that window.
+
+name: keep-alive
+
+on:
+  schedule:
+    # Every 6 hours. Sleep only starts after ~7 days idle, so this is generous; the
+    # frequency buys prompt failure notice rather than extra wakefulness.
+    - cron: "0 */6 * * *"
+  push:
+    branches: [main]        # verify the app survived every deploy
+  workflow_dispatch:        # and let a human run it on demand
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    name: Live demo is awake and serving
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check https://heat-fortyguard.streamlit.app/
+        run: |
+          set -uo pipefail
+          URL="https://heat-fortyguard.streamlit.app/"
+          JAR="$(mktemp)"
+          BODY="$(mktemp)"
+
+          # Cold starts are slow, and a sleeping app may need a second attempt to wake.
+          for attempt in 1 2 3; do
+            echo "── attempt $attempt ─────────────────────────────────────────"
+            STATUS=$(curl -sS \
+              --cookie-jar "$JAR" --cookie "$JAR" \
+              --location --max-redirs 10 \
+              --max-time 90 --retry 2 --retry-delay 5 \
+              -A "HeatGuard-uptime/1.0 (+https://github.com/dabiH2/heat-guard)" \
+              -o "$BODY" -w '%{http_code}' "$URL") || STATUS="000"
+            BYTES=$(wc -c < "$BODY" | tr -d ' ')
+            echo "   http=$STATUS  bytes=$BYTES"
+
+            if [ "$STATUS" = "200" ] && [ "$BYTES" -gt 2000 ] \
+               && grep -qi streamlit "$BODY"; then
+              echo "✅ live demo is awake and serving the app shell"
+              exit 0
+            fi
+
+            # Name the failure rather than just reporting a number.
+            if [ "$STATUS" = "404" ]; then
+              echo "   ↳ 404 — the app is gone or the URL changed"
+            elif grep -qi "gone to sleep" "$BODY" 2>/dev/null; then
+              echo "   ↳ sleep page returned; retrying to wake it"
+            elif grep -qi "do not have access\|Please sign in" "$BODY" 2>/dev/null; then
+              echo "   ↳ AUTH WALL — the app or its repo has gone private."
+              echo "     Judges cannot open it. This needs fixing immediately."
+              exit 1
+            elif [ "$STATUS" = "000" ]; then
+              echo "   ↳ curl failed outright (DNS, TLS, or a redirect loop)"
+            fi
+            sleep 20
+          done
+
+          echo ""
+          echo "❌ live demo did not answer healthily after 3 attempts."
+          echo "   Judging runs to 16 September and the live link is the primary"
+          echo "   artefact — check https://share.streamlit.io/ for the app status."
+          echo "── last response, first 400 bytes ──"
+          head -c 400 "$BODY" || true
+          exit 1
