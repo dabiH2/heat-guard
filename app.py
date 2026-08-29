@@ -49,7 +49,7 @@ from heatguard import tools                                    # noqa: E402
 from heatguard.agent import answer, load_sites                 # noqa: E402
 from heatguard import charts                                  # noqa: E402
 from heatguard.bands import action_for, band_for, load_thresholds  # noqa: E402
-from heatguard.router import AnalyticType, RefusalReason       # noqa: E402
+from heatguard.router import AnalyticType, RefusalReason, route       # noqa: E402
 
 st.set_page_config(page_title="HeatGuard", page_icon="🌡️", layout="wide")
 
@@ -59,6 +59,24 @@ DEMO_DATE = "2025-07-15"
 THRESHOLD_CHOICES = {
     "91 °F — OSHA moderate risk (work/rest cycles begin)": 91.0,
     "103 °F — OSHA high risk (50:10 cycles, buddy system)": 103.0,
+}
+
+# One canonical phrasing per row of the decision table. These are STARTING POINTS, not a
+# fixed menu: the router reads the words, so editing the text can change the layer. That
+# is the point, and the live preview underneath makes it visible.
+EXAMPLE_QUESTIONS = {
+    "snapshot": ("Snapshot — what is it right now?",
+                 "Is it safe at this site right now?"),
+    "intraday": ("Intraday — when do we start and stop?",
+                 "When should we start and stop today?"),
+    "forecast": ("Forecast — will we cross soon?",
+                 "Will we cross the threshold in the next few hours?"),
+    "duration": ("Duration — how long above the band?",
+                 "How many hours were they above the danger threshold?"),
+    "persistence": ("Chronic — is this site always like this?",
+                    "Is this site chronically dangerous?"),
+    "comparison": ("Comparison — which site is worst?",
+                   "Which of our sites is worst today?"),
 }
 
 
@@ -443,13 +461,42 @@ with decision_tab:
                             index=available.index(DEMO_DATE)
                             if DEMO_DATE in available else 0)
 
+        # Questions are NOT a fixed list — the router pattern-matches free text against
+        # marker phrases. But an empty box invites arbitrary input and shows nothing back,
+        # so the six rows are offered as starting points and the classification is
+        # previewed live. Routing costs nothing and touches no network, so there is no
+        # reason to make anyone press a button to find out which layer they will get.
+        preset = st.selectbox(
+            "Start from one of the six question types",
+            options=list(EXAMPLE_QUESTIONS),
+            format_func=lambda k: EXAMPLE_QUESTIONS[k][0],
+            help="One row of the decision table each. Edit the text afterwards — the "
+                 "router reads the words, not the menu.",
+        )
         question = st.text_input(
-            "Question",
-            value="How many hours were they above the danger threshold?",
+            "…or ask in your own words",
+            value=EXAMPLE_QUESTIONS[preset][1],
+            key=f"q_{preset}",
             help="The wording decides the analysis layer. Try 'is it safe right now?' "
                  "against 'how long were they above the band?' — same site, same day, "
                  "different layer, different answer.",
         )
+
+        # Live preview. This is the whole IP, made visible before any call is made.
+        _preview = route(question, lat=float(site["lat"]), lon=float(site["lon"]),
+                         date=date)
+        if _preview.refused:
+            st.warning(
+                f"Reads as **{_preview.question_type.value}** → would be **refused** "
+                f"(`{_preview.refusal.value}`). No call would be made.", icon="🚫")
+        else:
+            _esc = (f" · escalated from *{_preview.escalated_from.value}*"
+                    if _preview.escalated_from else "")
+            st.info(
+                f"Reads as **{_preview.question_type.value}** → "
+                f"`filter_type={_preview.filter_type}`, "
+                f"`analytic_type={_preview.analytic_type.value}`{_esc}",
+                icon="🧭")
 
         threshold_label = st.radio("Threshold", list(THRESHOLD_CHOICES),
                                    help="Reported at both, because the number changes "
@@ -457,6 +504,8 @@ with decision_tab:
         threshold_f = THRESHOLD_CHOICES[threshold_label]
 
         go = st.button("Ask HeatGuard", type="primary", use_container_width=True)
+        st.caption("Routing already happened, above, for free. The button only fetches "
+                   "the data the chosen layer needs.")
 
     with right:
         if go:
