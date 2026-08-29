@@ -51,6 +51,7 @@ from heatguard import agent                                    # noqa: E402
 from heatguard.agent import answer, load_sites                 # noqa: E402
 from heatguard import charts                                  # noqa: E402
 from heatguard.bands import action_for, band_for, load_thresholds  # noqa: E402
+from heatguard import evidence                                 # noqa: E402
 from heatguard import theme                                    # noqa: E402
 from heatguard.router import AnalyticType, RefusalReason, route       # noqa: E402
 
@@ -60,6 +61,30 @@ DECISIONS_SAMPLE = Path(__file__).resolve().parent / "data" / "decisions.sample.
 
 st.set_page_config(page_title="HeatGuard", page_icon="🌡️", layout="wide")
 theme.inject(st)
+
+# ---------------------------------------------------------------------------
+# EVERY EXTERNAL FIGURE ON THIS PAGE ARRIVES THROUGH HERE.
+# ---------------------------------------------------------------------------
+# Streamlit re-executes this file top to bottom on every interaction, so this is a FRESH
+# log per pass. That is what lets the Sources block at the foot list exactly the claims
+# the reader is looking at rather than the whole thirty-claim registry.
+#
+# The distinction it enforces is the one this project cares about most: a figure with a
+# source link belongs to somebody else's document, and a figure with no link was measured
+# here from the committed fixtures. Nothing measured borrows an external citation, and
+# nothing external is presented as measured.
+SOURCES = evidence.CitationLog()
+
+#: COST-01 — BLS Employer Costs for Employee Compensation, construction industry, total
+#: compensation per hour worked (wages $35.54 + benefits $15.69), March 2026. It stays a
+#: SLIDER: a published default is worth more than an invented one, and a buyer who
+#: disagrees should be able to move it and watch the number change.
+DEFAULT_LOADED_RATE_USD_PER_HOUR = 51.23
+
+#: COST-02 — the share of paid time owed as mandated rest at OSHA's PROPOSED high heat
+#: trigger: 15 minutes per 120 = 12.5%. Arithmetic on the proposed regulatory text, not a
+#: published figure, and the underlying break provision is NOT IN FORCE (REG-02).
+MANDATED_REST_FRACTION = 0.125
 
 # The demo day and the sites whose data is committed to the cache. Anything outside this
 # set cannot be answered offline, so the UI does not offer it.
@@ -175,12 +200,38 @@ if offline():
         icon="📦",
     )
 
+# ---------------------------------------------------------------------------
+# THE THESIS. It used to read "Peak temperature is a poor predictor of harm. Duration
+# above a threshold is the signal." That was not supportable and it is now gone: no
+# occupational study has ever used hours-above-threshold as an exposure variable, the one
+# worker study testing hourly WBGT was null, and the largest US intensity-vs-duration test
+# found intensity significant and duration not. Asserting it in front of a judge who knows
+# the literature loses more than the sentence was ever worth.
+#
+# What replaces it is a claim about the ARCHITECTURE OF THE STANDARDS, not about
+# epidemiology — and that claim is airtight, because the limits say so in their own text.
+# Every one of them is written as time at a condition, and the peak limit that a daily
+# maximum could have been compared against was withdrawn in 2016.
 st.markdown(
-    "> **A safety manager with twelve Phoenix sites decides each morning where crews can "
-    "work.** Today that decision comes from a single city-wide forecast high. "
-    "OSHA records outdoor-worker heat-stroke deaths at a daily maximum heat index of "
-    "only **86 °F** — inside the *Caution* band. **Peak temperature is a poor predictor "
-    "of harm. Duration above a threshold is the signal.**"
+    f"> **A safety manager with twelve Phoenix sites decides each morning where crews can "
+    f"work.** Today that decision comes from a single city-wide forecast high. "
+    f"OSHA records outdoor-worker heat-stroke deaths at a daily maximum heat index of "
+    f"only **86 °F** — inside the *Caution* band ({SOURCES.link('HARM-04')}). OSHA's own "
+    f"instruction on that forecast is blunt: *do not rely solely on the Heat Index "
+    f"reported by weather forecasts for your safety at work, as it may underestimate your "
+    f"actual risk* ({SOURCES.link('CTR-06')})."
+)
+st.markdown(
+    f"> **Every occupational heat limit in force is defined as *time at a condition*, not "
+    f"as a peak.** NIOSH's Recommended Alert Limit and Recommended Exposure Limit are "
+    f"expressed as one-hour time-weighted averages and published for 60, 45, 30 and 15 "
+    f"minute work periods ({SOURCES.link('NIOSH-01')}). ACGIH's TLV has the same shape — "
+    f"work allocated per hour at a given WBGT ({SOURCES.link('ACGIH-01')}) — "
+    f"and ISO 7933's output is a maximum allowable exposure *time* rather than a "
+    f"temperature ceiling ({SOURCES.link('ISO-01')}). NIOSH removed its ceiling limit "
+    f"recommendations in 2016 ({SOURCES.link('NIOSH-02')}), so there is no peak limit left "
+    f"to compare a daily maximum against at all. **A daily peak cannot be checked against "
+    f"any of them. Hours above a threshold can.**"
 )
 
 # The colour key for the whole app, shown ONCE, above the tabs, next to the sentence it
@@ -191,6 +242,21 @@ st.markdown(
 #      86 falls in the SECOND of five bands -- amber, nowhere near the red end -- lands
 #      faster than the sentence does.
 st.markdown(theme.heat_scale_legend(), unsafe_allow_html=True)
+
+# The second legend on the page, and it does the same job for evidence that the colour key
+# does for severity: it defines the vocabulary once, so no figure below needs a footnote.
+# Blurring the two kinds of number is the easiest way for a project like this to overclaim
+# — a measured result quietly wearing somebody else's authority — so the distinction is
+# stated up front and then held to everywhere.
+st.caption(
+    "**Two kinds of number appear below, and they are marked differently.** A figure "
+    "carrying a **source link** is somebody else's published work, and the link goes to "
+    "it. A figure with **no link** was measured by this project from its own committed "
+    "fixtures — the peak spread, the worker-hours, the 92%, the 17 hours in the unit trap, "
+    "the credits per call. Nothing measured here borrows an external citation, and nothing "
+    "external is presented as measured. Every linked claim is listed with its data year "
+    "under **Sources**, at the foot of the page."
+)
 
 today_tab, decision_tab, trap_tab, method_tab = st.tabs(
     ["📋 The morning call", "Ask a question", "⚠️ The trap", "How it decides"]
@@ -589,33 +655,69 @@ with today_tab:
             icon="✅",
         )
 
+        st.caption(
+            f"**Measured here, and deliberately uncited.** The 1.9 °F peak spread, the "
+            f"{naive:,.0f} → {actual:,.0f} worker-hours and the "
+            f"{(naive - actual) / naive * 100:.0f}% over-count come from this project's "
+            f"own committed fixture set for {DEMO_DATE}, not from anybody's publication. "
+            f"They carry no source link because there is nothing external to link to, and "
+            f"attaching one would be borrowing authority the figures do not need. The "
+            f"external claims on this page are the ones with links; they are listed under "
+            f"**Sources** at the foot."
+        )
+
         # ------------------------------------------------------ what that is worth
         # The safety argument competes with a free NWS forecast and loses. The two
         # arguments that survive contact with a buyer are cost avoidance and defensible
         # documentation, and both use numbers already measured above.
         #
         # The dollar figure is DERIVED, not measured, so the rate is exposed as a control
-        # rather than baked in. A judge who thinks $55 is wrong can move it and watch the
-        # number change — which is more persuasive than a figure they cannot interrogate,
-        # and more honest than presenting an assumption as a finding.
+        # rather than baked in. It used to default to an invented 55 — the only uncited
+        # number in the whole submission. It now defaults to the BLS figure for the
+        # construction industry and says so next to the control, which is both smaller and
+        # worth more: a judge can check it, and can still move it.
+        #
+        # And the output is a RANGE, not a point. A single figure assumes the employer
+        # stops work outright, which is the aggressive reading and the one the mandate
+        # objection defeats: at the proposed high heat trigger what is owed is paid rest,
+        # not a stoppage. So the floor values the phantom hours at the mandated rest
+        # fraction alone, the ceiling values them as fully idle loaded labour, and the page
+        # says the truth is between them rather than picking the flattering end.
         st.markdown("#### What that is worth")
         rate = st.slider(
             "Loaded labour rate, $/hour",
-            min_value=25, max_value=100, value=55, step=5,
+            min_value=25.0, max_value=100.0,
+            value=DEFAULT_LOADED_RATE_USD_PER_HOUR, step=0.01, format="$%.2f",
             help="Wage plus burden — payroll tax, insurance, equipment standing idle. "
-                 "Move it: the saving scales linearly and the assumption is yours, "
-                 "not ours.",
+                 "The default is a published BLS figure for the construction industry, "
+                 "not our assumption. Move it: both bounds scale linearly, and the "
+                 "assumption is then yours.",
         )
-        avoided = (naive - actual) * rate
+        st.caption(
+            f"Default: {SOURCES.cite('COST-01')} — total compensation per hour worked, "
+            f"construction industry, wages plus benefits. It stays a slider because a "
+            f"buyer who disagrees with the rate should be able to move it and watch both "
+            f"bounds move with it."
+        )
 
-        money_a, money_b = st.columns(2)
+        phantom = naive - actual
+        cost_floor = phantom * MANDATED_REST_FRACTION * rate
+        cost_ceiling = phantom * rate
+
+        money_a, money_b, money_c = st.columns(3)
         money_a.metric(
-            "Unnecessary stop-work avoided, one day",
-            f"${avoided:,.0f}",
-            help=f"{naive - actual:,.0f} phantom worker-hours × ${rate}/h. "
-                 f"One day, one roster.",
+            "Floor · mandated rest only",
+            f"${cost_floor:,.0f}",
+            help=f"{phantom:,.0f} phantom worker-hours × 12.5% × ${rate:,.2f}/h. What is "
+                 f"owed as paid rest even while the crew keeps working.",
         )
         money_b.metric(
+            "Ceiling · fully idle labour",
+            f"${cost_ceiling:,.0f}",
+            help=f"{phantom:,.0f} phantom worker-hours × ${rate:,.2f}/h. What a full "
+                 f"precautionary stop-work would cost. One day, one roster.",
+        )
+        money_c.metric(
             "Cost of being wrong the other way",
             "one heat-illness claim",
             help="An OSHA citation, a workers' compensation claim, or a fatality "
@@ -623,14 +725,34 @@ with today_tab:
                  "decision instead.",
         )
 
+        st.markdown(
+            f"**The truth is between \\${cost_floor:,.0f} and \\${cost_ceiling:,.0f}, and "
+            f"which end depends on what the employer actually does.** The floor values the "
+            f"{phantom:,.0f} phantom worker-hours only as paid rest that would have been "
+            f"owed anyway — {SOURCES.cite('COST-02')} — and it is the bound that survives "
+            f"the objection that a heat trigger does not license stopping work at all. The "
+            f"ceiling values the same hours as fully idle loaded labour. **No published "
+            f"figure exists for the cost of a precautionary work stoppage**, so neither "
+            f"end is a measured cost of stoppage and this page does not present one as if "
+            f"it were."
+        )
+        st.warning(
+            f"**The break provision the floor rests on is PROPOSED, and not in force.** "
+            f"The federal heat standard is {SOURCES.cite('REG-02')} The control it would "
+            f"impose at the high heat trigger is {SOURCES.cite('REG-05')}. Read the floor "
+            f"as what the obligation would cost under the rule as proposed — never as a "
+            f"requirement currently binding on an employer.",
+            icon="⚠️",
+        )
+
         st.info(
             f"**Over-warning is the expensive error, and it is the one nobody counts.** "
             f"Stopping work costs money on a day nobody was at risk; the "
             # Dollar signs are escaped: Streamlit reads $…$ as LaTeX math, which silently
             # eats both the currency symbol and the bold markers around it.
-            f"{naive - actual:,.0f} worker-hours above are **\\${avoided:,.0f}** at "
-            f"\\${rate}/h. Under-warning costs a claim — rarer, far worse, and the reason "
-            f"the tool refuses rather than guesses.\n\n"
+            f"{naive - actual:,.0f} worker-hours above are **\\${cost_floor:,.0f} to "
+            f"\\${cost_ceiling:,.0f}** at \\${rate:,.2f}/h. Under-warning costs a claim — "
+            f"rarer, far worse, and the reason the tool refuses rather than guesses.\n\n"
             f"**Every decision here is written to `data/decisions.jsonl`** — question, "
             f"layer chosen, why, threshold, result, action, timestamp. That file is the "
             f"product as much as the number is: in a citation or a comp dispute, what "
@@ -984,8 +1106,13 @@ with trap_tab:
         "Earth is that hot and it is therefore almost certainly Fahrenheit that skipped "
         "the conversion."
     )
-    st.caption("Reproducible from `data/fixtures/t4/t4_probes.json`; pinned by "
-               "`tests/test_api_contract.py`.")
+    st.caption(
+        "**Measured here, not cited.** The 17 hours and the 0 hours are two live calls "
+        "this project made against the FortyGuard API, reproducible from "
+        "`data/fixtures/t4/t4_probes.json` and pinned by `tests/test_api_contract.py`. "
+        "They carry no source link because there is no external document to point at — "
+        "nobody else has published this."
+    )
 
     st.divider()
     st.markdown("#### Four more failures that look like answers")
@@ -1178,3 +1305,31 @@ with method_tab:
     t = load_thresholds()
     st.divider()
     st.caption(t.disclaimer)
+
+
+# ============================================================================= sources
+#
+# ONLY what this pass of the page actually rendered — never the whole registry. Thirty
+# claims listed under a page that cited seven is a bibliography, not a citation: a reader
+# cannot tell which of them any figure on screen rests on, which is the failure the
+# registry existed to fix. `SOURCES` fills as the page renders, so this block is exactly
+# the external claims above it, in the order they appeared.
+#
+# The ABSENCE of a figure here is itself the signal. Anything on this page with no entry
+# below was measured by this project from its committed fixtures — the peak spread, the
+# worker-hours, the 92%, the 17-hour unit trap, the 4,220 credits, the site and crew
+# counts. None of them borrows a citation, and none of the claims below is presented as
+# something we measured.
+st.divider()
+with st.expander(
+    f"📚 Sources — the {len(SOURCES)} external claims rendered on this page"
+):
+    st.markdown(SOURCES.markdown())
+    st.caption(
+        "Every figure above that is **not** listed here was measured by this project from "
+        "its own committed fixtures. `data/evidence/claims.json` is the registry and "
+        "`tests/test_evidence.py` fails the build if a claim loses its source URL or its "
+        "data year, if data older than three years is not flagged stale, if a "
+        "general-population figure travels without its caveat, or if this page cites an id "
+        "the registry does not hold. A citation that cannot be checked is not a citation."
+    )

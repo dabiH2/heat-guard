@@ -28,8 +28,10 @@ the same". Ranked by DURATION: "for more than 19 hours it stayed above, and then
 hours straight it was above the threshold."
 
 OSHA records outdoor-worker heat-stroke deaths at a daily maximum heat index of only
-86 °F, inside the NWS "Caution" band. Peak is a poor predictor of harm. Duration is the
-signal.
+86 °F, inside the NWS "Caution" band. Every occupational heat limit in force — NIOSH's
+RAL/REL, ACGIH's TLV, ISO 7933 — is defined as time at a condition, and NIOSH removed its
+peak-temperature ceiling limit in 2016. A daily peak cannot be compared against any of
+them. Hours above a threshold can.
 
 -------------------------------------------------------------------------------
 THE UNIT DISCIPLINE THIS MODULE ENFORCES

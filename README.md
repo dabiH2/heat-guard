@@ -21,10 +21,21 @@ Temperature API®.**
 > A safety manager with twelve Phoenix sites decides each morning where crews can work.
 > Today that decision comes from a single city-wide forecast high — a *daytime maximum*,
 > measured at Sky Harbor. OSHA records outdoor-worker heat-stroke deaths at a daily
-> maximum heat index of only **86 °F**, inside the "Caution" band.
+> maximum heat index of only **86 °F**, inside the "Caution" band [[EV:HARM-04]] —
+> and OSHA's own instruction is *"do not rely solely on the Heat Index reported by
+> weather forecasts for your safety at work, as it may underestimate your actual
+> risk"* [[EV:CTR-06]]. Station readings *"may not reflect the conditions at the
+> specific worksite"*, and *"the potential error increases with distance from the
+> weather station"* [[EV:CTR-07]].
 >
-> **Peak temperature is a poor predictor of harm. Duration above a threshold is the
-> signal.**
+> **Every occupational heat limit in force — NIOSH's RAL and REL [[EV:NIOSH-01]], ACGIH's
+> TLV, ISO 7933 [[EV:ISO-01]] — is defined as *time at a condition*, and NIOSH removed its
+> peak-temperature ceiling limit in 2016 [[EV:NIOSH-02]]. A daily maximum cannot be
+> compared against any of them. Hours above a threshold can.**
+
+*Every external figure below carries an `EV` marker resolving to
+[`data/evidence/claims.json`](data/evidence/claims.json). Figures without one are measured
+by this project from its own committed fixtures.*
 
 ## The measured result
 
@@ -55,13 +66,48 @@ parcels against 19 h of exceedance.
 
 ### Why anyone would pay for this
 
-A pure safety pitch competes with a free National Weather Service forecast and loses.
-Two arguments survive contact with a buyer, and both use numbers already measured above:
+A pure safety pitch competes with a free National Weather Service forecast and loses. Four
+arguments survive contact with a buyer.
 
-- **Over-warning is the expensive error, and nobody counts it.** 643 phantom worker-hours
-  is roughly **$35,000** at a $55/h loaded rate — one day, one roster. The app exposes
-  that rate as a slider rather than baking it in, because it is an assumption, not a
-  finding, and a buyer who disagrees should be able to move it.
+- **The free tool has been measured against the worksite, and it failed.** The OSHA-NIOSH
+  Heat Safety Tool, fed by NWS data, identified **0% of high or extreme risk conditions**
+  when checked against on-site WBGT; the authors' verdict was *"not protective of
+  workers… not recommended"* [[EV:CTR-01]]. That is the only published evaluation of the
+  incumbent free tool.
+
+- **Over-warning is the expensive error, and nobody counts it.** OSHA makes that argument
+  itself, in writing, against its own cost estimate: assuming full-shift exceedance *"may
+  overstate the number of breaks employers need to provide since there may be some days
+  where the heat triggers are met or exceeded but for shorter periods of time"*
+  [[EV:REG-04]]. Priced at the BLS construction loaded rate of **$51.23/h**
+  [[EV:COST-01]], the 643 phantom worker-hours are worth, for one day on one roster:
+
+  | Bound | Basis | Value |
+  |---|---|---|
+  | Lower | 643 h × 12.5% mandated rest [[EV:COST-02]] × $51.23 [[EV:COST-01]] | **≈$4,118** |
+  | Upper | 643 h fully idle × $51.23 [[EV:COST-01]] | **≈$32,941** |
+
+  The truth is between them, and which end it sits nearer depends on what the employer
+  actually does. The lower bound is what is owed *even while the crew keeps working* — a
+  15-minute paid break every two hours at the high heat trigger, which is **proposed, not
+  in force** [[EV:REG-05]] [[EV:REG-02]]. The upper bound assumes the crew stands idle for
+  every one of those hours. **No published figure exists for the cost of precautionary work
+  stoppage**; that negative result is recorded in
+  [`docs/impact-evidence.md` §6](docs/impact-evidence.md#6-what-i-could-not-source), item 8.
+  The app exposes the rate as a slider rather than baking it in, because a buyer who
+  disagrees should be able to move it.
+
+  *The pitch video was recorded before this rate was sourced, so it shows $55/h and
+  $35,363.*
+
+- **HeatGuard is an API, not a sensor.** No hardware, no calibration, no per-site
+  instrument. The Construction Industry Safety Coalition told OSHA that WBGT equipment is
+  *"not only expensive, but also complex… requires regular calibration"* and asked for
+  simpler methods instead
+  ([`docs/practice-and-efficacy-evidence.md`](docs/practice-and-efficacy-evidence.md#6-counter-evidence-you-must-be-ready-for)).
+  That is the buyer's own objection to the measurement they are being asked to take, and
+  the form factor already answers it.
+
 - **The decision log is the other product.** Every question the running app answers is
   appended to `data/decisions.jsonl` — question, layer chosen, why, both thresholds,
   result, action, timestamp — including the ones it *refuses*, and why it refused. In an
@@ -76,6 +122,37 @@ Two arguments survive contact with a buyer, and both use numbers already measure
   (`python scripts/make_decisions_sample.py`), covering a snapshot, a duration question
   routed to `exceedance`, a comparison across three sites, an escalation, and three
   refusals. Nothing in it is hand-written.
+
+## Impact — who is exposed, and what today's alert misses
+
+Nothing in this section is my measurement. Every figure is external and cited.
+
+**The harm is counted, and the count is known to be low.** 48 US workers died of
+exposure to environmental heat in 2024 [[EV:HARM-01]], 40 of them outdoors [[EV:HARM-02]].
+OSHA's own risk assessment applies an undercount factor of **14** to heat fatalities
+[[EV:HARM-03]].
+
+**Reach, counted from the bottom up.** 154,320 people work in construction and extraction,
+landscaping, refuse collection and line installation in the Phoenix-Mesa-Chandler MSA
+[[EV:REACH-01]] — **6.50% of everyone employed in the metro** [[EV:REACH-03]]. The same
+five occupations across sixteen US Sun Belt metros total 1,364,770 [[EV:REACH-02]]. Every
+cell and every addition is shown, per occupation code, in
+[`docs/impact-evidence.md` §4](docs/impact-evidence.md#4-bottom-up-reach). Two things this
+count is not: it counts **jobs, not customers** — the buyer is an employer's safety
+function, and I have not counted those — and BLS OEWS **excludes the self-employed
+entirely**, which is material in construction and landscaping, so the figure is a floor.
+
+**What today's alert misses.** 64% of Maricopa County's 430 heat-related deaths in 2025
+fell on days NWS HeatRisk was *not* Major or Extreme [[EV:POP-01]] [[EV:POP-02]]. **These
+are general-population deaths, not worker deaths: Maricopa County does not record
+occupation.** The claim is about the alert, not about the decedents' jobs — in the US
+county with the most heat deaths, the categorical alert that a supervisor reads each
+morning was outside its top two categories on the days most deaths occurred. A supervisor
+reading that alert inherits the same blind spot.
+
+**What supervisors use instead.** 87% of US contractors assess heat risk from weather
+forecasts [[EV:PRAC-01]]; 42% take any direct jobsite measurement [[EV:PRAC-02]]; 13% use
+WBGT [[EV:PRAC-03]].
 
 ## The problem it solves
 
@@ -146,10 +223,10 @@ deliberately narrow.*
 committed fixture cache. It needs no API key, so there is nothing to leak and nothing
 that breaks when the FortyGuard key expires. A judge clicking around **cannot spend a
 credit** — going live requires setting `HEATGUARD_ONLINE=1`, which only ever happens on a
-developer machine. Every path a visitor can click was verified offline: 12 sites × 4
+developer machine. Every path a visitor can click was verified offline: 12 sites × 6
 question shapes × 2 thresholds — 36 answered, 12 refused by design, **0 cache misses**.
 
-**The build is sound.** 349 tests, all offline, no network, no credits, no key. Layer
+**The build is sound.** Over 400 tests, all offline, no network, no credits, no key. Layer
 selection is deterministic and its post-conditions *crash* rather than emit a layer
 already known to be wrong. A [live-uptime check](.github/workflows/keep-alive.yml) runs
 every 3 hours and fails loudly rather than pinging blindly.
@@ -205,7 +282,7 @@ Celsius while the vendor's own client docstring says Fahrenheit**.
 ```bash
 python -m venv venv && venv\Scripts\activate
 pip install -r requirements.txt
-pytest                    # 336 tests, offline, zero credits, no API key
+pytest                    # offline, zero credits, no API key
 streamlit run app.py      # offline by default, serves the committed fixtures
 ```
 
@@ -221,6 +298,9 @@ key in `.env`. See [`DEPLOY.md`](DEPLOY.md).
 | `docs/routing_spec.md` | that table, in prose, with the refusals |
 | `docs/api-notes.md` | every measured API behaviour, `[VENDOR]` / `[LIVE]` / `[TRANSCRIPT]` |
 | `docs/site_selection.md` | the twelve sites, the predictions, and how they did |
+| `docs/impact-evidence.md` | harm, reach and cost — every figure with a source URL and a data year, and a list of what could not be sourced |
+| `docs/practice-and-efficacy-evidence.md` | how supervisors decide today, and the evidence that no tool of this class has been shown to work |
+| `data/evidence/claims.json` | the claim registry every `EV` marker resolves to |
 | `docs/submission-summary.md` | the 500-word summary |
 | `data/fixtures/` | every API response, committed — the demo's data source |
 | `data/decisions.sample.jsonl` | a real generated sample of the audit trail — question, layer, rationale, action, refusals |
@@ -231,21 +311,56 @@ key in `.env`. See [`DEPLOY.md`](DEPLOY.md).
 Built with **Claude Code (Claude Opus 5)** — code, tests, documentation, and API probing.
 Disclosed per the hackathon rules; the pitch video is my own work.
 
-Every factual claim here was measured against the live API and is reproducible from the
-committed fixtures without a key.
+Every claim here about the API was measured against it and is reproducible from the
+committed fixtures without a key. Every claim about the world outside it carries an `EV`
+marker, a source URL and the year the data refers to.
 
 ## Limitations, stated plainly
 
 Naming these is not modesty. A judge finds them in the first minute, and being the one
 who says them first is worth more than hoping nobody looks.
 
-- **No customer discovery has happened.** Zero interviews. The crew sizes, shift times
-  and site roster are *plausible constructions*, not observed operations at a real
-  contractor. The mechanism is measured; the demand is not. The next step is five
+- **No tool of this class has ever been shown to reduce heat illness.** Not this one, and
+  not anything it competes with. A scoping review of wearable heat monitors found **0 of 19
+  studies measured a health outcome** — no RCTs, no controlled trials [[EV:EFF-01]]. The
+  only US RCT of a worker heat decision-support app was **null** on physiological strain
+  [[EV:EFF-02]]. The one strong positive result in the literature, a 2024 Italian study,
+  came from a legally mandated work ban rather than from the forecasting platform that
+  triggered it. OSHA is in the same position and says so in the rule text: it is
+  **assuming** *"an effectiveness of 95 percent for fatalities and 65 percent of HRIs"*
+  [[EV:EFF-03]]. The measurement gap is documented. Whether closing it changes outcomes is
+  unmeasured.
+- **Duration has not been shown to out-predict peak for worker harm. Nobody has tested
+  it.** No occupational study uses hours-above-threshold as an exposure variable
+  ([`docs/practice-and-efficacy-evidence.md` §5](docs/practice-and-efficacy-evidence.md#5-the-thesis-sentence-that-has-to-change)).
+  The argument at the top of this file is about standards architecture — the limits are
+  written as time at a condition — not about predictive power. That is a gap, not a
+  finding.
+- **Counter-evidence, named.** A contractor testified to OSHA that the free NWS forecast is
+  *"all I need to change work hours, days off, job assignments, production, and
+  timelines"*, and contractor use of mobile heat safety apps **fell from 35% to 22%**
+  between the 2023 and 2025 survey waves [[EV:PRAC-04]] — the trend is away from tooling,
+  not toward it. Both cut against this product, and neither is answered by building more
+  of it.
+- **No customer discovery has happened. Zero interviews.** The crew sizes, shift times and
+  site roster are *plausible constructions*, not observed operations at a real contractor.
+  What was read instead is the public record: named employers' sworn testimony from OSHA
+  docket OSHA-2021-0009 — 12 hearing days, 16 Jun – 2 Jul 2025 — plus two contractor
+  surveys, quoted in
+  [`docs/practice-and-efficacy-evidence.md`](docs/practice-and-efficacy-evidence.md). That
+  is a record of what employers say they do. It is not a record of anyone agreeing to buy
+  this. The mechanism is measured; the demand is not. The next step is unchanged: five
   conversations with Phoenix safety supervisors, before another line of code.
 - Heat index, **not WBGT** — the metric OSHA actually regulates against. The API returns
   `wet_bulb_temperature_celsius`, so a WBGT *estimate* is reachable. That is the top of
   the roadmap, not a footnote.
+- **NOT BUILT — trigger on deviation from local normal, not an absolute band.** The router
+  keys off absolute OSHA bands. Kwest Group's EHS manager testified that the operative
+  signal is *"a significant change or deviation from what that normal heat index is in that
+  location"* [[EV:PRAC-05]], and the Construction Industry Safety Coalition then formally
+  proposed that same basis to OSHA, citing the urban heat island by name. A per-site
+  historical API is the only thing that can compute a local normal per site. It is roadmap,
+  not code.
 - No modelling of crew acclimatisation or task intensity, both of which move OSHA's
   thresholds materially.
 - Decision support only. Does not replace an employer's heat-illness prevention program.

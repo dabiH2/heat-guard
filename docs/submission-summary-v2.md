@@ -3,72 +3,73 @@
 *FortyGuard Hackathon'26 · Track 4 (Government & Environment) × Track 6 (Agentic)*
 
 **Live demo: https://heat-fortyguard.streamlit.app/** · **Repo: github.com/dabiH2/heat-guard**
-(`Hackathon-FG` added as collaborator, accepted 24 Aug)
 
 ---
 
-**Phoenix outdoor-crew supervisors struggle to decide which crews can safely work, because
-their only heat signal is one city-wide forecast high applied to every site, which results
-in 643 phantom worker-hours of "unsafe exposure" on a single measured day: a 92% over-count
-worth roughly $35,000 of unnecessary stop-work.**
+**Phoenix outdoor-crew supervisors decide who works from one city-wide forecast high. One
+measured day: 643 phantom worker-hours of "unsafe exposure", a 92% over-count worth
+≈$4,118/day as mandated rest alone [[EV:COST-02]] [[EV:COST-01]] to ≈$32,941/day as idle
+labour [[EV:COST-01]].**
 
-**Hero.** The safety supervisor at a Phoenix contractor or municipal utility, making one call
-each morning: who works, who rotates, who stops.
+**Hero.** A Phoenix contractor's safety supervisor: one morning call — who works, who rotates,
+who stops.
 
-**Pain.** They read a daily forecast high, a *daytime maximum* measured at Sky Harbor, and
-apply it uniformly. It says nothing about a specific site, and nothing about a 21:00–05:30
-night crew. Nothing they use today reports duration above a threshold, per site.
+**Stakes.** 48 US workers died of environmental heat in 2024, 40 outdoors [[EV:HARM-01]]
+[[EV:HARM-02]] — undercounted by OSHA's own factor of 14 [[EV:HARM-03]].
 
-**Is AI required?** No, and that is the design. The router is **deterministic**: a decision
-table maps question to analysis layer, states why, and refuses when the data cannot answer.
-The model narrates; it never picks a layer, threshold or date.
+**Reach.** 154,320 outdoor workers in the Phoenix MSA [[EV:REACH-01]], 1,364,770 across 16 US
+Sun Belt metros [[EV:REACH-02]] — bottom-up from BLS OEWS May 2025, arithmetic in
+`docs/impact-evidence.md` §4. Jobs, not customers.
 
-## The trap it exists to catch
+**Pain.** 87% of US contractors decide from forecasts, 13% from WBGT [[EV:PRAC-01]]
+[[EV:PRAC-03]]. The free incumbent OSHA-NIOSH Heat Safety Tool identified 0% of high or extreme
+risk against on-site WBGT [[EV:CTR-01]]. Nothing reports duration above a threshold, per site.
 
-`tcm` (peak) and `exceedance` (hours above threshold) are the **same endpoint, same
-`filter_type`, same area, one optional string apart.** Ask "how long were they above the
-band", let the default stand, and you get a well-formed peak-temperature map: opposite
-operational decision, **no error raised**. HeatGuard picks that string before any call.
+**Why duration.** Every occupational heat limit in force is defined as time at a condition
+[[EV:NIOSH-01]] [[EV:ISO-01]]; NIOSH removed its peak-temperature ceiling in 2016
+[[EV:NIOSH-02]]. A daily peak cannot be compared against any of them.
 
-**Endpoints:** `/v1/heatmap` (`tcm`, `exceedance`, `persistence`, `filter_type` 2/3),
-`/v1/env_params`, `/v1/status/{id}`, `/v1/system/fetch-api-key-usage`.
+**Is AI required?** No. A **deterministic** decision table maps question to layer, states why,
+and refuses when data cannot answer. The model narrates; it never picks layer, threshold or
+date.
 
-## Measured result
+## The trap
 
-2025-07-15, OSHA high-risk band. Twelve sites, 115 workers; one returned zero tiles, a
-documented silent failure, so figures are over **11 sites, 107 workers**:
+`tcm` (peak) and `exceedance` are the **same endpoint, same `filter_type`, one optional string
+apart.** Ask for hours above the band, leave the default, get a peak map: opposite decision,
+**no error raised**. HeatGuard sets that string before any call.
+
+## Measured result — this project's own
+
+2025-07-15, OSHA high-risk band. One of twelve sites returned zero tiles (silent failure):
+**11 sites, 107 workers**.
 
 | | |
 |---|---|
-| Peak spread, 11 sites | **1.96 °F** — indistinguishable |
-| Duration spread | **2.62 h** — discriminates **20× better** |
-| City-wide figure applied uniformly | **701 worker-hours** |
-| Scoped to shifts crews actually work | **58** |
-| **Phantom exposure removed** | **643 — 92%, ≈ $35k/day** |
-
-The dangerous window ran 13:00–20:00; nearly every shift misses it. Eight sites tie at 7.0 h,
-identical on any heat map. The worst site is not the hottest but the one with **22 people in
-that hour instead of 18**.
+| Peak spread | **1.96 °F** — indistinguishable |
+| Duration spread | **2.62 h** — **20× better** |
+| City-wide, uniform | **701 worker-hours** |
+| Scoped to real shifts | **58** |
+| **Phantom exposure** | **643 — 92%** |
+| Dangerous window | **13:00–20:00** — most shifts miss it |
+| Worst site | not the hottest — **22 in that hour, not 18** |
 
 ## Built to be checked
 
-**336 tests run offline, no API key, no network**, against committed fixtures, so every number
-above reproduces from a clean clone. Six ways this API fails silently *while still billing*
-are refused before the call, not handled after it. Every threshold crossing the API boundary
-is unit-suffixed and converted in exactly one function, because an unconverted Fahrenheit
-threshold returns **0.0 hours where the truth is 17.0**: `Completed`, billed, silent. The
-deployed app serves those fixtures, so it still works after the key expires on 21 September.
+**430 tests run offline — no key, no network** — against committed fixtures, so every number
+above reproduces from a clean clone; the deployed app outlives the 21 September key expiry.
+Six ways this API fails silently *while billing* are refused before the call.
 
-**Why anyone would pay.** Over-warning is the expensive error and nobody counts it. Every
-decision and refusal is logged to `decisions.jsonl`; in an OSHA citation that record is the
-product. The method is not Phoenix-specific: the same calls run in any US metro the API
-covers, against any roster with sites, shifts and headcount.
+**Over-warning is the expensive error and nobody counts it.** Every decision and refusal is
+logged to `decisions.jsonl`; in an OSHA citation that record is the product.
 
-**What is not proven.** **No customer discovery has happened.** The roster is constructed, not
-observed; the next step is five conversations with Phoenix safety supervisors before another
-line of code. Per-site predictions also scored 2 of 11, worse than chance: the API separates
-urban core from periphery, not surface type. The mechanism is measured; the demand is not.
+**What is not proven. No customer discovery has happened.** Instead: named employers' sworn
+testimony, OSHA docket OSHA-2021-0009 (12 hearing days, 2025), and two contractor surveys —
+`docs/practice-and-efficacy-evidence.md`. The roster is constructed, not observed. No tool of
+this class has been shown to reduce heat illness [[EV:EFF-01]] [[EV:EFF-02]]; OSHA is in the
+same position — it states it is assuming its own 95%/65% figures [[EV:EFF-03]]. Per-site
+prediction scored 2 of 11, worse than chance: the API separates urban core from periphery, not
+surface type.
 
-**AI disclosure.** Claude Code (Claude Opus 5) wrote code, tests and documentation and ran the
-API probing. I set the thesis, chose the sites and thresholds, and made every scoping call.
-The pitch video is my own.
+**AI disclosure.** Claude Code (Claude Opus 5) wrote code, tests and docs, ran the API probing.
+I set the thesis, chose sites and thresholds, made every scoping call. The pitch video is mine.
