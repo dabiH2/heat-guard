@@ -42,11 +42,12 @@ That is the demo, and it is theirs, not ours. Cite it.
 
 ## Judging
 
-> ⚠ **"Weights are exact" was wrong.** Only **two** of the four weights are spoken in any
-> recording. See **Judging — what is actually sourced** below for the verified table.
-> Summary: **40% (impact) and 10% (communication) are verbatim-confirmed; 35% and 15% have
-> no source in 33,500 words of transcript.** They may come from a handbook page not in this
-> pack — but do not present them as quoted fact.
+> ✅ **RESOLVED 2026-08-29. All four weights are confirmed, and the criterion definitions
+> below were WRONG.** The Participant Handbook p17 ("11. JUDGING & SUBMISSION") and the
+> `#announcements` Slack canvas both carry the full weighted rubric with per-criterion
+> wording. The earlier warning that 35% and 15% were unsourced is superseded: they were in
+> the handbook all along, which is exactly where this file predicted they would be.
+> Full corrected table in **Judging — what is actually sourced** below.
 
 Handbook: *"Judges reward applied relevance over flashy demos."* A winning project needs the platform central not decorative, a clear problem and user, **a measurable outcome** (their example: "−7 °F on this route"), and a path to deployment.
 
@@ -226,20 +227,73 @@ At `[00:25:48]`–`[00:25:55]` he lists the trade-off as *"[regex] versus LLMs, 
 
 ## Judging — what is actually sourced
 
-| Criterion | Weight | Status |
+**Source: Participant Handbook p17, section "11. JUDGING & SUBMISSION", corroborated by the
+`#announcements` Slack canvas. Preamble: "Projects are scored on the four weighted criteria
+below. Judges' decisions are final."** All four weights CONFIRMED.
+
+| Criterion | Weight | Handbook wording, verbatim |
 |---|---|---|
-| Impact & relevance | **40%** | ✅ **Verified verbatim.** `01-kickoff` `[00:39:02]`: *"impact and relevance holds for like 40% of the whole project."* |
-| Technical execution | 35% | ⚠ **Never stated in any transcript.** Weight is unsourced. |
-| Innovation | 15% | ⚠ **Never stated in any transcript.** Weight is unsourced. |
-| Communication | **10%** | ✅ **Verified twice.** `01-kickoff` `[00:37:39]`: *"that actually holds like 10% of your whole criteria."* `02-temperature-api` `[00:57:56]`: *"10% goes into like communication."* |
+| Impact & relevance | **40%** | "A real urban-heat problem with measurable benefit; commercially viable solutions a real client would adopt" |
+| Technical execution | **35%** | "It works, the build is sound, data handled well; deployable, client-grade quality" |
+| Innovation | **15%** | "Original approach or a fresh combination of ideas" |
+| Communication | **10%** | "Clear, compelling demo and write-up" |
 
-Both spoken weights are hedged ("holds *like* 10%"). The 40/10 pair is real; the 35/15 split has no spoken source. **The four criteria and their order are confirmed** (`01-kickoff` `[00:35:11]`–`[00:36:21]`), only two of the four weights are.
+The canvas expands two: Impact is *"not a demo project built for the hackathon alone"*;
+Technical is *"Aim for deployable, client-grade quality that could stand up in the real world,
+a product a customer could rely on, not a throwaway prototype."*
 
-Two definitions that differ from the obvious reading, and change what to emphasise:
-- **"Technical execution" is defined almost entirely as AI-tool disclosure**, not code quality — `[00:35:34]`–`[00:35:53]`.
-- **"Innovation" is defined as track behaviour**: *"did you pick up a track or did you make your own track? Or did you take that track and build it into something else? Or you combine two to three different tracks?"* `[00:35:55]`–`[00:36:04]`. **Combining tracks scores *for* you.** Track 4 × Track 6 is therefore rewarded, not a hedge. Say so in the summary.
+40% and 10% are independently confirmed in audio (`01-kickoff` `[00:39:02]`, `[00:37:39]`;
+`02-temperature-api` `[00:57:56]`; `11-whiteboard` `[00:02:03]`).
 
-There is a **two-stage screen** before judges see anything — an internal FortyGuard screening department, then the judges `[00:24:37]`–`[00:25:07]`.
+### ⚠️ Two definitions in this file were WRONG. Corrected 2026-08-29.
+
+Both errors came from treating the kickoff's spoken asides as definitions. They are not.
+
+- ~~"Technical execution" is defined almost entirely as AI-tool disclosure, not code quality~~
+  **WRONG.** It is *"It works, the build is sound, data handled well; deployable, client-grade
+  quality."* AI disclosure is one component of four, and it is a floor not a lever: absence is a
+  defect, presence earns nothing (`[00:39:33]`: *"you will not be penalized for it"*).
+  **Consequence for the submission: the 336 offline tests, the fixture cache, the guards before
+  the call and the demo working without a key are scoring on the criterion's main axis, not a
+  side one. Say so plainly in the README and the video.**
+- ~~"Innovation" is defined as track behaviour~~ **INCOMPLETE.** It is *"Original approach or a
+  fresh combination of ideas."* Combining tracks is one instance of "fresh combination", not the
+  definition. Track 4 × Track 6 still earns the mark, but the deterministic router is the
+  stronger Innovation claim, because a judge glossed originality as *"the best solutions have
+  some sort of trick. It's not about brute force solving a problem"* (Vikram Venkat,
+  `12-vc-decision` `[00:31:59]`).
+
+There is a **two-stage screen** before judges see anything: an internal FortyGuard screening
+department, then the judges (`01-kickoff` `[00:24:37]`–`[00:25:08]`). Confirmed and extended by
+`09-dashboard-walkthrough` `[00:32:59]`: the screen applies **the same four criteria**, and
+**public voting is an input to the screen only**, explicitly *not* to judging (`[00:38:02]`:
+*"No, it is not going to be included in the judging criteria"*).
+
+### What the judges actually said they want
+
+Two of the four judges are now fully transcribed. Vikram Venkat (Cota Capital) was asked
+directly *"how would you judge our projects?"* and answered. The load-bearing items:
+
+- **Three to five user conversations is the stated evidence bar** `12` `[00:25:55]`: *"I don't
+  expect you to have 100 customer interviews, but having three, four, five potential users who
+  you've spoken with."* HeatGuard has **zero**. This is the single largest scoring gap in the
+  submission, on the 40% criterion. The README already names it; keep it named, first.
+- **A working prototype beats a beautiful one** `12` `[00:26:28]`: *"We don't expect this to be
+  the most beautiful UX […] but I would like something that at least solves the immediate
+  problem at hand."*
+- **Roadmap counts, including "becomes a feature at FortyGuard"** `12` `[00:27:00]`.
+- **The 10-minute time-to-value test** `12` `[00:33:25]`: *"If I can get the value within the
+  first 10 minutes of having the product in my hands, I already like it."* No rulebook, no
+  founder explaining it, plug and play.
+- **Tune-out conditions** `12` `[00:34:22]`: *"Using a lot of buzzwords, being vague, generic"*,
+  and `[00:35:07]`: *"I don't want you to try to oversell anything as well."*
+- **Value before mechanism** `12` `[00:36:35]`: state how it saves time, increases revenue,
+  reduces cost, improves productivity or reduces risk, *then* explain the trick.
+- **First 60 to 90 seconds: what you're doing, why, and who you are** `12` `[00:34:38]`.
+- **Judges default to engaging** `12` `[00:35:31]`: *"We will, for the majority of cases, at
+  least start fiddling around with the project […] unless you have done something very wrong in
+  your video that tells us like, hey, why are we even spending time on this?"* **The video is
+  the gate; the live link is where the other criteria get evidenced.**
 
 ## Open questions to resolve by probing, not assuming
 

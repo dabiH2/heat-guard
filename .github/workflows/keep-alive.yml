@@ -31,9 +31,11 @@ name: keep-alive
 
 on:
   schedule:
-    # Every 6 hours. Sleep only starts after ~7 days idle, so this is generous; the
-    # frequency buys prompt failure notice rather than extra wakefulness.
-    - cron: "0 */6 * * *"
+    # Every 3 hours. Sleep starts after ~7 days idle, so this is far more often than sleep
+    # alone requires — the extra frequency buys prompt failure notice, and keeps the
+    # container warm so a judge does not meet a 40 s cold start. That cold start was
+    # observed against this very app on 2026-08-29 and is the specific liveness hazard.
+    - cron: "0 */3 * * *"
   push:
     branches: [main]        # verify the app survived every deploy
   workflow_dispatch:        # and let a human run it on demand

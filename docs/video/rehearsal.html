@@ -1,0 +1,553 @@
+<title>HeatGuard Rehearsal Player</title>
+<style>
+:root{
+  --bg:#f7f7f5; --panel:#fcfcfb; --ink:#0b0b0b; --ink2:#52514e; --muted:#898781;
+  --grid:#e1e0d9; --axis:#c3c2b7; --safe:#c3c2b7; --danger:#d03b3b;
+  --band:rgba(208,59,59,0.10); --ghost:#dedcd4; --line:#e1e0d9;
+  --ok:#2e7d5b; --warn:#b8791f; --accentbg:#fdf3f3;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#111110; --panel:#1a1a19; --ink:#ffffff; --ink2:#c3c2b7; --muted:#898781;
+    --grid:#2c2c2a; --axis:#383835; --safe:#4a4a46; --danger:#d03b3b;
+    --band:rgba(208,59,59,0.18); --ghost:#33332f; --line:#2c2c2a;
+    --ok:#5fbf95; --warn:#d8a355; --accentbg:#241a1a;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#111110; --panel:#1a1a19; --ink:#ffffff; --ink2:#c3c2b7; --muted:#898781;
+  --grid:#2c2c2a; --axis:#383835; --safe:#4a4a46; --danger:#d03b3b;
+  --band:rgba(208,59,59,0.18); --ghost:#33332f; --line:#2c2c2a;
+  --ok:#5fbf95; --warn:#d8a355; --accentbg:#241a1a;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.5;}
+.wrap{max-width:1240px;margin:0 auto;padding:20px 18px 56px;}
+h1{font-size:19px;margin:0 0 2px;letter-spacing:-.01em}
+.sub{color:var(--muted);font-size:13px;margin:0 0 16px}
+
+/* ---------- transport ---------- */
+.transport{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+  padding:12px 14px;margin-bottom:14px}
+.trow{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+button{font:inherit;font-size:13px;padding:7px 13px;border-radius:7px;cursor:pointer;
+  border:1px solid var(--line);background:var(--panel);color:var(--ink);transition:.12s}
+button:hover{border-color:var(--muted)}
+button.primary{background:var(--danger);border-color:var(--danger);color:#fff;font-weight:600}
+button.primary:hover{filter:brightness(1.08)}
+button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.clock{font-variant-numeric:tabular-nums;font-size:26px;font-weight:700;
+  letter-spacing:-.02em;min-width:132px}
+.clock .of{font-size:14px;font-weight:400;color:var(--muted)}
+.spacer{flex:1}
+label.ctl{font-size:12px;color:var(--ink2);display:flex;align-items:center;gap:6px}
+input[type=range]{accent-color:var(--danger);width:104px}
+
+/* ---------- progress ---------- */
+.bar{position:relative;height:30px;margin-top:12px;background:var(--grid);
+  border-radius:6px;overflow:hidden;cursor:pointer}
+.seg{position:absolute;top:0;bottom:0;border-right:1px solid var(--panel);
+  font-size:10px;color:var(--ink2);padding:7px 0 0 6px;white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;user-select:none}
+.seg.money{background:var(--band)}
+.play{position:absolute;top:0;bottom:0;left:0;width:2px;background:var(--danger);
+  box-shadow:0 0 0 1px rgba(208,59,59,.35)}
+
+/* ---------- stage ---------- */
+.stage{display:grid;grid-template-columns:1.42fr 1fr;gap:14px;align-items:start}
+@media(max-width:940px){.stage{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.card h2{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);
+  margin:0;padding:10px 14px;border-bottom:1px solid var(--line);font-weight:600;
+  display:flex;justify-content:space-between;align-items:center;gap:8px}
+.screen{padding:16px 14px;min-height:392px}
+.cue{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+  padding:3px 8px;border-radius:5px;background:var(--grid);color:var(--ink2)}
+.cue.fire{background:var(--danger);color:#fff;animation:flash .5s ease-out}
+@keyframes flash{from{transform:scale(1.22)}to{transform:scale(1)}}
+
+/* ---------- prompter ---------- */
+.prompt{padding:16px 16px 18px;min-height:392px;display:flex;flex-direction:column}
+.beatname{font-size:12px;color:var(--danger);font-weight:700;margin-bottom:2px}
+.beatmeta{font-size:11.5px;color:var(--muted);margin-bottom:14px}
+.now{font-size:22px;line-height:1.42;font-weight:600;letter-spacing:-.01em;
+  min-height:150px;transition:opacity .15s}
+.now em{font-style:normal;color:var(--danger)}
+.next{margin-top:auto;padding-top:14px;border-top:1px solid var(--line);
+  font-size:13.5px;color:var(--muted);line-height:1.45}
+.next b{color:var(--ink2);font-weight:600;display:block;font-size:10.5px;
+  text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
+.hold{font-size:20px;font-weight:700;color:var(--danger);letter-spacing:.02em}
+.hold small{display:block;font-size:13px;font-weight:400;color:var(--ink2);
+  letter-spacing:0;margin-top:8px}
+.holdbar{height:5px;background:var(--grid);border-radius:3px;margin-top:14px;overflow:hidden}
+.holdbar i{display:block;height:100%;background:var(--danger);width:0}
+
+/* ---------- pace ---------- */
+.pace{margin-top:14px;background:var(--panel);border:1px solid var(--line);
+  border-radius:10px;padding:12px 14px;font-size:12.5px;color:var(--ink2)}
+.pace b{color:var(--ink)}
+.pill{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;
+  font-weight:700;margin-left:6px}
+.pill.ok{background:var(--ok);color:#fff}
+.pill.warn{background:var(--warn);color:#fff}
+
+/* ---------- app replica ---------- */
+.metrics{display:flex;gap:26px;flex-wrap:wrap;margin:10px 0 4px}
+.metric{min-width:150px}
+.metric .k{font-size:12px;color:var(--ink2)}
+.metric .v{font-size:38px;font-weight:400;letter-spacing:-.02em;line-height:1.15}
+.metric .d{font-size:12px;color:var(--ok);font-weight:600}
+.callout{border-radius:8px;padding:11px 13px;font-size:12.5px;margin-top:12px;
+  background:rgba(46,125,91,.10);border:1px solid rgba(46,125,91,.28)}
+.callout.red{background:var(--accentbg);border-color:rgba(208,59,59,.35)}
+.callout.blue{background:rgba(70,110,190,.10);border-color:rgba(70,110,190,.28)}
+.quote{border-left:3px solid var(--axis);padding:2px 0 2px 14px;font-size:13.5px;
+  color:var(--ink2);line-height:1.55}
+.quote b{color:var(--ink)}
+.tabs{display:flex;gap:20px;border-bottom:1px solid var(--line);margin:2px 0 14px;
+  font-size:13px;color:var(--ink2);padding-bottom:8px}
+.tabs .t.sel{color:var(--danger);font-weight:600;box-shadow:0 9px 0 -7px var(--danger)}
+.h4{font-size:14px;font-weight:700;margin:14px 0 6px}
+.note{font-size:11.5px;color:var(--muted);margin-top:8px}
+table.dt{border-collapse:collapse;width:100%;font-size:11.5px;margin-top:8px}
+table.dt th{text-align:left;font-weight:600;color:var(--muted);border-bottom:1px solid var(--line);
+  padding:6px 8px 6px 0;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em}
+table.dt td{padding:5px 8px 5px 0;border-bottom:1px solid var(--line);vertical-align:top}
+table.dt code{background:var(--grid);padding:1px 5px;border-radius:4px;font-size:11px}
+table.dt .em{color:var(--danger);font-weight:700}
+.slider{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--ink2);margin:8px 0}
+.track{height:4px;background:var(--grid);border-radius:3px;width:190px;position:relative}
+.track i{position:absolute;left:0;top:0;bottom:0;width:35%;background:var(--danger);border-radius:3px}
+.track u{position:absolute;left:35%;top:-5px;width:14px;height:14px;border-radius:50%;
+  background:var(--danger);transform:translateX(-7px)}
+.broken{border:1px dashed var(--danger);border-radius:8px;padding:10px 12px;
+  font-size:12px;background:var(--accentbg);margin-bottom:12px}
+ul.rf{margin:6px 0 0;padding-left:18px;font-size:12px;color:var(--ink2);columns:2;gap:18px}
+ul.rf li{margin:2px 0}
+ul.rf code{font-size:11px}
+.foot{margin-top:22px;font-size:12px;color:var(--muted);line-height:1.6;
+  border-top:1px solid var(--line);padding-top:14px}
+.foot b{color:var(--ink2)}
+</style>
+
+<div class="wrap">
+  <h1>HeatGuard — rehearsal player</h1>
+  <p class="sub">A silent 3:00 animatic you deliver over. Frames are the real app;
+    every number was read out of the live deployment or the repo.
+    <b>This is a practice tool, not the submission</b> — the pitch is yours to speak.</p>
+
+  <div class="transport">
+    <div class="trow">
+      <button class="primary" id="play">▶ Play</button>
+      <button id="restart">↺ Restart</button>
+      <div class="clock"><span id="t">0:00</span><span class="of"> / 3:00</span></div>
+      <div class="spacer"></div>
+      <button id="loop">🔁 Loop take: off</button>
+      <button id="voice">🔇 Scratch voice: off</button>
+      <label class="ctl">Rate <input type="range" id="rate" min="0.7" max="1.4" step="0.05" value="1"><span id="ratev">1.00</span></label>
+      <label class="ctl">Speed <input type="range" id="speed" min="0.5" max="2" step="0.25" value="1"><span id="speedv">1×</span></label>
+    </div>
+    <div class="bar" id="bar"><div class="play" id="ph"></div></div>
+  </div>
+
+  <div class="stage">
+    <div class="card">
+      <h2><span>On screen — what you are capturing</span><span class="cue" id="cue">no action</span></h2>
+      <div class="screen" id="screen"></div>
+    </div>
+    <div class="card">
+      <h2>Teleprompter</h2>
+      <div class="prompt">
+        <div class="beatname" id="bn">Beat 0 — cold open</div>
+        <div class="beatmeta" id="bm">0:00–0:14 · 35 words</div>
+        <div class="now" id="now">Press <b>Play</b>. Speak the large line out loud, in time with it.</div>
+        <div class="next"><b>Next</b><span id="nx">—</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pace">
+    <b>Pace target 150 wpm.</b> If you finish a line noticeably before it clears, you are
+    rushing — the commonest failure in a 3-minute pitch, and it eats the holds first.
+    <span id="pacepill" class="pill ok">on pace</span>
+    <div style="margin-top:6px">Total speech <b>432 words = 172.8 s</b> · scripted silence <b>7 s</b> · <b>= 3:00</b></div>
+  </div>
+
+  <div class="foot" id="foot"></div>
+</div>
+
+<script>
+/* ============================================================ real data
+   Extracted live from https://heat-fortyguard.streamlit.app/ on 2026-08-28.
+   the_day rows: name, crew, night, shift segments [start,end], measured exposed
+   hours, label. phantom: claimed -> real. Claimed sums to 701; real sums to 58. */
+const DAY_ROWS = [
+ {n:"27th Avenue Resource Innovation…",c:22,ni:0,s:[[5.5,14]],  ex:[13,1], l:"22 worker-hours"},
+ {n:"Loop 202 South Mountain corrido…",c:18,ni:1,s:[[19,24],[0,5]],ex:[19,1],l:"18 worker-hours"},
+ {n:"Tres Rios wetlands, 91st Ave re…",c:11,ni:0,s:[[6,14.5]], ex:[13,1], l:"11 worker-hours"},
+ {n:"Encanto Park grounds",           c:7, ni:0,s:[[5.5,14]],  ex:[13,1], l:"7 worker-hours"},
+ {n:"Chase Tower block, N Central Ave",c:6,ni:1,s:[[21,24],[0,5.5]],ex:null,l:"no exposure"},
+ {n:"Estrella Mountain desert-edge y…",c:6,ni:0,s:[[5,13]],    ex:null,   l:"no exposure"},
+ {n:"Roosevelt Row corridor works",   c:4, ni:1,s:[[20,24],[0,4.5]],ex:null,l:"no exposure"},
+ {n:"Sky Harbor airfield ramp",       c:14,ni:0,s:[[5,13.5]],  ex:null,   l:"no exposure"},
+ {n:"South Mountain Park north trail…",c:5,ni:0,s:[[5,13]],    ex:null,   l:"no exposure"},
+ {n:"Superior Court complex, W Jeffe…",c:5,ni:1,s:[[21,24],[0,5.5]],ex:null,l:"no exposure"},
+ {n:"Union Hills Water Treatment Pla…",c:9,ni:0,s:[[6,14.5]],  ex:null,   l:"no exposure"}
+];
+const PHANTOM = [["27th Avenue Resource Innovation…",154,22],["Loop 202 South Mountain corrido…",126,18],
+ ["Sky Harbor airfield ramp",98,0],["Tres Rios wetlands, 91st Ave re…",77,11],
+ ["Encanto Park grounds",49,7],["Chase Tower block, N Central Ave",42,0],
+ ["Union Hills Water Treatment Pla…",39,0],["Superior Court complex, W Jeffe…",35,0],
+ ["Estrella Mountain desert-edge y…",30,0],["Roosevelt Row corridor works",28,0],
+ ["South Mountain Park north trail…",23,0]];
+
+/* ================================================= figure 1: the_day (port of charts.py) */
+function theDay(){
+  const L=268,R=108,TOP=56,ROW=28,BAR=13,W=980,PW=W-L-R,H=TOP+DAY_ROWS.length*ROW+40;
+  const x=h=>L+(h/24)*PW, p=[];
+  p.push(`<svg viewBox="0 0 ${W} ${H}" width="100%" style="background:var(--panel);border-radius:8px">`);
+  const bx=x(13), bw=x(20)-x(13);
+  p.push(`<rect x="${bx}" y="${TOP-20}" width="${bw}" height="${H-TOP-8}" fill="var(--band)"/>`);
+  [bx,bx+bw].forEach(v=>p.push(`<line x1="${v}" y1="${TOP-20}" x2="${v}" y2="${H-28}" stroke="var(--danger)" stroke-width="1.5"/>`));
+  p.push(`<text x="${bx+bw/2}" y="${TOP-28}" text-anchor="middle" font-size="12.5" font-weight="600" fill="var(--danger)">above 103 °F · 13:00–20:00</text>`);
+  for(let h=0;h<=24;h+=3){const g=x(h);
+    p.push(`<line x1="${g}" y1="${TOP-20}" x2="${g}" y2="${H-28}" stroke="var(--grid)" stroke-width="1"/>`);
+    p.push(`<text x="${g}" y="${H-12}" text-anchor="middle" font-size="11" fill="var(--muted)">${String(h).padStart(2,"0")}:00</text>`);}
+  DAY_ROWS.forEach((r,i)=>{
+    const y=TOP+i*ROW, cy=y+BAR/2, exposed=!!r.ex;
+    p.push(`<text x="${L-14}" y="${cy+4}" text-anchor="end" font-size="12.5" fill="var(--ink)">${r.n}</text>`);
+    p.push(`<text x="16" y="${cy+4}" font-size="11.5" fill="var(--muted)" style="font-variant-numeric:tabular-nums">${String(r.c).padStart(2," ")}${r.ni?" 🌙":""}</text>`);
+    r.s.forEach(([a,b])=>p.push(`<rect x="${x(a)}" y="${y}" width="${x(b)-x(a)}" height="${BAR}" rx="4" fill="var(--safe)" opacity="0.55"/>`));
+    if(exposed) p.push(`<rect x="${x(r.ex[0])}" y="${y}" width="${x(r.ex[0]+r.ex[1])-x(r.ex[0])}" height="${BAR}" rx="4" fill="var(--danger)"/>`);
+    p.push(`<text x="${W-R+10}" y="${cy+4}" font-size="11.5" font-weight="${exposed?600:400}" fill="${exposed?"var(--danger)":"var(--muted)"}">${r.l}</text>`);
+  });
+  return p.join("")+"</svg>";
+}
+
+/* ================================================= figure 2: phantom_bars */
+function phantom(){
+  const L=268,R=116,TOP=44,ROW=30,BAR=10,W=980,PW=W-L-R,H=TOP+PHANTOM.length*ROW+26;
+  const big=PHANTOM[0][1], bw=v=>(v/big)*PW, p=[];
+  p.push(`<svg viewBox="0 0 ${W} ${H}" width="100%" style="background:var(--panel);border-radius:8px">`);
+  p.push(`<text x="${L}" y="20" font-size="12.5" fill="var(--ink2)"><tspan fill="var(--ghost)">■</tspan> claimed by the city-wide figure   <tspan fill="var(--danger)">■</tspan> real, inside the shift</text>`);
+  PHANTOM.forEach(([n,claim,real],i)=>{const y=TOP+i*ROW;
+    p.push(`<text x="${L-14}" y="${y+11}" text-anchor="end" font-size="12.5" fill="var(--ink)">${n}</text>`);
+    p.push(`<rect x="${L}" y="${y}" width="${bw(claim)}" height="${BAR}" rx="4" fill="var(--ghost)"/>`);
+    p.push(`<rect x="${L}" y="${y+BAR+2}" width="${bw(real)}" height="${BAR}" rx="4" fill="var(--danger)"/>`);
+    p.push(`<text x="${W-R+8}" y="${y+15}" font-size="11.5" fill="var(--ink2)" style="font-variant-numeric:tabular-nums">${claim} → <tspan font-weight="700" fill="${real?"var(--danger)":"var(--muted)"}">${real}</tspan></text>`);});
+  return p.join("")+"</svg>";
+}
+
+/* ================================================= figure 3: unit_trap (verbatim values) */
+function unitTrap(){
+  const W=940,H=172,L=300,PW=480,p=[];
+  p.push(`<svg viewBox="0 0 ${W} ${H}" width="100%" style="background:var(--panel);border-radius:8px">`);
+  [["threshold = 35.00","95 °F, converted to °C",17,"var(--danger)"],
+   ["threshold = 95","95 °F sent raw → read as 95 °C",0,"var(--muted)"]].forEach(([lab,sub,hrs,col],i)=>{
+    const y=44+i*62, w=(hrs/17)*PW;
+    p.push(`<text x="${L-16}" y="${y+12}" text-anchor="end" font-size="14" font-weight="600" fill="var(--ink)" style="font-family:ui-monospace,monospace">${lab}</text>`);
+    p.push(`<text x="${L-16}" y="${y+29}" text-anchor="end" font-size="11.5" fill="var(--muted)">${sub}</text>`);
+    if(w>0) p.push(`<rect x="${L}" y="${y}" width="${w}" height="20" rx="4" fill="${col}"/>`);
+    else p.push(`<line x1="${L}" y1="${y+10}" x2="${L+22}" y2="${y+10}" stroke="var(--axis)" stroke-width="2"/>`);
+    p.push(`<text x="${L+Math.max(w,22)+12}" y="${y+15}" font-size="16" font-weight="700" fill="${col}">${hrs.toFixed(1)} h</text>`);
+    p.push(`<text x="${L+Math.max(w,22)+78}" y="${y+15}" font-size="11.5" fill="var(--muted)">status: Completed · 4,220 credits</text>`);});
+  p.push(`<text x="${L}" y="${H-16}" font-size="12.5" font-weight="600" fill="var(--danger)">Same endpoint, area, date, filter_type, analytic_type, direction. Nothing raised.</text>`);
+  return p.join("")+"</svg>";
+}
+
+/* ============================================================ frames */
+const TABS = sel => `<div class="tabs">${["📋 The morning call","Ask a question","⚠️ The trap","How it decides"]
+  .map((t,i)=>`<span class="t${i===sel?" sel":""}">${t}</span>`).join("")}</div>`;
+
+const FRAMES = {
+  header:()=>TABS(0)+`<div class="quote"><b>A safety manager with twelve Phoenix sites decides each
+    morning where crews can work.</b> Today that decision comes from a single city-wide forecast high.
+    OSHA records outdoor-worker heat-stroke deaths at a daily maximum heat index of only
+    <b>86 °F</b> — inside the <i>Caution</i> band. <b>Peak temperature is a poor predictor of harm.
+    Duration above a threshold is the signal.</b></div>
+    <p class="note">Beat 1 frame. Scroll up from the metrics; the OSHA line should be legible behind you.</p>`,
+
+  metrics:()=>TABS(0)+`<div style="font-size:19px;font-weight:700;margin-bottom:4px">2025-07-15 — 11 sites, 107 workers</div>
+    <div style="font-size:12.5px;color:var(--ink2)">Every site on the roster peaked between
+    <b>102.6 and 104.5 °F</b> — a spread of <b>1.9 °F</b>. By peak alone they are the same day at the
+    same place, and a city-wide figure would call all of them dangerous.</div>
+    <div class="metrics">
+      <div class="metric"><div class="k">City-wide figure · worker-hours</div><div class="v">701</div></div>
+      <div class="metric"><div class="k">Scoped to real shifts · worker-hours</div><div class="v">58</div><div class="d">↓ −643</div></div>
+      <div class="metric"><div class="k">Over-count</div><div class="v">92%</div></div>
+    </div>
+    <div class="callout">✅ <b>643 worker-hours of 'unsafe exposure' that nobody was standing in.</b>
+      The dangerous window on this day runs roughly 13:00–20:00 — almost entirely outside every shift
+      on the roster. A city-wide call to stop work would have been 92% wrong, and expensive.</div>`,
+
+  cost:()=>TABS(0)+`<div class="h4">What that is worth</div>
+    <div class="slider">Loaded labour rate, $/hour
+      <div class="track"><i></i><u></u></div><b style="color:var(--ink)">55</b>
+      <span style="color:var(--muted)">(25 – 100)</span></div>
+    <div class="metrics">
+      <div class="metric"><div class="k">Unnecessary stop-work avoided, one day</div><div class="v">$35,363</div></div>
+      <div class="metric"><div class="k">Cost of being wrong the other way</div>
+        <div class="v" style="font-size:22px;padding-top:12px">one heat-illness claim</div></div>
+    </div>
+    <div class="callout red">💷 <b>Over-warning is the expensive error, and it is the one nobody counts.</b>
+      Stopping work costs money on a day nobody was at risk; the 643 worker-hours above are
+      <b>$35,363 at $55/h</b>. Under-warning costs a claim — rarer, far worse, and the reason the tool
+      refuses rather than guesses.</div>
+    <p class="note">The slider is visible while you speak — that is your defence of the number.
+      Say the rate out loud.</p>`,
+
+  theday:()=>TABS(0)+`<div class="h4">The day, hour by hour</div>
+    <div style="font-size:12px;color:var(--ink2);margin-bottom:8px">Each bar is one crew's shift.
+      The red band is the only window that was actually above threshold.
+      <b>Almost every shift misses it — that is the 92% in one picture.</b></div>`+theDay()+
+    `<p class="note">Night shifts cross midnight and are drawn as two segments on a single
+      00:00–24:00 axis — the crew really is outside during both.</p>`,
+
+  phantom:()=>TABS(0)+`<div class="h4">What the city-wide figure claims, against what is real</div>`+
+    phantom()+`<p class="note">Optional shot. Claimed column sums to 701; real column sums to 58.</p>`,
+
+  trap:()=>TABS(2)+`<div class="broken">⚠️ <b>This tab renders blank on the live deployment right now.</b>
+      Frame reconstructed from <code>charts.py</code> + <code>app.py</code>. Fix before recording.</div>
+    <div style="font-size:15px;font-weight:700;margin-bottom:4px">Two calls. One unit. Seventeen hours of difference.</div>
+    <div style="font-size:12px;color:var(--ink2);margin-bottom:10px">Both calls below are
+      <b>the same endpoint, area, date, <code>filter_type</code>, <code>analytic_type</code> and
+      <code>direction</code>.</b> The only difference is whether the threshold was converted from
+      Fahrenheit to Celsius before it was sent.</div>`+unitTrap()+
+    `<div class="callout red" style="margin-top:10px">🚨 <b>17 hours of dangerous exposure, reported as
+      zero — as a confidently formatted all-clear.</b> For a heat-safety tool that is the worst
+      available wrong answer, and it sits one unit conversion away at all times.</div>
+    <p class="note">Note the top row's "status: Completed · 4,220 credits" label starts at x=858 in a
+      940-wide viewBox — it will be clipped. See the notes below.</p>`,
+
+  method:()=>TABS(3)+`<div class="broken">⚠️ <b>This tab also renders blank on the live deployment right now.</b>
+      Frame reconstructed from <code>app.py</code> + <code>docs/routing_spec.md</code>.</div>
+    <div style="font-size:15px;font-weight:700">The decision table</div>
+    <div style="font-size:12px;color:var(--ink2);margin:4px 0 2px"><code>filter_type</code> selects the
+      <b>time window</b>. <code>analytic_type</code> selects the <b>analysis layer</b> — and that is the
+      one that silently changes the answer.</div>
+    <table class="dt"><tr><th>Question</th><th>filter_type</th><th>analytic_type</th><th>Wrong answer if answered as a snapshot</th></tr>
+    ${[["Is it safe right now?","1 · hour","tcm","None — a snapshot is correct here",0],
+       ["When do we start and stop?","3 · day","time_of_measure","One number, no schedule",0],
+       ["Will we cross soon?","2 · hour range","tcm","A historical average hides today",0],
+       ["How long above the band?","3 · day","exceedance","A maximum says how hot, never how long",1],
+       ["Chronically dangerous?","4 · day range","exceedance","One bad day looks structural",1],
+       ["Which site is worst?","3 · day","exceedance","Ranks by the clock, not by heat",1]]
+      .map(r=>`<tr><td>${r[0]}</td><td><code>${r[1]}</code></td><td class="${r[4]?"em":""}"><code>${r[2]}</code></td><td>${r[3]}</td></tr>`).join("")}
+    </table>
+    <div class="h4">The LLM does not choose the layer</div>
+    <div style="font-size:12px;color:var(--ink2)"><code>router.py</code> is deterministic — no model call
+      anywhere in it. <b>Auditable</b> (this is a safety tool), <b>reproducible</b> (every demo take
+      matches), <b>testable at zero cost</b> (336 offline tests, no network, no credits).</div>
+    <div class="h4">Refusals are a feature</div>
+    <ul class="rf"><li><code>OUTSIDE_US</code></li><li><code>BEFORE_2021</code></li>
+      <li><code>BEYOND_FORECAST</code></li><li><code>EXCEEDS_30_DAY_WINDOW</code></li>
+      <li><code>AOI_TOO_LARGE</code></li><li><code>GRANULARITY_TOO_FINE</code></li>
+      <li class="em"><code>WRONG_LAYER_WOULD_MISLEAD</code></li></ul>`,
+
+  wrong:()=>TABS(0)+`<div class="h4">The twelve sites and their predictions</div>
+    <div style="font-size:12.5px;color:var(--ink2)">Each site carried a <b>falsifiable prediction</b>
+      written before any data was fetched. <b>Two of eleven came true — worse than chance.</b>
+      They are reported rather than dropped, because <code>docs/site_selection.md</code> committed to
+      reporting them and a roster where every prediction held would be evidence of tuning.</div>
+    <div class="callout blue" style="margin-top:12px">🎯 <b>Ranking by heat and ranking by harm give
+      different answers.</b> 8 of 11 sites tie at 7 hours above threshold for the day — a heat map
+      would colour them identically. Scoped to shifts, only 4 carry any exposure at all.
+      <b>Heat maps rank tiles. Crews are what get hurt.</b></div>
+    <p class="note">End here, or cut to a card with the live URL, the repo URL, and
+      "Built with Claude Code (Claude Opus 5)".</p>`
+};
+
+/* ============================================================ timeline
+   Durations are words / 2.5 (150 wpm). Holds are scripted silence. */
+const B=[
+ {name:"Beat 0 — cold open",              w:35, f:"metrics", cue:"static · no cursor"},
+ {name:"Beat 1 — hero and pain",          w:44, f:"header",  cue:"SCROLL up"},
+ {name:"Beat 2 — the morning call",       w:62, f:"metrics", cue:"SCROLL down"},
+ {name:"Beat 3 — THE MONEY SHOT",         w:110,f:"theday",  cue:"SCROLL · then freeze"},
+ {name:"Beat 4 — the trap",               w:58, f:"trap",    cue:"CLICK The trap tab"},
+ {name:"Beat 5 — how it decides",         w:70, f:"method",  cue:"CLICK How it decides"},
+ {name:"Beat 6 — what we got wrong",      w:53, f:"wrong",   cue:"CLICK morning call · SCROLL"}
+];
+const S=[ // [beatIndex, kind, text|seconds, frameOverride]
+ [0,"l","Last July fifteenth, a Phoenix safety manager reading the city forecast would have shut down <em>seven hundred and one</em> worker-hours as unsafe."],
+ [0,"l","<em>Six hundred and forty-three</em> of those, nobody was standing in."],
+ [0,"l","That's the product."],
+ [1,"l","The hero is a safety supervisor at a Phoenix contractor with twelve job sites."],
+ [1,"l","Every morning, one call — who works, who rotates, who stops."],
+ [1,"l","Today he makes it from a single forecast high, measured at Sky Harbor airport, and applies it to all twelve."],
+ [2,"l","Here's that day, measured per site from FortyGuard's temperature API."],
+ [2,"l","Every site peaked within <em>one-point-nine-six degrees</em> of every other — by peak, they're the same place."],
+ [2,"l","Apply the city-wide number: <em>seven hundred and one</em> unsafe worker-hours. Scope it to the shifts crews actually work: <em>fifty-eight</em>."],
+ [2,"l","<em>Ninety-two percent</em> over-count. At a fifty-five dollar loaded rate, that's <em>thirty-five thousand dollars</em> of stop-work. In one day.","cost"],
+ [3,"l","This is why."],
+ [3,"h",2],
+ [3,"l","Each bar is one crew's shift, across a twenty-four hour day. The red band is the only window that was actually above OSHA's high-risk heat index — <em>one o'clock to eight in the evening</em>."],
+ [3,"h",3],
+ [3,"l","Look how many shifts miss it entirely. That's the ninety-two percent, in one picture."],
+ [3,"l","<em>Eight of eleven</em> sites tie at exactly seven hours above threshold — on a heat map they are the same colour. Scoped to shifts, only <em>four</em> carry any exposure at all."],
+ [3,"h",2],
+ [3,"l","And the worst crew isn't at the hottest site. It's the site with <em>twenty-two people</em> standing in that hour instead of <em>eighteen</em>."],
+ [3,"l","Heat maps rank tiles. Crews are what get hurt."],
+ [4,"l","Two calls. Same endpoint, same area, same date, same parameters. The only difference is whether the threshold was converted from Fahrenheit."],
+ [4,"l","Converted: <em>seventeen hours</em> above the danger band. Unconverted: <em>zero point zero</em>."],
+ [4,"l","Both came back Completed. Both billed four thousand two hundred and twenty credits. <em>Nothing was raised.</em>"],
+ [4,"l","Seventeen hours of dangerous exposure, reported as a clean all-clear."],
+ [5,"l","So HeatGuard picks that string before any call is made — with no model at all."],
+ [5,"l","<em>It could. It shouldn't.</em>"],
+ [5,"l","The router is a deterministic decision table: auditable, reproducible, testable at zero cost."],
+ [5,"l","A test runs the same question with and without a model and asserts every decisive field is identical."],
+ [5,"l","It refuses <em>seven ways</em>, and logs every question, layer and rationale."],
+ [5,"l","That log is what you hand an OSHA inspector."],
+ [6,"l","One thing I'd rather not show you."],
+ [6,"l","Every site carried a prediction, written down before any data was fetched. <em>Two of eleven</em> came true — worse than chance. It's in the app, not buried."],
+ [6,"l","Track four crossed with track six. Built with Claude Code. The pitch is mine."],
+ [6,"l","Duration, not peak. Crews, not tiles."]
+];
+const words = s => s.replace(/<[^>]+>/g," ").split(/\s+/).filter(x=>/[a-z0-9]/i.test(x)).length;
+const CUES=[]; let t=0;
+S.forEach(row=>{
+  const [bi,kind,payload,fo]=row;
+  const dur = kind==="h" ? payload : words(payload)/2.5;
+  CUES.push({t0:t,t1:t+dur,bi,kind,text:kind==="h"?"":payload,frame:fo||B[bi].f,
+             first:CUES.length===0||CUES[CUES.length-1].bi!==bi});
+  t+=dur;
+});
+const TOTAL=t;
+
+/* Nine takes. Every boundary is either a click/scroll (motion masks the cut) or a
+   scripted hold (frame is frozen, so the cut is invisible). See docs/video/recording-plan.md */
+const TAKES=[
+ {id:"T1",t0:0,    t1:14.0, rec:1, screen:"morning call · metric cards"},
+ {id:"T2",t0:14.0, t1:31.6, rec:2, screen:"morning call · header quote"},
+ {id:"T3",t0:31.6, t1:56.4, rec:3, screen:"morning call · metrics → What that is worth"},
+ {id:"T4",t0:56.4, t1:75.8, rec:4, screen:"morning call · the day, hour by hour"},
+ {id:"T5",t0:75.8, t1:95.4, rec:5, screen:"morning call · the day (same frozen frame)"},
+ {id:"T6",t0:95.4, t1:107.8,rec:6, screen:"morning call · the day (same frozen frame)"},
+ {id:"T7",t0:107.8,t1:131.0,rec:8, screen:"⚠️ The trap"},
+ {id:"T8",t0:131.0,t1:159.0,rec:9, screen:"How it decides"},
+ {id:"T9",t0:159.0,t1:180.2,rec:7, screen:"morning call · predictions table"}
+];
+const takeAt=x=>TAKES.find(k=>x>=k.t0&&x<k.t1)||TAKES[TAKES.length-1];
+
+/* ============================================================ engine */
+const $=id=>document.getElementById(id);
+let playing=false, clock=0, last=0, spoken=-1, speed=1, voiceOn=false, rate=1, loopOn=false;
+const fmt=s=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,"0")}`;
+
+// progress segments
+(function(){const bar=$("bar");let acc=0;
+  B.forEach((b,i)=>{const bt=CUES.filter(c=>c.bi===i).reduce((a,c)=>a+(c.t1-c.t0),0);
+    const d=document.createElement("div");d.className="seg"+(i===3?" money":"");
+    d.style.left=(acc/TOTAL*100)+"%";d.style.width=(bt/TOTAL*100)+"%";
+    d.textContent=b.name.replace(/^Beat /,"B").replace(" — ","·");
+    d.title=b.name+" — click to jump";d.onclick=e=>{e.stopPropagation();seek(acc);};
+    bar.appendChild(d);acc+=bt;});
+  TAKES.forEach(k=>{if(k.t0===0)return;const s=document.createElement("div");
+    s.style.cssText=`position:absolute;top:0;bottom:0;left:${k.t0/TOTAL*100}%;width:2px;background:var(--ink);opacity:.30`;
+    s.title=k.id+" starts here";bar.appendChild(s);});
+  bar.onclick=e=>{const r=bar.getBoundingClientRect();seek((e.clientX-r.left)/r.width*TOTAL);};
+})();
+
+function cueAt(x){for(const c of CUES) if(x>=c.t0&&x<c.t1) return c; return CUES[CUES.length-1];}
+function seek(x){clock=Math.max(0,Math.min(TOTAL-0.01,x));spoken=-1;stopSpeech();paint();}
+
+function paint(){
+  const c=cueAt(clock), i=CUES.indexOf(c), b=B[c.bi];
+  $("t").textContent=fmt(clock);
+  $("ph").style.left=(clock/TOTAL*100)+"%";
+  $("bn").textContent=b.name;
+  const bs=CUES.find(x=>x.bi===c.bi).t0, be=[...CUES].reverse().find(x=>x.bi===c.bi).t1;
+  const k=takeAt(clock);
+  $("bm").textContent=`${fmt(bs)}–${fmt(be)} · ${b.w} words · ${b.cue}`
+    +`   ▸ take ${k.id} (${(k.t1-k.t0).toFixed(1)}s, record #${k.rec}) · ${k.screen}`;
+  const cue=$("cue");
+  if(c.first&&clock-c.t0<1.1){cue.textContent=b.cue;cue.className="cue fire";}
+  else{cue.textContent=b.cue.startsWith("CLICK")?"held":b.cue;cue.className="cue";}
+  if($("screen").dataset.f!==c.frame){$("screen").dataset.f=c.frame;$("screen").innerHTML=FRAMES[c.frame]();}
+  if(c.kind==="h"){
+    const p=(clock-c.t0)/(c.t1-c.t0)*100;
+    $("now").innerHTML=`<div class="hold">◼ HOLD — say nothing<small>${(c.t1-clock).toFixed(1)} s. Let the picture do the work. This is the part people cut. Don't.</small></div><div class="holdbar"><i style="width:${p}%"></i></div>`;
+  } else {
+    $("now").innerHTML=c.text;
+  }
+  const nx=CUES[i+1];
+  $("nx").textContent = nx ? (nx.kind==="h"?`◼ HOLD ${nx.t1-nx.t0} s`:nx.text.replace(/<[^>]+>/g,"")) : "— end —";
+  const pp=$("pacepill"), rem=TOTAL-clock;
+  pp.textContent = rem>0 ? `${fmt(rem)} left` : "done";
+  pp.className = "pill "+(clock<=TOTAL?"ok":"warn");
+  if(voiceOn&&playing&&c.kind==="l"&&spoken!==i){spoken=i;speak(c.text);}
+}
+
+/* ---- scratch voice: browser speech synthesis, generated at playback.
+   Deliberately not an exportable audio file. ---- */
+function stopSpeech(){try{speechSynthesis.cancel();}catch(e){}}
+function speak(html){
+  try{
+    const u=new SpeechSynthesisUtterance(html.replace(/<[^>]+>/g,""));
+    u.rate=rate; u.pitch=1; u.lang="en-GB";
+    const v=speechSynthesis.getVoices().find(x=>/en-GB|en_GB/.test(x.lang))
+         || speechSynthesis.getVoices().find(x=>/^en/.test(x.lang));
+    if(v)u.voice=v;
+    speechSynthesis.speak(u);
+  }catch(e){}
+}
+$("voice").onclick=()=>{
+  if(!("speechSynthesis" in window)){$("voice").textContent="🚫 voice unavailable here";return;}
+  voiceOn=!voiceOn; spoken=-1;
+  if(!voiceOn)stopSpeech();
+  $("voice").textContent=voiceOn?"🔊 Scratch voice: on":"🔇 Scratch voice: off";
+  $("voice").className=voiceOn?"on":"";
+  if(voiceOn){speak("");setTimeout(()=>{if(voiceOn&&!speechSynthesis.speaking&&!speechSynthesis.pending)
+    $("voice").textContent="🔊 on — if silent, open this file in Chrome";},900);}
+};
+$("loop").onclick=()=>{loopOn=!loopOn;
+  $("loop").textContent=loopOn?`🔁 Loop take: ${takeAt(clock).id}`:"🔁 Loop take: off";
+  $("loop").className=loopOn?"on":"";};
+$("rate").oninput=e=>{rate=+e.target.value;$("ratev").textContent=rate.toFixed(2);};
+$("speed").oninput=e=>{speed=+e.target.value;$("speedv").textContent=speed+"×";};
+$("play").onclick=()=>{playing=!playing;$("play").textContent=playing?"❚❚ Pause":"▶ Play";
+  if(!playing)stopSpeech(); else spoken=-1; last=performance.now();};
+$("restart").onclick=()=>{seek(0);};
+document.addEventListener("keydown",e=>{
+  if(e.code==="Space"){e.preventDefault();$("play").click();}
+  if(e.code==="ArrowRight")seek(clock+5);
+  if(e.code==="ArrowLeft")seek(clock-5);
+});
+function loop(now){
+  if(playing){const d=(now-last)/1000*speed;last=now;clock+=d;
+    if(loopOn){const k=takeAt(Math.max(0,clock-d));
+      if(clock>=k.t1){clock=k.t0;spoken=-1;stopSpeech();}}
+    if(clock>=TOTAL){clock=TOTAL-0.01;playing=false;$("play").textContent="▶ Play";stopSpeech();}}
+  else last=now;
+  paint(); requestAnimationFrame(loop);
+}
+paint(); requestAnimationFrame(loop);
+
+/* ============================================================ notes */
+$("foot").innerHTML=`
+<b>Controls.</b> Space = play/pause · ← → = ±5 s · click the bar or a beat block to jump.
+The <b>Speed</b> control changes playback only — rehearse at 1×.
+<b>Loop take</b> repeats the take you are currently inside, which is how you drill one take
+until it is clean before recording it. The thin dark ticks on the bar are the nine take
+boundaries; the plan is in <code>docs/video/recording-plan.md</code>.<br><br>
+<b>Two things this rehearsal turned up, both blocking:</b><br>
+1. <b>The <code>⚠️ The trap</code> and <code>How it decides</code> tabs render completely blank on the
+live app right now</b> — both panels return zero characters after a hard reload, with no Python
+exception surfaced. That is beats 4 and 5, fifty of your hundred and eighty seconds. Those two frames
+above are reconstructions from source, not captures.<br>
+2. <b>The script's dollar figure has been corrected to match the app.</b> The deployed
+"What that is worth" section says <b>$35,363 at $55/h</b> on a $25–100 slider, not the $29k–42k range
+from the brief. Beat 2 now says thirty-five thousand and names the rate — better, because the slider
+is on screen while you say it.<br><br>
+<b>Two smaller ones:</b> <code>charts.py</code>'s <code>unit_trap()</code> places the top row's
+"status: Completed · 4,220 credits" label at x=858 inside a 940-wide viewBox, so it clips — visible in
+the trap frame above. And <code>docs/site_selection.md</code> says "125 workers across 12 sites", but
+the twelve crew sizes sum to <b>115</b> (115 − 8 for the dropped Deer Valley site = the 107 the app
+shows). The "33 of them work nights" figure is correct.<br><br>
+<b>Provenance.</b> Every figure and number above was read out of
+<code>heat-fortyguard.streamlit.app</code> on 2026-08-28 or ported from <code>src/heatguard/charts.py</code>.
+The eleven claimed values sum to 701 and the eleven real values sum to 58, which is the check that the
+extraction is faithful. Nothing was estimated or invented.`;
+</script>

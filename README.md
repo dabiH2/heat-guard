@@ -9,6 +9,13 @@ Temperature API®.**
 
 *Runs entirely from committed fixtures — no API key, nothing to break when the FortyGuard key expires on 21 September.*
 
+> **Submission prerequisites, stated here because they cannot be verified from outside.**
+> `Hackathon-FG` **was added as a collaborator on this repository and the invitation was
+> accepted** (write access, 24 Aug 2026) — the prerequisite FortyGuard called out at
+> `02-temperature-api` `[00:50:22]`: *"if it's not added as a collaborator […] this
+> submission would not be counted."* The repository is public, the live demo opens
+> logged-out, and no key is committed or required to run anything here.
+
 ---
 
 > A safety manager with twelve Phoenix sites decides each morning where crews can work.
@@ -129,6 +136,37 @@ decisive field matches. *A safety tool whose recommendation depends on whether a
 model was reachable is not a safety tool.*
 
 [t]: tests/test_agent.py
+
+## Built to be relied on
+
+*Deployable, client-grade — the standard applied to what was actually built, which is
+deliberately narrow.*
+
+**It works on a cold visit.** The deployed app is **offline by default** and serves the
+committed fixture cache. It needs no API key, so there is nothing to leak and nothing
+that breaks when the FortyGuard key expires. A judge clicking around **cannot spend a
+credit** — going live requires setting `HEATGUARD_ONLINE=1`, which only ever happens on a
+developer machine. Every path a visitor can click was verified offline: 12 sites × 4
+question shapes × 2 thresholds — 36 answered, 12 refused by design, **0 cache misses**.
+
+**The build is sound.** 349 tests, all offline, no network, no credits, no key. Layer
+selection is deterministic and its post-conditions *crash* rather than emit a layer
+already known to be wrong. A [live-uptime check](.github/workflows/keep-alive.yml) runs
+every 3 hours and fails loudly rather than pinging blindly.
+
+**The data is handled well.** These are the documented ways to misuse this API and get a
+confident wrong answer. Each is handled in code, not just noted:
+
+| Trap | What goes wrong | What we do |
+|---|---|---|
+| **Analysis layers use a different schema** | `tcm` returns per-tile temperature fields; `exceedance`/`persistence` return `properties.value`. Code reading `properties.temperature` finds nothing. | Two separate readers. `tile_hours()` raises `UnitError` unless `stats_data.units == "hour"`. |
+| **`exceedance` counts hours, not degree-hours** | `6.0` means six hours past the threshold — not accumulated °C·h. | Labelled hours everywhere. Never called an intensity or a severity. |
+| **`env_params` heat index is a humidity artifact** | One temperature anchor across 24 h with only humidity varying, so it peaks *overnight*. It is a humidity-sensitivity curve, not a diurnal forecast. | **No duration metric is derived from it.** Duration comes from `exceedance`. `env_params` supplies humidity only, for the heat-index → air-temperature conversion. Verified independently by reproducing their series from the single input temperature. |
+| **`env_params` is coarser than a parcel** | Nearby points return identical arrays; it is a re-expression of the heatmap, not an independent measurement. | Never used to discriminate between sites. |
+| **`threshold` is °C while readings are °F** | Sending 95 meaning °F returns **0.0 h where the truth is 17.0** — `Completed`, billed, silent. | One conversion point, unit-suffixed signatures, and a guard that refuses any threshold above 60 °C. |
+
+Six further silent-and-billed failure modes, all measured live, are in
+[`docs/api-notes.md`](docs/api-notes.md) — every one refused before the call is made.
 
 ## What we got wrong
 

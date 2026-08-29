@@ -1,0 +1,13 @@
+# ffmpeg concat list — script order, NOT recording order.
+# Usage:  ffmpeg -f concat -safe 0 -i takes.txt -c copy heatguard-pitch.mp4
+# Expected total: 180.2 s (3:00). See recording-plan.md for what each take contains.
+
+file 'T1.mp4'   # beat 0  · cold open              · 14.0 s
+file 'T2.mp4'   # beat 1  · hero and pain          · 17.6 s
+file 'T3.mp4'   # beat 2  · the morning call       · 24.8 s
+file 'T4.mp4'   # beat 3a · MONEY SHOT             · 19.4 s
+file 'T5.mp4'   # beat 3b · MONEY SHOT             · 19.6 s
+file 'T6.mp4'   # beat 3c · MONEY SHOT             · 12.4 s
+file 'T7.mp4'   # beat 4  · the trap               · 23.2 s
+file 'T8.mp4'   # beat 5  · how it decides         · 28.0 s
+file 'T9.mp4'   # beat 6  · what we got wrong      · 21.2 s

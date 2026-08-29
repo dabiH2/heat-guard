@@ -825,7 +825,7 @@ says they are not. **This is the strongest single artefact found. Build the demo
 | 2 | The wrong layer = `filter_type` | The layer selector is **`analytic_type`**; `filter_type` is the time window | 🔴 Critical — thesis mechanism |
 | 3 | AOI ≤ ~130 km² / 50 mi² | *"the limit is about **15 miles square**"* `02` `[00:23:58]` | 🔴 High — 3.4×, sizes every demo AOI |
 | 4 | Session 2 had a "parts that trip people up" segment | **No such segment.** Session over-ran; he apologises three times | 🟠 Medium — expectation deleted |
-| 5 | Judging = 40 / 35 / 15 / 10 | **Only 40% and 10% are ever spoken.** 35% and 15% have no source in any transcript | 🟠 Medium — don't cite as fact |
+| 5 | Judging = 40 / 35 / 15 / 10 | ~~Only 40% and 10% are ever spoken~~ **RESOLVED 2026-08-29: all four weights confirmed from Participant Handbook p17 + `#announcements` canvas.** The transcripts were simply not the source. | 🟢 **Resolved.** Cite freely. But see the new row 15 below, which is the real correction. |
 | 6 | Written summary max 500 words | **No word limit stated anywhere in 33,500 words.** Source unknown | 🟠 Medium — keep as safe ceiling, not a rule |
 | 7 | Failed tasks cost nothing → probe freely | True for *task failure*, but a **non-US AOI *"is just going to spend your credit"*** `[00:13:39]` | 🟠 Medium — guard before the call |
 | 8 | Deadline Aug 30, effective Aug 29 | Still true — but **live link must survive to 16 Sept**, and **API key is revoked on the 16th** | 🟠 Medium — new operational requirement |
@@ -835,10 +835,21 @@ says they are not. **This is the strongest single artefact found. Build the demo
 | 12 | *(added 21 Aug)* Constraining the LLM "**reads as** maturity to a Google/NVIDIA panel" — an assumption | The Google judge says it outright: *"**Traditional deterministic code is faster, cheaper and entirely predictable**"* `05` `[00:25:12]`, and asks *"Is AI generally required to solve this?"* `05` `[00:27:14]` | 🟢 **Resolved emphatically in our favour.** Not a contradiction — an assumption promoted to fact. |
 | 13 | *(added 21 Aug)* Kickoff: *"We don't want an MVP. We want something which is usable right now"* `01` `[00:34:58]` | Judge: *"What is the **absolute simplest version** of this product we can build to prove our hypothesis **within the next 24 hours**"* `05` `[00:27:20]`, and *"prioritize validation over perfect infrastructure"* `[00:15:49]` | 🟠 **Genuine tension.** Organisers want *live and usable*; the judge wants *minimal and problem-shaped*. Resolution: **narrow scope, fully working** — not broad scope, half working. This is an argument for the existing scope-discipline table, not against it. |
 | 14 | *(added 21 Aug)* MVP is the target | Judge replaces it: *"people are used to MVPs, minimal viable products. From now on we're going to use from an idea to a **minimum lovable product**"* `05` `[00:30:39]` | 🟡 Low — vocabulary. Use "lovable" framing if the word comes up; don't force it. |
+| **15** | *(added 29 Aug)* **"Technical execution" means AI-tool disclosure**, and **"Innovation" means track behaviour** — both inferred from the kickoff's spoken intro | **Both WRONG.** Handbook p17: Technical execution = *"It works, the build is sound, data handled well; deployable, client-grade quality."* Innovation = *"Original approach or a fresh combination of ideas."* The kickoff mentions disclosure and track-combining **while introducing** each criterion; those are asides, not definitions. | 🔴 **Critical, and it was working against us.** We were treating the 35% criterion as a paperwork item. It is the engineering-quality criterion, and HeatGuard's offline tests, fixture cache, pre-call guards and key-free demo score directly on it. **Lead with them.** |
+| **16** | *(added 29 Aug)* We know what judges want from `05` alone | `12-vc-decision` is **a second judge answering "how would you judge our projects?" directly.** Three-part filter: narrow problem statement backed by **3–5 user conversations**; a working prototype that solves the immediate problem; a roadmap. Plus the **10-minute time-to-value test** `[00:33:25]` and *"the best solutions have some sort of trick. It's not about brute force"* `[00:31:59]`. | 🔴 **High.** The 3–5 conversations bar is the one we fail outright. Naming that gap first is now not just honest, it is pre-empting the exact question this judge will ask. |
+| **17** | *(added 29 Aug)* Public voting might feed the judging score | It does not. `09-dashboard-walkthrough` `[00:38:02]`: *"**No, it is not going to be included in the judging criteria.**"* It feeds the **screen** and outreach only `[00:33:16]`. | 🟢 Resolved. Campaign for votes to clear the screen; do not shape the project around them. |
 
 ---
 
 ## 8. Still unknown after 49,900 words (six sessions)
+
+> **⚠️ SUPERSEDED 2026-08-29.** All thirteen sessions are now transcribed (`07` to `13` arrived
+> after this section was written), and the Participant Handbook p17 is in hand. Items resolved:
+> **the 35% / 15% weights** (handbook, all four confirmed); **the seven track names** (event page);
+> **the criterion definitions** (handbook, and two of ours were wrong: see rows 15 to 17 above);
+> **the judge panel** (four named: Abdelkhalek, Reichental, Venkat, Cvetanov). Still open: the
+> **500-word limit** (unsourced across all thirteen), the **real AOI ceiling**, and whether
+> **comfort analysis** is API-native. Full current state lives in `../../JUDGING-PROCEDURE.md`.
 
 - **The real AOI ceiling.** 15 mi² vs 50 mi², unresolved. Probe first.
 - **Technical execution = 35%, Innovation = 15%.** Unsourced. May come from a handbook page not in this pack.

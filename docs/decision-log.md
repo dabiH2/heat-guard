@@ -5,6 +5,221 @@ the submission. Reversals get their own entry rather than an edit.
 
 ---
 
+## D-009 — 2026-08-29 — Two sourced claims are over-claims; correct the wording, keep the thesis
+
+**Status:** decided — **narrows two high-confidence records without overturning either**
+**Trigger:** parallel extraction, adversarial re-audit of `02` and first read of `13`.
+
+**(a) "Analysis layer" is our coinage, not Fawad's.** Re-verified independently: `layer` = **0**
+occurrences in `02-temperature-api` .txt and .srt, and every Whisper escape hatch (`lair`,
+`leer`, `lawyer`, `later`) is accounted for. His nouns are *"the analytic type"* `[00:24:30]`
+and *"these other analysis thing"* `[00:24:41]`. `api-notes.md` currently asserts *"`analytic_type`
+— confirmed verbally, and it is the 'analysis layer'"*. The first half is true; the quotation
+marks in the second half are not. **Decision:** keep the concept, drop the quotation marks,
+never present it as his phrase.
+
+**(b) Two further mechanism claims are unsourced from the webinar.** `default`=0, `optional`=0,
+`omit`=0, HTTP `400`=0 — Fawad never says `analytic_type` is optional, never says `tcm` is the
+default, never shows that omitting it errors. And *"one optional string apart"* is factually off:
+his own live `exceedance` call carries **three** extra fields `[00:27:05]` (`analytic_type`,
+`threshold`, `direction`). **Decision:** source the default to the vendor client explicitly, and
+replace "one optional string apart" with the stronger accurate version — *on a defaulted
+`analytic_type` the `threshold` and `direction` you passed are silently ignored.*
+
+**(c) "20 m native resolution" is now contradicted on record.** FortyGuard's own invited mentor,
+`13` `[00:16:56]`: *"The field resolves near one kilometer. So a street corner is below what we
+can actually see."* `api-notes.md` logs the 20 m claim as *"not contradicted by any source | keep"*
+— that row is stale. Reconciliation: 20 m / 60–80–100 m is the **delivery grid**; ~1 km is the
+**effective resolving power**. Both can be true. **Decision:** qualify the README line, attribute
+the 1 km figure to Stelfox and not to FortyGuard as a spec, and use it to reframe the confessed
+2-of-11 failure from *"our hypothesis was wrong"* to *"the field cannot resolve this, and the
+vendor's own mentor says so"* — corroborated by our own 200 m AOI returning stdev 0.0.
+
+**Consequence:** wording only. The trap, the six-parcel case study, the Celsius-thresholds claim,
+the rate-limit contradiction and the non-US billing claim are all transcript-solid and unchanged.
+
+**Also settled:** a re-audit agent proposed overturning `fg.filter_type.five_exists` on transcript
+evidence — Fawad does enumerate a fifth value `[00:19:46]`. **Rejected.** The live probe returns
+`Input should be 1, 2, 3 or 4`. Standing rule reaffirmed: **for API behaviour trust the live probe
+over the webinar; for intent, vocabulary and judging signal trust the webinar.**
+
+---
+
+## D-008 — 2026-08-29 — The demand gap is a named, quantified, missed bar; build the remedy, not the evidence
+
+**Status:** decided
+**Trigger:** `12-vc-decision` and `08-pmf`, independently.
+
+Two sources, neither aware of the other, put a number on the thing the submission does not have.
+
+> `12` `[00:25:59]`, **Vikram, principal at Kota Capital — a judge**, asked directly *"how would you
+> judge our projects?"* and answering *"I think I laid out many of the criteria"* `[00:31:46]`:
+> *"I don't expect you to have 100 customer interviews, but **having three, four, five potential
+> users who you've spoken with** […] I think that's **number one, super important**."*
+
+> `08` `[00:43:38]`, the invited PMF mentor, who explicitly disclaims being a judge:
+> *"I would rather see someone come out of a hackathon with **i spoke to these five potential
+> customers i learned x y and z** then i built this."*
+
+HeatGuard has **zero**. And Vikram ranks demand above mechanism explicitly `[00:27:34]`:
+*"there's some projects that might be technically very, very impressive. But if it's not solving a
+big enough problem in a large enough market, it's not as valuable."*
+
+### Decision
+
+**The confession stays, and it gets its missing second half.** The bet that candour reads as
+credibility is **validated** — `11` `[00:19:42]` *"you will get extra points for that for sure"*;
+`12` `[00:35:07]` names **overselling**, not gap-admitting, as the tune-out. But the quote the bet
+rests on has a second clause the submission currently forfeits: *"…but also aware of either **how
+they can solve it** or are confident enough to **ask for help** in solving this"* `12` `[00:21:37]`.
+
+So: append to *"The mechanism is measured; the demand is not"* the specific first three calls in
+order, and one explicit ask of the reviewer. Nothing more.
+
+⚠ **Do not manufacture the evidence.** The PMF mentor lowers the realistic bar to *"one or two"*
+`[00:43:20]` and counts non-response as data `[00:39:10]`, which makes a genuine send-log with real
+timestamps worth having if there is time. A decorative or fabricated log inverts the exact
+credibility bet the submission is making and is worse than the honest confession it replaces.
+
+**Also decided:** name the decision log as the *compounding* asset (`12` `[00:08:24]` — defensibility
+*"should have some sort of compounding factor"*; routing logic does not compound, an accumulating
+decision trail does), phrased as **designed to accumulate**, not *already accumulating*. And state
+the *"becomes a feature at FortyGuard"* roadmap line — `12` `[00:26:49]` blesses it by name, which
+materially reduces thin-wrapper exposure. **Confidence:** high; two independent sources, one a judge.
+
+---
+
+## D-007 — 2026-08-29 — Stop conceding "the agent does not decide"; the decision table *is* the guardrail
+
+**Status:** decided — **reverses a wording choice made under D-004, not the architecture**
+**Trigger:** `10-physical-ai`. The speaker is **Professor Jonathan Reichental — a judge**
+(*"our mentor and judge today"* `[00:00:20]`) **and an advisor to FortyGuard** who *"helped us shape
+FortyGuard as what you're seeing right now, starting from the dashboard"* `[00:01:45]`.
+
+He defines the track's own term, `[00:48:29]`:
+> *"**agentic AI** means that not only does AI complete a function for us, but it also **makes
+> decisions on our behalf**. **We create guardrails. We define the conditions**, then it makes a
+> decision on our behalf."*
+
+Read literally against that definition, the submission's current line — *the agent parses and
+narrates but does not decide* — describes a **non-agentic** system, in a track scored on agency.
+That is the one scoring risk this session exposes, and the same sentence supplies the fix.
+
+**Decision.** Reword to: *the decision table is the guardrail; the system decides layer, threshold
+and refusal inside human-authored conditions — the LLM does not.* **Text only. The behaviour does
+not change and the determinism test must still pass unmodified.**
+
+### The deterministic bet is now backed by two judges on independent grounds
+
+D-004 justified it on Abdelkhalek's economics. Reichental adds safety, `[00:48:58]`:
+> *"there should be **humans in the loop** […] where it comes to human safety. That would be a good
+> one, I think, a good criteria. **Can humans get hurt?**"*
+
+HeatGuard's domain is human thermal harm, so it sits inside his own test. He also names
+*"governance […] that there is **recourse**? How do we have **oversight**?"* `[00:42:07]` — the exact
+vocabulary the refusal path and the with/without-model equality test answer. **Say both.**
+
+⚠ One maximalist line exists — *"Everything that can be autonomous will be autonomous"* `[00:44:04]`
+— but it is his **early-2030s forecast**, bounded four minutes later by the humans-can-get-hurt test.
+**Rejected:** adding LLM decision surface. It would break the determinism test, which is the
+submission's single strongest artefact, and move *away* from this judge's stated criterion.
+
+---
+
+## D-006 — 2026-08-29 — All four judging weights are now sourced; 75% of the score is Impact + Technical execution
+
+**Status:** decided — **supersedes `fg.judging.weights_partial` and half of `fg.unsourced.reconfirmed_after_six_sessions`**
+**Trigger:** `09-dashboard-walkthrough` `[00:59:30]`–`[00:59:36]`, spoken by a FortyGuard organiser,
+unhedged, all four in one breath:
+
+> *"So **impact and relevance, 40%**. **Technical execution coming up to 35%**. **Innovation is 15%**
+> and then **communication is 10%**."*
+
+For six sessions the pack recorded that only Impact (40) and Communication (10) were ever spoken,
+both hedged with *"like"*, and instructed: *"Do not present 35/15 as sourced fact."* **That
+instruction is now retired.** Communication = 10% is independently restated in `11` `[00:50:38]`.
+
+### Consequence — where the remaining hours go
+
+**Impact 40 + Technical execution 35 = 75%**, and both are judged from the **description, the repo
+and the video** — not from clicking around the app. Communication is 10%, so narrative polish is
+capped at a tenth of the score and must not crowd out the measured numbers.
+
+`fg.judging.definitions_differ` still holds and now matters more: *"technical execution"* is defined
+largely as **AI-tool disclosure**, and *"innovation"* as **track combination** — Track 4 × Track 6
+already earns it. The organiser also tells judges to ask *"Have you just hard coded values into it?"*
+`09` `[00:58:46]`, which is precisely how a hostile skim misreads a deterministic rule engine.
+**Decision:** ship a threshold-provenance block in the README naming the authority behind every
+number (OSHA / NWS HeatRisk), and label any genuinely arbitrary value as a configurable default
+rather than inventing a citation. This is the cheapest available defence of the 35%.
+
+**Still unsourced after thirteen sessions and 107,000 words:** the 500-word summary limit. Keep 500
+as a self-imposed ceiling; never cite it as a rule.
+
+---
+
+## D-006 · 2026-08-29 · The rubric is settled, and two of our criterion definitions were wrong
+
+**Status:** decided
+**Trigger:** Participant Handbook p17 ("11. JUDGING & SUBMISSION") and the `#announcements` Slack
+canvas, both obtained 29 Aug. Plus transcripts `07` to `13`, which completed the corpus.
+
+### What changed
+
+**All four weights are confirmed.** 40 / 35 / 15 / 10, from the handbook, with per-criterion
+wording. The long-running warning in `CLAUDE.md` that 35% and 15% were unsourced is closed. That
+file predicted they would turn out to live in a handbook page. They did.
+
+**Two definitions we were working from were wrong**, and both errors came from treating the
+kickoff's spoken introduction as if it were the rubric:
+
+| We believed | Handbook p17 actually says |
+|---|---|
+| "Technical execution" is mostly **AI-tool disclosure**, not code quality | *"It works, the build is sound, data handled well; deployable, client-grade quality"* |
+| "Innovation" is **track behaviour** | *"Original approach or a fresh combination of ideas"* |
+
+### Decision
+
+1. **Promote the engineering work to the front of the technical story.** We were treating the 35%
+   criterion as a paperwork item to satisfy with a disclosure line. It is the engineering-quality
+   criterion. The 336 offline tests, the committed fixtures, the guards placed before the call, and
+   a demo that runs with no API key are scoring on its main axis. Say that plainly rather than
+   burying it under the router narrative.
+2. **Keep the router as the Innovation claim, and reframe it.** Track 4 × Track 6 still earns
+   "fresh combination", but the stronger argument is now a judge's own gloss on originality:
+   Vikram Venkat, `12-vc-decision` `[00:31:59]`, *"the best solutions have some sort of trick. It's
+   not about brute force solving a problem."* A deterministic decision table in place of an LLM
+   call **is** the trick. That framing beats "we combined two tracks".
+3. **Name the zero-customer-conversations gap first, not last.** Venkat states the evidence bar for
+   a two-week build at `12` `[00:25:55]`: *"having three, four, five potential users who you've
+   spoken with."* We have none. It is on the 40% criterion. The README already discloses it; move
+   it earlier and pair it with the specific next step, because a judge who finds it himself scores
+   it worse than a judge who is handed it.
+4. **Restructure the video opening.** Venkat wants, in the first 60 to 90 seconds, *"what you're
+   doing, why you're doing it, and who you are"* `[00:34:38]`, with **value before mechanism**
+   `[00:36:35]`. He tunes out on buzzwords, vagueness, and overselling `[00:34:22]`. And the video
+   is a **gate**: `[00:35:31]` *"we will [...] start fiddling around with the project [...] unless
+   you have done something very wrong in your video."* A weak opening does not cost 10% of the
+   score, it costs the demo visit where the other 90% is evidenced.
+5. **Apply the 10-minute time-to-value test to the app before submitting.** `12` `[00:33:25]`: *"If
+   I can get the value within the first 10 minutes of having the product in my hands, I already
+   like it."* No rulebook, no explanation needed. The landing tab must carry the headline number
+   before any interaction.
+6. **Fix the cold start.** Measured 29 Aug: the Streamlit demo served an empty shell for roughly 40
+   seconds on a cold open. `keep-alive.yml` exists; verify it is actually firing, because the live
+   link is the artifact organisers say judges will 100% open.
+
+### Not changed
+
+The thesis, the architecture rule, and the scope-discipline table all stand. D-004's finding that
+the Google judge endorses deterministic code is reinforced, not weakened, by Venkat's independent
+"not brute force" line: two of the four judges now say versions of the same thing.
+
+**Confidence:** high on the rubric (authoritative document, three corroborating sources). High on
+the judge quotes (verbatim, on camera, from named judges answering direct questions about judging).
+
+---
+
 ## D-005 — 2026-08-21 — Adopt the judge's 4-point checklist as a submission gate
 
 **Status:** decided
