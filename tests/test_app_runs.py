@@ -18,10 +18,12 @@ the suite and worth every millisecond: the live link is the primary judged artef
 """
 
 import pytest
+from pathlib import Path
 
 from streamlit.testing.v1 import AppTest
 
-APP = "app.py"
+# Absolute: AppTest resolves a relative path against the *calling* file, i.e. tests/.
+APP = str(Path(__file__).resolve().parents[1] / "app.py")
 TIMEOUT = 90          # cold run parses fixtures and builds three SVG figures
 
 
