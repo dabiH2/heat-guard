@@ -349,7 +349,9 @@ with decision_tab:
         go = st.button("Ask HeatGuard", type="primary", use_container_width=True)
 
     with right:
-        if not go:
+        if go:
+            _render_answer(site, site_id, date, question, threshold_f)
+        else:
             st.subheader("What this shows")
             st.markdown(
                 "The router classifies the question against a decision table **before "
@@ -361,101 +363,116 @@ with decision_tab:
                 "well-formatted map of peak temperature with no error and no hint the "
                 "question went unanswered."
             )
-            st.stop()
 
-        with st.spinner("Routing, then fetching…"):
-            try:
-                out = answer(question, site_id=site_id, date=date,
-                             threshold_f=threshold_f, narrate=False)
-            except tools.CacheMiss as exc:
-                st.error(f"**Not in the cached set.** {exc}", icon="📦")
-                st.stop()
-            except tools.ToolsError as exc:
-                st.error(f"**API error.** {exc}")
-                st.stop()
 
-        choice, result = out["choice"], out["result"]
+def _render_answer(site: dict, site_id: str, date: str, question: str,
+                   threshold_f: float) -> None:
+    """Route the question, run the plan, and render the outcome.
 
-        # ---------------------------------------------------------- refusal path
-        if choice.refused:
-            st.error(f"**Refused — {choice.refusal.value.replace('_', ' ')}**", icon="🚫")
-            st.markdown(choice.refusal_message)
-            st.success(
-                "**No API call was made, so no credit was spent.** Three FortyGuard "
-                "failure modes return `Completed` with a plausible-looking empty result "
-                "*and charge for it* — a non-US area, a date outside real coverage, and "
-                "tomorrow's date. Refusing here is a cost control as much as a "
-                "correctness one.",
-                icon="✅",
+    ⚠️ EVERY EARLY EXIT HERE IS `return`, NEVER `st.stop()`.
+
+    `st.stop()` halts the ENTIRE script run, not the current tab or column. Because
+    Streamlit executes this file top to bottom on every interaction, a stop inside the
+    "Ask a question" tab silently prevented every tab defined LATER in the file — "The
+    trap" and "How it decides" — from being populated at all. They only appeared once the
+    button was pressed and the stop was skipped.
+
+    That shipped, and it meant a judge opening the app cold saw two empty tabs, including
+    the one carrying the strongest evidence for the 35% criterion. Use `return`.
+    """
+    with st.spinner("Routing, then fetching…"):
+        try:
+            out = answer(question, site_id=site_id, date=date,
+                         threshold_f=threshold_f, narrate=False)
+        except tools.CacheMiss as exc:
+            st.error(f"**Not in the cached set.** {exc}", icon="📦")
+            return
+        except tools.ToolsError as exc:
+            st.error(f"**API error.** {exc}")
+            return
+
+    choice, result = out["choice"], out["result"]
+
+    # ---------------------------------------------------------- refusal path
+    if choice.refused:
+        st.error(f"**Refused — {choice.refusal.value.replace('_', ' ')}**", icon="🚫")
+        st.markdown(choice.refusal_message)
+        st.success(
+            "**No API call was made, so no credit was spent.** Three FortyGuard "
+            "failure modes return `Completed` with a plausible-looking empty result "
+            "*and charge for it* — a non-US area, a date outside real coverage, and "
+            "tomorrow's date. Refusing here is a cost control as much as a "
+            "correctness one.",
+            icon="✅",
+        )
+        return
+
+    if result.get("empty"):
+        st.warning(
+            "**The API returned no tiles for this area and date.** That is a "
+            "coverage gap, not a safe reading — it is deliberately *not* reported "
+            "as an all-clear.", icon="⚠️")
+        return
+
+    # ------------------------------------------------------------ the answer
+    peak = result["peak"]
+    band = band_for(peak["max_f"])
+    action = action_for(peak["max_f"])
+
+    st.subheader(f"{site['name']} · {date}")
+
+    cols = st.columns(3)
+    cols[0].metric("Peak heat index", f"{peak['max_f']:.0f} °F",
+                   help="The number a forecast would report.")
+    if result.get("hours") is not None:
+        cols[1].metric(f"Hours above {threshold_f:.0f} °F",
+                       f"{result['hours']:.1f} h",
+                       help="What the duration layer measures. This is the one that "
+                            "changes the decision.")
+    cols[2].metric("NWS band", band.id.replace("_", " ").title())
+
+    st.markdown(f"### Action — {action.action.replace('_', ' ')}")
+    st.markdown(action.label)
+
+    # ----------------------------------------------- the routing decision itself
+    st.divider()
+    st.markdown("#### The layer, and why")
+    st.info(choice.rationale, icon="🧭")
+
+    detail = st.columns(4)
+    detail[0].markdown(f"**Endpoint**\n\n`{choice.endpoint}`")
+    detail[1].markdown(f"**filter_type**\n\n`{choice.filter_type}`")
+    detail[2].markdown(
+        f"**analytic_type**\n\n`{choice.analytic_type.value if choice.analytic_type else '—'}`")
+    detail[3].markdown(f"**granularity**\n\n`{choice.granularity} m`")
+
+    if choice.escalated_from is not None:
+        st.warning(
+            f"The wording carried a duration marker, so this was read as a duration "
+            f"question rather than a *{choice.escalated_from.value}* one. The marker "
+            f"list overrides the classifier deliberately — being wrong toward more "
+            f"data costs a credit, being wrong toward less costs a wrong call.",
+            icon="↗️")
+
+    with st.expander("What a snapshot would have said instead"):
+        st.markdown(choice.wrong_answer_if_snapshot)
+
+    if result.get("threshold_c_air") is not None:
+        with st.expander("The unit conversion behind that threshold"):
+            st.markdown(
+                f"OSHA bands are **heat index**. `exceedance` thresholds **air "
+                f"temperature**. At this site's measured "
+                f"**{result['humidity_pct']:.0f}%** humidity:\n\n"
+                f"- OSHA threshold: **{result['threshold_f_heat_index']:.0f} °F heat index**\n"
+                f"- Equivalent air temperature: **{result['threshold_f_air']:.0f} °F**"
+                f" = **{result['threshold_c_air']:.2f} °C** ← what is sent\n\n"
+                f"In dry Phoenix air the equivalent runs *above* the OSHA number; "
+                f"under monsoon humidity it runs *below*. Same threshold, different "
+                f"air temperature, depending on the day."
             )
-            st.stop()
 
-        if result.get("empty"):
-            st.warning(
-                "**The API returned no tiles for this area and date.** That is a "
-                "coverage gap, not a safe reading — it is deliberately *not* reported "
-                "as an all-clear.", icon="⚠️")
-            st.stop()
-
-        # ------------------------------------------------------------ the answer
-        peak = result["peak"]
-        band = band_for(peak["max_f"])
-        action = action_for(peak["max_f"])
-
-        st.subheader(f"{site['name']} · {date}")
-
-        cols = st.columns(3)
-        cols[0].metric("Peak heat index", f"{peak['max_f']:.0f} °F",
-                       help="The number a forecast would report.")
-        if result.get("hours") is not None:
-            cols[1].metric(f"Hours above {threshold_f:.0f} °F",
-                           f"{result['hours']:.1f} h",
-                           help="What the duration layer measures. This is the one that "
-                                "changes the decision.")
-        cols[2].metric("NWS band", band.id.replace("_", " ").title())
-
-        st.markdown(f"### Action — {action.action.replace('_', ' ')}")
-        st.markdown(action.label)
-
-        # ----------------------------------------------- the routing decision itself
-        st.divider()
-        st.markdown("#### The layer, and why")
-        st.info(choice.rationale, icon="🧭")
-
-        detail = st.columns(4)
-        detail[0].markdown(f"**Endpoint**\n\n`{choice.endpoint}`")
-        detail[1].markdown(f"**filter_type**\n\n`{choice.filter_type}`")
-        detail[2].markdown(
-            f"**analytic_type**\n\n`{choice.analytic_type.value if choice.analytic_type else '—'}`")
-        detail[3].markdown(f"**granularity**\n\n`{choice.granularity} m`")
-
-        if choice.escalated_from is not None:
-            st.warning(
-                f"The wording carried a duration marker, so this was read as a duration "
-                f"question rather than a *{choice.escalated_from.value}* one. The marker "
-                f"list overrides the classifier deliberately — being wrong toward more "
-                f"data costs a credit, being wrong toward less costs a wrong call.",
-                icon="↗️")
-
-        with st.expander("What a snapshot would have said instead"):
-            st.markdown(choice.wrong_answer_if_snapshot)
-
-        if result.get("threshold_c_air") is not None:
-            with st.expander("The unit conversion behind that threshold"):
-                st.markdown(
-                    f"OSHA bands are **heat index**. `exceedance` thresholds **air "
-                    f"temperature**. At this site's measured "
-                    f"**{result['humidity_pct']:.0f}%** humidity:\n\n"
-                    f"- OSHA threshold: **{result['threshold_f_heat_index']:.0f} °F heat index**\n"
-                    f"- Equivalent air temperature: **{result['threshold_f_air']:.0f} °F**"
-                    f" = **{result['threshold_c_air']:.2f} °C** ← what is sent\n\n"
-                    f"In dry Phoenix air the equivalent runs *above* the OSHA number; "
-                    f"under monsoon humidity it runs *below*. Same threshold, different "
-                    f"air temperature, depending on the day."
-                )
-
-        st.caption(f"Logged to `data/decisions.jsonl` · "
-                   f"calls made: {', '.join(result.get('calls', [])) or 'none'}")
+    st.caption(f"Logged to `data/decisions.jsonl` · "
+               f"calls made: {', '.join(result.get('calls', [])) or 'none'}")
 
 
 # ============================================================================== trap
