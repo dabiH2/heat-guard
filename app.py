@@ -203,8 +203,207 @@ def shift_exposure(date: str) -> dict | None:
             / f"shift_exposure_{date}.json")
     if not path.exists():
         return None
-    import json
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+@st.cache_data
+def day_analysis(date: str) -> dict | None:
+    """The whole-day companion to shift_exposure(): peaks and 91 °F hours per site.
+
+    Separate fixture because it answers a different question. shift_exposure knows what
+    happened INSIDE each crew's hours; this knows what happened across the whole day, and
+    the call sheet needs both to show that they disagree.
+    """
+    path = (Path(__file__).parent / "data" / "fixtures" / "t8"
+            / f"analysis_{date}.json")
+    if not path.exists():
+        return None
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+#: OSHA's rungs in the words a foreman uses. The raw enum (`rest_breaks_50_10`) is a
+#: database value, not an instruction, and a plan that goes to a crew has to be readable
+#: by the crew.
+CALL_TEXT = {
+    "rest_breaks_50_10": "50:10 work/rest",
+    "rest_breaks_55_5": "55:5 work/rest",
+    "no_reading": "NO READING",
+}
+
+
+def _measured_window(shift: str, night: bool) -> tuple[str, float, float]:
+    """What was actually measured, against what was rostered.
+
+    `scripts/build_shift_exposure.py:hhmm` floors BOTH shift edges to the hour, because
+    the API takes whole hours. Its docstring says it rounds "outward so exposure is never
+    under-counted" — it does not; both branches floor, so a shift ENDING at 13:30 was
+    measured to 13:00 and the last half hour was never looked at.
+
+    That matters more than it sounds. For the day crews the lost sliver sits at the END of
+    the shift, which on a Phoenix July day is the hottest part of it. So this returns the
+    unmeasured remainder explicitly and the UI prints it, because the alternative is a
+    sheet that silently reports a shift it did not fully measure.
+
+    Returns (human label, measured hours, unmeasured hours).
+    """
+    start, end = shift.split("-")
+
+    def floor(t: str) -> tuple[int, int]:
+        h, m = (int(x) for x in t.split(":"))
+        return h, m
+
+    sh, sm = floor(start)
+    eh, em = floor(end)
+
+    if night:
+        # Two calls: start→23:00 on the date, then 00:00→end on the following day. The
+        # 23:00–00:00 hour is in neither, which is why these lose more than a day shift.
+        measured = (23 - sh) + eh
+        rostered = ((24 - sh - sm / 60) + (eh + em / 60))
+        label = f"{sh:02d}:00–23:00 + 00:00–{eh:02d}:00"
+    else:
+        measured = eh - sh
+        rostered = (eh + em / 60) - (sh + sm / 60)
+        label = f"{sh:02d}:00–{eh:02d}:00"
+
+    unmeasured = max(0.0, rostered - measured)
+    label += (" · covers the shift" if unmeasured < 0.01
+              else f" · {unmeasured:.1f} h unmeasured")
+    return label, float(measured), float(unmeasured)
+
+
+def _bound_91(shift_hours: float, hours_91: float, night: bool) -> float | None:
+    """A FLOOR on hours above 91 °F inside the shift, by pigeonhole. Not a measurement.
+
+    If a site was above 91 °F for H of 24 hours, a shift of length L must overlap at
+    least L - (24 - H) of them, whatever order the hours came in. That is arithmetic on a
+    measured total, so it is honest — but it is a lower bound and every rendering of it
+    says "at least".
+
+    Returns None for night shifts. The bound needs the whole-day total for the SAME 24
+    hours the shift spans, and a shift crossing midnight spans two dates. The cache holds
+    16 July only as the post-midnight tail of these very shifts, so there is no whole-day
+    figure for it. Printing a number here would mean extending a 15 July measurement
+    across a day nobody measured.
+    """
+    if night:
+        return None
+    return max(0.0, shift_hours - (24.0 - hours_91))
+
+
+def _call_for(row: dict, analysis_row: dict | None) -> tuple[str, str]:
+    """The verdict for one crew. The ONLY place a call is decided.
+
+    Keyed on hours above threshold INSIDE the crew's own shift window — deliberately not
+    on `action_for(peak_f)`. Ten of the twelve sites peak within 1.9 °F of one another, so
+    a peak-driven ladder returns the same rung for almost every crew and the sheet
+    degenerates into one call printed twelve times. Which is exactly the failure this
+    whole project is an argument against: the peak does not separate these sites, and the
+    hours inside the shift do.
+    """
+    if analysis_row is None or analysis_row.get("empty") or row["whole_day_hours"] <= 0:
+        return "no_reading", CALL_TEXT["no_reading"]
+    if row["in_shift_hours"] > 0:
+        return "rest_breaks_50_10", CALL_TEXT["rest_breaks_50_10"]
+    return "rest_breaks_55_5", CALL_TEXT["rest_breaks_55_5"]
+
+
+
+def plan_text(date: str, sheet: list[dict], threshold_f: float) -> str:
+    """The one-page dated shift plan. Pure string builder — no Streamlit, so it is
+    testable, and identical whether it is downloaded or printed.
+
+    This is the object that LEAVES the browser. Everything else on the page argues; this
+    is what a foreman reads at 05:00 and what sits in the file if an inspector ever asks
+    what the employer knew and when. So it carries the calls, the measurement behind each
+    one, the method, and — the part most tools omit — what was NOT measured.
+    """
+    fifty = [r for r in sheet if r["call_id"] == "rest_breaks_50_10"]
+    fives = [r for r in sheet if r["call_id"] == "rest_breaks_55_5"]
+    none_ = [r for r in sheet if r["call_id"] == "no_reading"]
+    width = 78
+
+    out = [
+        "=" * width,
+        f"HEAT EXPOSURE SHIFT PLAN — {date}",
+        "Phoenix, Arizona · prepared by HeatGuard",
+        "=" * width,
+        "",
+        f"DECISION THRESHOLD: {threshold_f:.0f} °F heat index, measured inside each",
+        "crew's own shift window — not the day's peak, and not a city-wide forecast.",
+        "",
+        f"{len(fifty)} crew(s) on 50:10 work/rest · {len(fives)} on 55:5 · "
+        f"{len(none_)} with no reading",
+        "",
+        "-" * width,
+        "THE CALLS",
+        "-" * width,
+    ]
+
+    for r in sheet:
+        out += [
+            "",
+            f"  {r['Crew']}",
+            f"    Call ................ {r['Call today']}",
+            f"    Crew size ........... {r['Crew size']}",
+            f"    Rostered shift ...... {r['Shift']}",
+            f"    Window measured ..... {r['Window measured']}",
+            f"    >= {threshold_f:.0f} °F in shift ... {r[f'>={threshold_f:.0f} °F in shift']}",
+            f"    >= {threshold_f:.0f} °F all day ... {r[f'>={threshold_f:.0f} °F all day']}",
+        ]
+
+    out += [
+        "",
+        "-" * width,
+        "METHOD",
+        "-" * width,
+        "",
+        "  Source .......... FortyGuard Temperature API, /v1/heatmap",
+        "  Analysis layer .. analytic_type=exceedance (hours above a threshold),",
+        "                    NOT analytic_type=tcm (a single temperature).",
+        "  Resolution ...... 20 m native, measured 2 m above ground.",
+        "  Captured ........ live and committed; no figure here is modelled.",
+        "",
+        "  The threshold is a heat index in Fahrenheit. The API takes air temperature",
+        "  in Celsius. Conversion is done per site at that site's measured humidity.",
+        "",
+        "-" * width,
+        "WHAT WAS NOT MEASURED — read this before relying on the plan",
+        "-" * width,
+        "",
+        "  1. UNMEASURED WINDOWS. The API takes whole hours, so each shift edge was",
+        "     floored to the hour. Crews marked with unmeasured time above have minutes",
+        "     at the edge of the shift that were never looked at. For day shifts that",
+        "     sliver falls at the END of the shift, which in a Phoenix July is the",
+        "     hottest part of it. Those minutes are UNMEASURED, NOT CLEAR.",
+        "",
+        "  2. NO READING IS NOT AN ALL-CLEAR. Where the call reads NO READING the API",
+        "     returned zero tiles for that area on that date. Status: Completed. Cost:",
+        "     4,220 credits. A coverage gap is not a safe reading, and this plan will",
+        "     not convert one into the other. Those crews stay on the standing plan.",
+        "",
+        "  3. COUNTS, NOT TIMES. This reports HOW MANY hours were above the threshold,",
+        "     not WHICH hours. Locating them needs an analysis layer that was not",
+        "     captured for this date, so each control applies shift-wide.",
+        "",
+        "  4. HEAT INDEX, NOT WBGT. OSHA regulates against wet bulb globe temperature.",
+        "     This plan does not model crew acclimatisation or workload. It is decision",
+        "     support and does not replace a heat-illness prevention program.",
+        "",
+        "-" * width,
+        "ACKNOWLEDGEMENT",
+        "-" * width,
+        "",
+        "  Issued by ......................................  Time ................",
+        "",
+        "  Received by ....................................  Time ................",
+        "",
+        "=" * width,
+        f"Generated by HeatGuard from measurements taken on {date}.",
+        "=" * width,
+        "",
+    ]
+    return "\n".join(out)
 
 
 # ========================================================== the roster-wide headline
@@ -219,7 +418,150 @@ with today_tab:
         actual = sum(r["worker_hours"] for r in rows)
         crews = sum(r["crew"] for r in rows)
 
-        st.subheader(f"{DEMO_DATE} — {len(rows)} sites, {crews} workers")
+        # ------------------------------------------------------------ the call sheet
+        # This is the product. Everything below it is the argument for why the calls are
+        # what they are; a supervisor at 04:40 needs the calls, and needs them without
+        # clicking anything.
+        analysis = day_analysis(DEMO_DATE) or {"rows": [], "empty": []}
+        arows = {r["site_id"]: r for r in analysis["rows"]}
+        roster_csv = sites()
+        threshold_f = data["threshold_f_heat_index"]
+        all_rows = data["rows"]
+        headcount = sum(r["crew"] for r in all_rows)
+
+        sheet = []
+        for r in all_rows:
+            call_id, call_text = _call_for(r, arows.get(r["site_id"]))
+            window, measured_h, unmeasured_h = _measured_window(r["shift"], r["night"])
+            site_cfg = roster_csv.get(r["site_id"], {})
+            # The ROSTERED length, not the measured one. The crew is outside for the
+            # whole shift whether or not the API looked at all of it, and the pigeonhole
+            # bound is a statement about the crew's exposure, not about our coverage.
+            rostered_h = float(site_cfg.get("shift_hours") or measured_h)
+            ar = arows.get(r["site_id"])
+            has_data = ar is not None and not ar.get("empty")
+            bound = (_bound_91(rostered_h, ar["hours_91"], r["night"])
+                     if has_data else None)
+
+            sheet.append({
+                "call_id": call_id,
+                "_crew_n": r["crew"],
+                "Crew": r["name"],
+                "Crew size": r["crew"],
+                "Shift": r["shift"] + (" 🌙" if r["night"] else ""),
+                "Call today": call_text,
+                f">={threshold_f:.0f} °F in shift":
+                    f"{r['in_shift_hours']:.1f} h" if has_data else "—",
+                f">={threshold_f:.0f} °F all day":
+                    f"{r['whole_day_hours']:.1f} h" if has_data else "—",
+                "Window measured": window if has_data else "none — zero tiles returned",
+                ">=91 °F in shift": (
+                    "not derivable — shift crosses midnight" if has_data and r["night"]
+                    else f"at least {bound:.1f} of {rostered_h:.1f} h" if has_data
+                    else "—"),
+            })
+
+        _ORDER = {"rest_breaks_50_10": 0, "rest_breaks_55_5": 1, "no_reading": 2}
+        sheet.sort(key=lambda x: (_ORDER[x["call_id"]], -x["_crew_n"], x["Crew"]))
+
+        fifty = [x for x in sheet if x["call_id"] == "rest_breaks_50_10"]
+        fives = [x for x in sheet if x["call_id"] == "rest_breaks_55_5"]
+        nodata = [x for x in sheet if x["call_id"] == "no_reading"]
+
+        st.subheader(
+            f"{DEMO_DATE} · {len(sheet)} crews · {headcount} workers · "
+            f"decision threshold {threshold_f:.0f} °F heat index"
+        )
+
+        chip_cols = st.columns(3)
+        for col, group, band_id, label in (
+            (chip_cols[0], fifty, "high", "50:10 work/rest"),
+            (chip_cols[1], fives, "moderate", "55:5 work/rest"),
+            (chip_cols[2], nodata, "below_caution", "no reading"),
+        ):
+            col.markdown(
+                theme.band_chip(
+                    band_id,
+                    f"{len(group)} crew{'' if len(group) == 1 else 's'} · "
+                    f"{sum(x['_crew_n'] for x in group)} workers — {label}"),
+                unsafe_allow_html=True)
+
+        _named = ", ".join(f"{x['Crew'].split(',')[0]} ({x['_crew_n']})" for x in fifty)
+        st.success(
+            f"**{len(fifty)} crews move to 50:10 work/rest today; {len(fives)} run 55:5; "
+            f"{len(nodata)} has no reading.**\n\n"
+            f"{_named} each crossed {threshold_f:.0f} °F heat index *inside their own "
+            f"shift hours*. The other {len(fives)} crews with coverage never did.\n\n"
+            f"**Nobody reaches the stop line.** OSHA's `stop_nonessential` rung starts at "
+            f"115 °F heat index and today's highest site peak is 104.5 °F, so no crew on "
+            f"this roster stops. The ladder has that rung and today it is empty — a tool "
+            f"that always finds a reason to stop work gets switched off by March.",
+            icon="✅",
+        )
+
+        st.markdown(
+            f"**The rule, applied identically to every crew:**\n\n"
+            f"- {threshold_f:.0f} °F heat index crossed **inside the crew's own shift "
+            f"window** → 50:10 work/rest for the shift.\n"
+            f"- Not crossed inside the shift → 55:5 work/rest for the shift.\n"
+            f"- No tiles returned → **no call, and no all-clear.**\n\n"
+            f"The rung follows the hours the crew is actually outside, not the day's "
+            f"peak. Ten of the eleven sites with coverage peak within **1.9 °F** of one "
+            f"another, so a peak-driven call is the same call eleven times."
+        )
+        st.caption(load_thresholds().disclaimer)
+
+        st.dataframe(
+            [{k: v for k, v in row.items() if not k.startswith(("call_id", "_"))}
+             for row in sheet],
+            use_container_width=True, hide_index=True,
+        )
+
+        st.caption(
+            "**\"Window measured\" is not the rostered shift.** The API takes whole "
+            "hours, so each shift edge was floored when the call was made. Crews showing "
+            "unmeasured time have minutes at the edge of the shift that were never looked "
+            "at — and for the day crews that sliver falls at the *end* of the shift, "
+            "which in a Phoenix July is the hottest part of it. **Unmeasured, not clear.**"
+        )
+        st.caption(
+            "**55:5 is not a per-crew finding.** Every crew with coverage is above 91 °F "
+            "for part of its shift on this day, so the lower rung is a Phoenix July "
+            "constant — `config/thresholds.yaml` predicted exactly that. The column is "
+            "shown because the *bound* is honest arithmetic on a measured total, and it "
+            "says \"at least\" for the same reason."
+        )
+        st.caption(
+            "**A count, not a schedule.** This reports how many hours were above the "
+            "threshold, not which ones. Locating them needs `analytic_type="
+            "time_of_measure`, which was not captured for this date, so each control "
+            "applies shift-wide."
+        )
+
+        if nodata:
+            st.warning(
+                f"**{nodata[0]['Crew']} has no reading, and that is not an all-clear.** "
+                f"The API returned zero tiles for this area on this date. Status: "
+                f"`Completed`. Cost: **4,220 credits**. A coverage gap billed at full "
+                f"price is one of six failure modes that return a plausible-looking "
+                f"result — this crew stays on the standing plan, and HeatGuard will not "
+                f"turn silence into safety.", icon="⚠️")
+
+        st.download_button(
+            "⬇  Download the shift plan for 05:00",
+            data=plan_text(DEMO_DATE, sheet, threshold_f),
+            file_name=f"heat-plan-{DEMO_DATE}.txt",
+            mime="text/plain",
+            type="primary",
+            help="One page. The calls, the measurement behind each one, the method, what "
+                 "was NOT measured, and a signature line. This is the artefact that "
+                 "leaves the browser.",
+        )
+
+        st.divider()
+
+        # ------------------------------------ why the calls differ from the forecast
+        st.markdown("#### Why the calls differ from the forecast")
         st.markdown(
             f"Every site on the roster peaked between **102.6 and 104.5 °F** — a spread "
             f"of **1.9 °F**. By peak alone they are the same day at the same place, and "
@@ -310,51 +652,6 @@ with today_tab:
             "Night shifts cross midnight and are drawn as two segments on a single "
             "00:00–24:00 axis — the crew really is outside during both."
         )
-
-        st.markdown("#### What the city-wide figure claims, against what is real")
-        st.markdown(charts.phantom_bars(rows), unsafe_allow_html=True)
-
-        st.markdown("#### Where the exposure actually is")
-        st.dataframe(
-            [
-                {
-                    "Site": r["name"],
-                    "Shift": r["shift"] + (" 🌙" if r["night"] else ""),
-                    "Crew": r["crew"],
-                    "Whole day (h)": r["whole_day_hours"],
-                    "In shift (h)": r["in_shift_hours"],
-                    "Worker-hours": r["worker_hours"],
-                }
-                for r in sorted(rows, key=lambda x: -x["worker_hours"])
-            ],
-            use_container_width=True, hide_index=True,
-        )
-
-        top_whole = max(r["whole_day_hours"] for r in rows)
-        tied = [r for r in rows if abs(r["whole_day_hours"] - top_whole) < 0.05]
-        exposed = sorted([r for r in rows if r["worker_hours"] > 0],
-                         key=lambda r: -r["worker_hours"])
-
-        if len(tied) > 1 and exposed:
-            worst, second = exposed[0], (exposed[1] if len(exposed) > 1 else None)
-            st.info(
-                f"**Ranking by heat and ranking by harm give different answers.**\n\n"
-                f"**{len(tied)} of {len(rows)} sites tie** at {top_whole:.0f} hours above "
-                f"threshold for the day — by that measure they are indistinguishable, and "
-                f"a heat map would colour them identically. Scoped to shifts, only "
-                f"**{len(exposed)}** carry any exposure at all."
-                + (
-                    f"\n\n**{worst['name']}** carries the most: "
-                    f"{worst['worker_hours']:.0f} worker-hours against "
-                    f"{second['worker_hours']:.0f} at {second['name']} — the same "
-                    f"{worst['in_shift_hours']:.0f} hour of overlap, but "
-                    f"**{worst['crew']} people standing in it** rather than "
-                    f"{second['crew']}."
-                    if second else ""
-                )
-                + "\n\nHeat maps rank tiles. Crews are what get hurt.",
-                icon="🎯",
-            )
 
         st.caption(
             f"Threshold {data['threshold_f_heat_index']:.0f} °F heat index, converted "
@@ -480,7 +777,26 @@ def _render_answer(site: dict, site_id: str, date: str, question: str,
     for col, (label, value, tip) in zip(cols, tiles):
         col.metric(label, value, help=tip)
 
-    st.markdown(f"### Action — {action.action.replace('_', ' ')}")
+    # The heading comes from the shift-scoped rule that produced the call sheet, not from
+    # action_for(peak_f). Ten of twelve sites peak within 1.9 °F of one another, so a
+    # peak-keyed ladder answers 50:10 for almost all of them — and tab 1, which keys on
+    # hours inside the shift, would disagree with this tab about the same crew on the same
+    # day in the same words. `action` is still shown below as the OSHA chip, because it is
+    # the band the peak genuinely falls in; it is just not the call.
+    _day = shift_exposure(date) or {"rows": []}
+    _shift_row = next((r for r in _day["rows"] if r["site_id"] == site_id), None)
+    _an = day_analysis(date) or {"rows": []}
+    _an_row = next((r for r in _an["rows"] if r["site_id"] == site_id), None)
+    if _shift_row is not None:
+        _call_id, _call_text = _call_for(_shift_row, _an_row)
+        st.markdown(f"### Today's call — {_call_text}")
+        st.caption(
+            f"From the hours this crew was above {_day.get('threshold_f_heat_index', 103):.0f}"
+            f" °F *inside its own shift window* — the same rule, and the same answer, as "
+            f"the morning call sheet. Not from the day's peak."
+        )
+    else:
+        st.markdown(f"### Action — {action.action.replace('_', ' ')}")
     # Colour is the fastest channel for severity, so it is spent here and only here: the
     # band the forecast would report, and the OSHA action that is actually being called
     # for. Chips rather than st.metric because metric cannot render HTML, and because the
@@ -727,7 +1043,7 @@ with method_tab:
     st.markdown(
         "`router.py` is deterministic — no model call anywhere in it. That makes layer "
         "selection **auditable** (this is a safety tool), **reproducible** (every demo "
-        "take matches), and **testable at zero cost** (336 offline tests, no network, "
+        "take matches), and **testable at zero cost** (over 400 offline tests, no network, "
         "no credits).\n\n"
         "The language model narrates and nothing else. With no API key the templated "
         "narration is used and the answer is byte-identical apart from wording — there "
@@ -753,9 +1069,9 @@ with method_tab:
         "serves a committed fixture cache. It needs no API key, so there is nothing to "
         "leak and nothing that breaks when the FortyGuard key expires — and **clicking "
         "around cannot spend a credit**. Every path you can click here was verified "
-        "offline: 12 sites × 4 question shapes × 2 thresholds, 36 answered, 12 refused "
+        "offline: 12 sites × 6 question shapes × 2 thresholds, 36 answered, 12 refused "
         "by design, **zero cache misses**.\n\n"
-        "**The build is sound.** 349 tests, all offline — no network, no credits, no "
+        "**The build is sound.** Over 400 tests, all offline — no network, no credits, no "
         "key. Layer selection is deterministic, and its post-conditions *crash* rather "
         "than emit a layer already known to be wrong."
     )

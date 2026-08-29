@@ -252,3 +252,40 @@ def test_an_unrecognised_question_refuses_in_the_ui_without_crashing():
         blocks = (len(tab.markdown) + len(tab.subheader)
                   + len(tab.metric) + len(tab.table))
         assert blocks > 0, f"tab {tab.label!r} lost its content"
+
+
+# ------------------------------------------------- the shift plan: the actual product
+
+def test_the_morning_call_leads_with_a_call_per_crew(cold):
+    """The landing tab used to open with a statistic about a methodology. A supervisor at
+    04:40 needs the calls, without clicking anything."""
+    t0 = cold.tabs[0]
+    text = " ".join(m.value for m in t0.markdown) + " ".join(s.value for s in t0.success)
+    for expected in ("50:10 work/rest", "55:5 work/rest", "no reading"):
+        assert expected in text, f"{expected!r} missing from the morning call"
+    assert t0.dataframe, "the call sheet is missing"
+
+
+def test_the_shift_plan_is_downloadable(cold):
+    """The artefact is the thing that LEAVES the browser — what a foreman reads at 05:00
+    and what sits in the file if an inspector asks what the employer knew and when."""
+    labels = [d.label for d in cold.download_button]
+    assert any("shift plan" in l.lower() for l in labels), (
+        f"no shift-plan download; found {labels}")
+
+
+def test_the_empty_site_is_never_reported_as_safe(cold):
+    """PHX-DVT returned zero tiles, Completed, and was billed 4,220 credits. A coverage
+    gap must not be rendered as 0 hours, which reads as an all-clear."""
+    t0 = cold.tabs[0]
+    warned = " ".join(w.value for w in t0.warning)
+    assert "not an all-clear" in warned.lower()
+    assert "4,220" in warned
+
+
+def test_the_headline_metrics_survive_the_rewrite(cold):
+    """701 / 58 / 92% are pinned figures and the rewrite must not disturb them; they moved
+    below the call sheet, they did not change."""
+    values = " ".join(str(m.value) for m in cold.tabs[0].metric)
+    for figure in ("701", "58", "92"):
+        assert figure in values, f"{figure} lost in the rewrite: {values}"
