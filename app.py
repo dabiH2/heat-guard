@@ -304,67 +304,6 @@ with today_tab:
             "gradient dominates street-level surface differences. The thesis survives "
             "that; the site-selection hypothesis does not."
         )
-
-
-# ========================================================================== decision
-
-with decision_tab:
-    left, right = st.columns([1, 2])
-
-    with left:
-        st.subheader("Ask")
-        roster = sites()
-        site_id = st.selectbox(
-            "Site",
-            options=list(roster),
-            format_func=lambda s: f"{roster[s]['name']}  ·  {roster[s]['archetype']}",
-        )
-        site = roster[site_id]
-
-        shift = f"{site['shift_start']}–{site['shift_end']}"
-        night = site["night_shift"] == "True"
-        st.caption(
-            f"**{site['crew_size']} crew** · shift {shift}"
-            f"{' 🌙 **night**' if night else ''} · predicted `{site['expected_profile']}`"
-        )
-
-        available = cached_dates() or [DEMO_DATE]
-        date = st.selectbox("Date", options=available,
-                            index=available.index(DEMO_DATE)
-                            if DEMO_DATE in available else 0)
-
-        question = st.text_input(
-            "Question",
-            value="How many hours were they above the danger threshold?",
-            help="The wording decides the analysis layer. Try 'is it safe right now?' "
-                 "against 'how long were they above the band?' — same site, same day, "
-                 "different layer, different answer.",
-        )
-
-        threshold_label = st.radio("Threshold", list(THRESHOLD_CHOICES),
-                                   help="Reported at both, because the number changes "
-                                        "materially between them.")
-        threshold_f = THRESHOLD_CHOICES[threshold_label]
-
-        go = st.button("Ask HeatGuard", type="primary", use_container_width=True)
-
-    with right:
-        if go:
-            _render_answer(site, site_id, date, question, threshold_f)
-        else:
-            st.subheader("What this shows")
-            st.markdown(
-                "The router classifies the question against a decision table **before "
-                "any API call is made**, picks the analysis layer, states why, and "
-                "refuses when the data cannot answer it.\n\n"
-                "`tcm` and `exceedance` are the *same endpoint*, the *same* "
-                "`filter_type`, the *same* area — **one optional string apart**. Ask a "
-                "duration question, let the default stand, and you get a "
-                "well-formatted map of peak temperature with no error and no hint the "
-                "question went unanswered."
-            )
-
-
 def _render_answer(site: dict, site_id: str, date: str, question: str,
                    threshold_f: float) -> None:
     """Route the question, run the plan, and render the outcome.
@@ -473,6 +412,69 @@ def _render_answer(site: dict, site_id: str, date: str, question: str,
 
     st.caption(f"Logged to `data/decisions.jsonl` · "
                f"calls made: {', '.join(result.get('calls', [])) or 'none'}")
+
+
+
+
+# ========================================================================== decision
+
+with decision_tab:
+    left, right = st.columns([1, 2])
+
+    with left:
+        st.subheader("Ask")
+        roster = sites()
+        site_id = st.selectbox(
+            "Site",
+            options=list(roster),
+            format_func=lambda s: f"{roster[s]['name']}  ·  {roster[s]['archetype']}",
+        )
+        site = roster[site_id]
+
+        shift = f"{site['shift_start']}–{site['shift_end']}"
+        night = site["night_shift"] == "True"
+        st.caption(
+            f"**{site['crew_size']} crew** · shift {shift}"
+            f"{' 🌙 **night**' if night else ''} · predicted `{site['expected_profile']}`"
+        )
+
+        available = cached_dates() or [DEMO_DATE]
+        date = st.selectbox("Date", options=available,
+                            index=available.index(DEMO_DATE)
+                            if DEMO_DATE in available else 0)
+
+        question = st.text_input(
+            "Question",
+            value="How many hours were they above the danger threshold?",
+            help="The wording decides the analysis layer. Try 'is it safe right now?' "
+                 "against 'how long were they above the band?' — same site, same day, "
+                 "different layer, different answer.",
+        )
+
+        threshold_label = st.radio("Threshold", list(THRESHOLD_CHOICES),
+                                   help="Reported at both, because the number changes "
+                                        "materially between them.")
+        threshold_f = THRESHOLD_CHOICES[threshold_label]
+
+        go = st.button("Ask HeatGuard", type="primary", use_container_width=True)
+
+    with right:
+        if go:
+            _render_answer(site, site_id, date, question, threshold_f)
+        else:
+            st.subheader("What this shows")
+            st.markdown(
+                "The router classifies the question against a decision table **before "
+                "any API call is made**, picks the analysis layer, states why, and "
+                "refuses when the data cannot answer it.\n\n"
+                "`tcm` and `exceedance` are the *same endpoint*, the *same* "
+                "`filter_type`, the *same* area — **one optional string apart**. Ask a "
+                "duration question, let the default stand, and you get a "
+                "well-formatted map of peak temperature with no error and no hint the "
+                "question went unanswered."
+            )
+
+
 
 
 # ============================================================================== trap
