@@ -86,6 +86,8 @@ and say which is which.
 | 2.19 | — next projected milestone | **Supplemental NPRM, 12/2026**; final action projected **10/2027**; Legal Deadline: **None** | same as 2.18 | Unified Agenda 2026 |
 | 2.20 | Proposed **initial heat trigger** | heat index **80 °F**, or WBGT = NIOSH RAL | 89 FR 70698 regulatory text | 2024 |
 | 2.21 | Proposed **high heat trigger** | heat index **90 °F**, or WBGT = NIOSH REL | same | 2024 |
+| 2.21a | Control owed **at** the high heat trigger | a minimum **15-minute paid rest break at least every two hours** | [OSHA NPRM final regulatory text](https://www.osha.gov/sites/default/files/Heat-NPRM-Final-Reg-Text.pdf) | 30 Aug 2024 · *proposed, not in force* |
+| 2.21b | Control owed **at** the initial heat trigger | **1 quart of drinking water per employee per hour** | 89 FR 70698 regulatory text | 2024 · *proposed, not in force* |
 | 2.22 | **Arizona state heat standard** | **NONE.** Not listed in NEP Appendix H | [CPL 03-00-024, App. H](https://www.osha.gov/sites/default/files/enforcement/directives/CPL_03-00-024_0.pdf) | 10 Apr 2026 |
 | 2.23 | Arizona's actual instrument | **ADOSH Heat State Emphasis Program**, effective **9 Apr 2026**; enforcement via A.R.S. §23-403(A) general duty clause | [ADOSH Heat SEP](https://www.azica.gov/sites/default/files/2026-04/Arizona%20Heat%20SEP%20CPL_03-00-024%20%204-9-26.pdf) | 2026 |
 | 2.24 | Arizona Executive Order 2025-09 | Directs a task force to draft **guidelines**; text states it "shall not confer any legal rights or remedies" | [azgovernor.gov](https://azgovernor.gov/office-arizona-governor/executive-order/2025-09) | signed 22 May 2025 |
@@ -169,6 +171,19 @@ replace it as the slider's default**, with the source shown in the UI. That conv
 check:
 
 > 643 phantom worker-hours × $51.23/h = **$32,941**
+
+**The lower bound, and where its 12.5% comes from.** Row 2.21a: at the proposed high heat
+trigger an employer owes a minimum 15-minute paid rest break at least every two hours. 15 min
+per 120 min = **12.5% of paid time**. So the labour cost of mis-scoping which hours sit above
+the trigger, valued only as mandated rest that was not actually owed, is:
+
+> 643 worker-hours × 12.5% = 80.4 worker-hours × $51.23/h = **$4,118**
+
+That is the floor — what you owe *even while continuing to work*. It is the bound that survives
+the objection that a heat trigger does not permit you to stop work anyway (§2a). The $32,941
+upper bound assumes full idle labour, which is the aggressive reading. **Quote the range, not
+either end alone**, and note that the proposed rule is not in force (row 2.18), so this is what
+the obligation would cost under the rule as proposed.
 
 Use `$51.23` and `≈$33,000`, not `$55` and `≈$35,000`. The smaller, sourced number is worth
 more than the larger, invented one. Be explicit that this values *idle loaded labour*, which
