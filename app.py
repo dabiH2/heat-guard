@@ -949,17 +949,9 @@ def _render_answer(facts: list, date: str, question: str,
     _render_mechanism(choice, result, ranked_over=len(ordered))
 
 
-def _use_example(text: str) -> None:
-    """Fill the question box from an example chip.
-
-    An `on_click` callback rather than a plain `if st.button(...)`, and that is not a
-    style preference. Streamlit refuses to let session state for a widget key be written
-    after that widget has been instantiated in the same run, so a chip placed BELOW the
-    box — where a reader expects suggestions — could not set it any other way. Callbacks
-    run before the rerun, so the assignment is legal and the chips can sit where they
-    belong.
-    """
-    st.session_state["ask_question"] = text
+#: The question text an example chip has asked for. NOT a widget key — that distinction
+#: is the entire fix for a measured bug, see the slot comment in the Ask tab below.
+ASK_TEXT_STATE = "ask_q_text"
 
 
 # ========================================================================== decision
@@ -1014,14 +1006,37 @@ with decision_tab:
     # The box is seeded once so a cold visit answers something real on the first press,
     # and the chips below are examples rather than a mode selector — the router reads the
     # words, so editing one of them can change the layer, which is the point.
-    st.session_state.setdefault("ask_question", ask.DEFAULT_QUESTION)
-    question = st.text_input(
-        "Question", key="ask_question", placeholder=ask.QUESTION_PLACEHOLDER)
+    # ---------------------------------------------------------------------------
+    # THE BOX RENDERS ABOVE THE CHIPS BUT IS CREATED AFTER THEM.
+    # ---------------------------------------------------------------------------
+    # MEASURED, 29 Aug 2026, on the deployed app: clicking an example chip reset the
+    # whole page back to the FIRST tab. The chips used `on_click=` to write
+    # `st.session_state["ask_question"]` — which was the text box's own widget `key`.
+    # Mutating a widget's key from a callback remounts that widget, and the remount takes
+    # `st.tabs` with it, whose selected tab is client-side state. Pressing `Ask HeatGuard`
+    # — a plain button with no callback — did NOT reset it, which is what isolated the
+    # cause.
+    #
+    # The callback existed for a real reason: Streamlit refuses to write a widget's key
+    # after that widget has been instantiated in the same run, and the chips belong BELOW
+    # the box where a reader expects suggestions. `st.empty()` dissolves that constraint —
+    # it reserves the box's POSITION now and lets it be BUILT later, so the chips run
+    # first in code while still rendering second on screen. No callback, and the state
+    # they write is not a widget key.
+    st.session_state.setdefault(ASK_TEXT_STATE, ask.DEFAULT_QUESTION)
+    _q_slot = st.empty()
 
     _chip_cols = st.columns(len(ask.EXAMPLES))
     for _col, (_label, _text) in zip(_chip_cols, ask.EXAMPLES):
-        _col.button(_label, key=f"eg_{_label}", on_click=_use_example, args=(_text,),
-                    use_container_width=True)
+        if _col.button(_label, key=f"eg_{_label}", use_container_width=True):
+            st.session_state[ASK_TEXT_STATE] = _text
+
+    # Deliberately keyless. The widget's identity includes `value`, so a chip press
+    # rebuilds it with the new text, while typing survives any rerun that leaves `value`
+    # alone — which is exactly the behaviour both paths need.
+    question = _q_slot.text_input(
+        "Question", value=st.session_state[ASK_TEXT_STATE],
+        placeholder=ask.QUESTION_PLACEHOLDER)
 
     # Live routing preview — the whole IP, visible before anything is fetched and costing
     # nothing. Kept from the old tab because it is the best thing in it; compressed to one

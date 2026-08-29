@@ -929,3 +929,76 @@ def test_the_ask_tab_still_previews_the_routing_for_free():
     assert "_preview = route(" in SOURCE, "the free live routing preview is gone"
     assert SOURCE.index("_preview = route(") < SOURCE.index('st.button("Ask HeatGuard"'), (
         "the routing preview must render BEFORE the button, or it is not a preview")
+
+
+# ---------------------------------------------------------------- the tab-reset defect
+
+def _example_chip_button_calls() -> list[ast.Call]:
+    """Every `st.button` / `col.button` call that renders an example-question chip."""
+    found = []
+    for node in ast.walk(TREE):
+        if not (isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Attribute)
+                and node.func.attr == "button"):
+            continue
+        # The chips are the only buttons keyed "eg_..."; Ask HeatGuard is keyless.
+        for kw in node.keywords:
+            if kw.arg == "key" and "eg_" in ast.unparse(kw.value):
+                found.append(node)
+    return found
+
+
+def test_the_example_chips_do_not_use_an_on_click_callback():
+    """MEASURED on the deployed app, 29 Aug 2026: clicking any example chip reset the
+    page to the FIRST tab.
+
+    The chips wrote `st.session_state["ask_question"]` from an `on_click` callback, and
+    that string was the question box's own widget `key`. Mutating a widget's key from a
+    callback remounts the widget, and the remount takes `st.tabs` with it — whose selected
+    tab is client-side state with no server record. Pressing `Ask HeatGuard`, a plain
+    button with no callback, did NOT reset the tab, which is what isolated the cause.
+
+    On camera this was fatal: three of the nine pitch-video takes are chip clicks, and
+    each one bounced the viewer out of the tab being demonstrated.
+    """
+    chips = _example_chip_button_calls()
+    assert chips, "the example chips are gone entirely"
+    for call in chips:
+        kwargs = {kw.arg for kw in call.keywords}
+        assert "on_click" not in kwargs, (
+            "an example chip uses on_click= again. It writes session state BEFORE the "
+            "rerun, which remounts the question box and resets st.tabs to tab one. Use "
+            "`if col.button(...):` with the st.empty() slot instead.")
+
+
+def test_the_question_box_is_not_keyed_to_mutated_state():
+    """The other half of the same defect: the box must not own the key the chips write.
+
+    `st.empty()` reserves the box's position before the chips run, so the chips can write
+    plain (non-widget) state and the box is BUILT afterwards from it — rendering above
+    them regardless. If someone re-adds `key=` here, the remount comes back.
+    """
+    assert "_q_slot = st.empty()" in SOURCE, (
+        "the reserved slot is gone; the question box can no longer be built after the "
+        "chips, so the callback will come back with it")
+    assert SOURCE.index("_q_slot = st.empty()") < SOURCE.index("eg_"), (
+        "the slot must be reserved BEFORE the chips render")
+    assert SOURCE.index("eg_") < SOURCE.index("_q_slot.text_input("), (
+        "the chips must run BEFORE the box is built, or their text lands one rerun late")
+    # AST, not a string search: the point is that the Question widget carries no `key=`
+    # at all. A comment mentioning the old defect must not be able to fail this.
+    for node in ast.walk(TREE):
+        if (isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Attribute)
+                and node.func.attr == "text_input"
+                and any(isinstance(a, ast.Constant) and a.value == "Question"
+                        for a in node.args)):
+            kwargs = {kw.arg for kw in node.keywords}
+            assert "key" not in kwargs, (
+                "the Question box has a `key=` again. Whatever writes that key from a "
+                "callback will remount it and reset st.tabs to tab one.")
+            assert "value" in kwargs, (
+                "the box must take its text from `value=` so a chip press rebuilds it")
+            break
+    else:
+        raise AssertionError("no text_input labelled 'Question' found at all")
