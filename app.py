@@ -22,6 +22,7 @@ API KEY STAYS SERVER-SIDE. Never in client code, never in a video frame.
 
 from __future__ import annotations
 
+import json
 import os
 import sys
 from datetime import date as _date
@@ -46,10 +47,15 @@ if os.environ.get("HEATGUARD_ONLINE", "").strip().lower() not in ("1", "true", "
     os.environ["HEATGUARD_OFFLINE"] = "1"
 
 from heatguard import tools                                    # noqa: E402
+from heatguard import agent                                    # noqa: E402
 from heatguard.agent import answer, load_sites                 # noqa: E402
 from heatguard import charts                                  # noqa: E402
 from heatguard.bands import action_for, band_for, load_thresholds  # noqa: E402
 from heatguard.router import AnalyticType, RefusalReason, route       # noqa: E402
+
+#: Nine real records, generated offline and committed, so the audit-trail view is
+#: never empty on a cold container.
+DECISIONS_SAMPLE = Path(__file__).resolve().parent / "data" / "decisions.sample.jsonl"
 
 st.set_page_config(page_title="HeatGuard", page_icon="🌡️", layout="wide")
 
@@ -87,9 +93,63 @@ def sites():
 
 @st.cache_data
 def cached_dates() -> list[str]:
-    """Dates the fixture cache can actually answer, newest first."""
-    seen = {p["date"] for p in tools.cached_combinations() if p.get("date")}
-    return sorted(seen, reverse=True)
+    """Dates the fixture cache can answer END TO END, newest first.
+
+    Not every date present in the index is a date the app can be *asked about*.
+    2025-07-16 appears only as the post-midnight tail of night shifts that START on the
+    15th: five `exceedance` calls with `filter_type=2`, and no `env_params` at all. It is
+    an artefact of a window wrapping past midnight, not a demo day.
+
+    Offering it in the Date box meant the first question a judge would ask — "how hot is
+    it right now" — routed to the snapshot layer, found no heat index in the cache, and
+    killed the app with a KeyError. Reported live.
+
+    So a date is offered only when the cache holds BOTH endpoints the question set needs.
+    Presence in the index is not the same as answerability, and the dropdown is a promise.
+    """
+    combos = tools.cached_combinations()
+    with_env = {p["date"] for p in combos
+                if p.get("date") and p.get("endpoint") == "/v1/env_params"}
+    with_map = {p["date"] for p in combos
+                if p.get("date") and p.get("endpoint") == "/v1/heatmap"}
+    return sorted(with_env & with_map, reverse=True)
+
+
+def _decision_files() -> list[Path]:
+    """The live log first, then the committed sample.
+
+    The live file is gitignored and the deployed container's copy is ephemeral, so on a
+    cold Streamlit Cloud boot it does not exist at all. The sample is nine real records
+    generated offline and committed precisely so the tab is never empty for a judge who
+    arrives before clicking anything.
+    """
+    return [p for p in (agent.DECISIONS_LOG, DECISIONS_SAMPLE) if p.exists()]
+
+
+def recent_decisions(limit: int = 25) -> list[dict]:
+    """Most recent first. Deliberately NOT cached — the whole point is that a question
+    asked ten seconds ago shows up."""
+    rows: list[dict] = []
+    for path in _decision_files():
+        for line in path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                rows.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue          # a half-written final line is not worth a crash
+        if rows:
+            break                 # the live log wins outright when it has anything
+    return list(reversed(rows))[:limit]
+
+
+def decisions_bytes() -> bytes:
+    for path in _decision_files():
+        raw = path.read_bytes()
+        if raw.strip():
+            return raw
+    return b""
 
 
 def offline() -> bool:
@@ -349,6 +409,19 @@ def _render_answer(site: dict, site_id: str, date: str, question: str,
             return
 
     choice, result = out["choice"], out["result"]
+
+    # `answer()` catches tools.ToolsError internally and returns it as out["error"]
+    # rather than re-raising, so the `except tools.CacheMiss` above never fires for a
+    # missing fixture. Without this branch the empty result fell straight through to
+    # `result["peak"]` and the script died with a bare KeyError, taking every tab with
+    # it. A missing fixture is a boring, expected condition; it must render as one.
+    if out.get("error"):
+        st.error(f"**No data behind this question.** {out['error']}", icon="📦")
+        st.caption(
+            "The routing decision above still stands. It was made before the call, from "
+            "the wording alone, and cost nothing — which is the point of making it first."
+        )
+        return
 
     # ---------------------------------------------------------- refusal path
     if choice.refused:
@@ -691,6 +764,62 @@ with method_tab:
         "than chance. The value turned out to be scoping to shifts and weighting by "
         "headcount — not site microclimate. Reported rather than quietly dropped."
     )
+
+    # ------------------------------------------------------- the audit trail, visible
+    #
+    # CLAUDE.md calls `data/decisions.jsonl` "the compliance audit trail and the evidence
+    # the system works". It was neither, from a judge's seat: the file is gitignored, and
+    # the copy the deployed container writes lives in ephemeral storage nobody can reach.
+    # The app claimed "Logged to data/decisions.jsonl" and gave no way to check.
+    #
+    # So it is rendered here. Every question asked in THIS session appears below as it is
+    # asked, including refusals, and the whole file downloads as JSONL. A safety tool that
+    # asks to be audited has to hand over the log.
+    st.divider()
+    st.markdown("#### The audit trail")
+    st.markdown(
+        "Every routing decision is appended to `data/decisions.jsonl` — the question, the "
+        "layer chosen, the rationale, the refusal if there was one, and whether the prose "
+        "came from the model or the template. **Refusals are logged too**, which is the "
+        "half that matters: a log that only records answers cannot show what was declined."
+    )
+
+    _rows = recent_decisions(25)
+    if _rows:
+        st.caption(
+            f"{len(_rows)} most recent — this container's log, including anything you "
+            f"just asked. Restarting the app clears it; the committed sample below does "
+            f"not move."
+        )
+        st.dataframe(
+            [
+                {
+                    "at": r.get("at", "")[:19].replace("T", " "),
+                    "site": r.get("site_name"),
+                    "question": (r.get("question") or "")[:52],
+                    "read as": r.get("question_type"),
+                    "filter": r.get("filter_type"),
+                    "layer": r.get("analytic_type"),
+                    "refused": r.get("refusal") or "",
+                    "peak °F": r.get("peak_f"),
+                    "hours": r.get("hours_above"),
+                    "prose": r.get("narration_source"),
+                }
+                for r in _rows
+            ],
+            use_container_width=True, hide_index=True,
+        )
+    else:
+        st.caption("No decisions recorded yet — ask something on the second tab.")
+
+    _log = decisions_bytes()
+    if _log:
+        st.download_button(
+            "Download the decision log (JSONL)", data=_log,
+            file_name="heatguard-decisions.jsonl", mime="application/x-ndjson",
+            help="One JSON object per decision. This is the artefact a safety audit "
+                 "would ask for.",
+        )
 
     t = load_thresholds()
     st.divider()

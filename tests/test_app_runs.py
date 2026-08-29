@@ -147,3 +147,81 @@ def test_the_offline_banner_is_shown(cold):
     text = " ".join(m.value for m in cold.markdown) + " ".join(
         i.value for i in cold.info)
     assert "cached fixture set" in text
+
+
+# ------------------------------------- THE DATE REGRESSION: every offered date must work
+
+def test_every_offered_date_answers_without_crashing():
+    """THE 2025-07-16 REGRESSION.
+
+    `cached_dates()` listed every date appearing anywhere in the fixture index. 2025-07-16
+    is in there only as the post-midnight tail of night shifts starting on the 15th — five
+    `exceedance` calls, no `env_params`. Selecting it and pressing the button routed to the
+    snapshot layer, found no heat index, and raised `KeyError: 'peak'`, which killed the
+    script and blanked all four tabs.
+
+    Two defects, both fixed: the dropdown offered a date it could not answer, and the
+    render path never checked `out["error"]` before indexing the result.
+
+    Anything the UI OFFERS, the UI must survive. Found by a human clicking the deployed app.
+    """
+    at = run()
+    dates = [sb for sb in at.selectbox if sb.label == "Date"]
+    assert dates, "the Date selectbox is missing"
+    options = list(dates[0].options)
+    assert options, "no dates are offered at all"
+
+    for date in options:
+        fresh = run()
+        [sb for sb in fresh.selectbox if sb.label == "Date"][0].set_value(date)
+        fresh = fresh.run(timeout=TIMEOUT)
+        after = [b for b in fresh.button if "Ask HeatGuard" in b.label][0].click().run(
+            timeout=TIMEOUT)
+        assert not after.exception, (
+            f"date {date!r} is offered in the dropdown but crashes on the button press: "
+            f"{[f'{e.type}: {e.message}' for e in after.exception]}"
+        )
+
+
+def test_the_night_shift_tail_date_is_not_offered_as_a_date():
+    """Pins the specific data shape that caused it, so a future cache refill cannot
+    silently reintroduce a date that has heatmap tiles but no heat index."""
+    import app as heatguard_app
+    from src.heatguard import tools
+
+    combos = tools.cached_combinations()
+    tail = {p["date"] for p in combos
+            if p.get("date") and p.get("endpoint") == "/v1/heatmap"} - {
+           p["date"] for p in combos
+           if p.get("date") and p.get("endpoint") == "/v1/env_params"}
+
+    offered = set(heatguard_app.cached_dates())
+    assert not (tail & offered), (
+        f"{sorted(tail & offered)} have heatmap tiles but no env_params, so the snapshot "
+        f"layer cannot answer them — they must not appear in the Date box"
+    )
+    assert offered, "filtering removed every date; the app now offers nothing"
+
+
+# --------------------------------------------------- the audit trail must be reachable
+
+def test_the_decision_log_is_visible_and_downloadable(cold):
+    """CLAUDE.md calls decisions.jsonl the compliance evidence. It was gitignored and the
+    deployed copy lives in ephemeral container storage, so a judge could not reach it —
+    the app asserted "Logged to data/decisions.jsonl" and offered no way to check."""
+    text = " ".join(m.value for m in cold.tabs[-1].markdown)
+    assert "The audit trail" in text, "the audit-trail section is missing"
+
+    names = [d.label for d in cold.download_button]
+    assert any("decision log" in n.lower() for n in names), (
+        f"no download button for the decision log; found {names}")
+
+
+def test_the_audit_view_is_never_empty_on_a_cold_container():
+    """The sample is committed precisely so a judge arriving before clicking sees records.
+    If the live log is gitignored AND the sample stops loading, the tab shows nothing and
+    the compliance claim becomes unverifiable again."""
+    import app as heatguard_app
+    assert heatguard_app.DECISIONS_SAMPLE.exists(), "the committed sample is gone"
+    assert heatguard_app.recent_decisions(5), "no decisions readable from any source"
+    assert heatguard_app.decisions_bytes(), "the download would serve an empty file"
