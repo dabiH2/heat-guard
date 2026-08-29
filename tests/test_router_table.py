@@ -121,10 +121,64 @@ def test_classification_is_case_insensitive():
     assert classify("HOW LONG WERE THEY ABOVE THE BAND?") == QuestionType.DURATION
 
 
-def test_unrecognised_questions_fall_back_to_the_narrowest_layer():
-    """Falling back to a broad layer would spend credits on a guess."""
-    assert classify("hello") == QuestionType.SNAPSHOT
-    assert DECISION_TABLE[classify("hello")].filter_type == 1
+def test_unrecognised_questions_are_refused_not_guessed():
+    """THE DUSTBIN REGRESSION.
+
+    This test used to assert the opposite, and justified it on cost: "falling back to a
+    broad layer would spend credits on a guess." That let a cost argument beat a safety
+    argument inside a safety tool, and it contradicted the rule asserted eight tests
+    below -- being wrong toward more data costs a credit, being wrong toward less costs
+    a wrong call.
+
+    It was not theoretical. SNAPSHOT had no markers of its own, so it was where every
+    unrecognised phrasing landed, and SNAPSHOT is the single-hour `tcm` layer this whole
+    project exists to warn people off. Eleven of fifteen realistic supervisor paraphrases
+    came back as a one-hour reading, including "should I send the crew out for the full
+    day?" -- a duration question in plain English, answered with one hour.
+
+    Guessing broad and guessing narrow are both wrong. Not guessing is free.
+    """
+    assert classify("hello") is None
+    assert classify("give me the numbers for this site") is None
+
+    choice = r("hello")
+    assert choice.refused
+    assert choice.refusal is RefusalReason.UNRECOGNISED_QUESTION
+    assert choice.filter_type is None and choice.analytic_type is None
+
+
+def test_the_unrecognised_refusal_names_what_would_work():
+    """A refusal that does not say what WOULD work is a dead end, not a safeguard."""
+    message = r("hello").refusal_message.lower()
+    for family in ("current reading", "how long", "which site", "later today"):
+        assert family in message, f"{family!r} missing from the refusal message"
+
+
+def test_snapshot_must_now_be_asked_for_explicitly():
+    """Snapshot stays reachable -- it is a legitimate question, just no longer the place
+    unrecognised text falls into."""
+    for question in ("How hot is it right now?", "What is the temperature?",
+                     "Current heat index at this site"):
+        assert classify(question) is QuestionType.SNAPSHOT
+        assert DECISION_TABLE[QuestionType.SNAPSHOT].filter_type == 1
+
+
+def test_a_duration_marker_rescues_an_otherwise_unreadable_question():
+    """The marker list is authoritative over the classifier and always has been. It must
+    keep working when the classifier returns nothing at all, or the new refusal would
+    swallow the exact questions that matter most."""
+    choice = r("tell me about the worst of it out there")
+    assert not choice.refused
+    assert choice.question_type is QuestionType.DURATION
+    assert choice.escalated_from is QuestionType.SNAPSHOT
+
+
+def test_a_hard_api_violation_outranks_not_understanding_the_question():
+    """"That granularity does not exist" is true regardless of what they meant, and is a
+    more useful thing to be told than "I could not read you". The unrecognised refusal is
+    the last resort, not the first excuse."""
+    choice = r("mumble mumble at 30 m", granularity=30)
+    assert choice.refusal is RefusalReason.GRANULARITY_TOO_FINE
 
 
 def test_comparison_outranks_duration_when_both_markers_are_present():

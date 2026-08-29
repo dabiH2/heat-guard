@@ -558,7 +558,16 @@ with decision_tab:
         # Live preview. This is the whole IP, made visible before any call is made.
         _preview = route(question, lat=float(site["lat"]), lon=float(site["lon"]),
                          date=date)
-        if _preview.refused:
+        if _preview.refused and _preview.question_type is None:
+            # The unrecognised refusal has no question_type BY CONSTRUCTION — that is the
+            # whole point of it, and dereferencing .value here would crash the script and
+            # blank every tab. Same class of bug as the two already fixed today.
+            st.warning(
+                "**Not recognised as any of the six question types**, so no layer would "
+                "be picked and no call would be made. Snapshot is no longer the "
+                "fall-through — guessing narrow is how a one-hour reading gets passed "
+                "off as a duration answer.", icon="🚫")
+        elif _preview.refused:
             st.warning(
                 f"Reads as **{_preview.question_type.value}** → would be **refused** "
                 f"(`{_preview.refusal.value}`). No call would be made.", icon="🚫")

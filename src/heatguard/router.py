@@ -116,6 +116,21 @@ class RefusalReason(str, Enum):
     WRONG_LAYER_WOULD_MISLEAD = "wrong_layer_would_mislead"
     # ^ the differentiator: refusing a well-formed question because the only layer that
     #   fits the requested scope would produce a confident wrong answer.
+    UNRECOGNISED_QUESTION = "unrecognised_question"
+    # ^ MEASURED DEFECT, fixed 2026-08-29. SNAPSHOT used to be the dustbin: it had no
+    #   markers of its own, so anything the marker table did not recognise fell through
+    #   to filter_type=1 + tcm - the single-hour layer this entire project exists to warn
+    #   against. Probed with fifteen paraphrases a supervisor would plausibly type;
+    #   ELEVEN came back as a one-hour snapshot, including "should I send the crew out
+    #   for the full day?" and "which of my sites should I worry about".
+    #
+    #   The old justification was cost: "falling back to a BROAD layer would spend
+    #   credits on a guess." That let a cost argument beat a safety argument inside a
+    #   safety tool, and it contradicted this codebase's own rule, asserted in
+    #   test_escalation_direction_is_always_toward_more_data_never_less: being wrong
+    #   toward more data costs a credit, being wrong toward less costs a wrong call.
+    #
+    #   Guessing broad and guessing narrow are both wrong. Not guessing is free.
 
 
 class RouterInvariantError(AssertionError):
@@ -154,6 +169,11 @@ _MARKERS: tuple[tuple[QuestionType, tuple[str, ...]], ...] = (
         "which site", "which of our", "which of the", "which sites", "which is worst",
         "compare", "comparison", "rank", "ranking", "worst site", "hottest site",
         "across sites", "across our sites", "site is worst", "sites is worst",
+        # Added after the paraphrase probe: these read as comparison to any human and
+        # were falling through to a single-hour snapshot.
+        "which of my", "my sites", "our sites", "other sites", "worry about",
+        "worse than", "better than", "hotter than", "cooler than", "compared to",
+        "versus",
     )),
     (QuestionType.PERSISTENCE, (
         "chronically", "chronic", "typically", "usually", "normally", "historically",
@@ -164,6 +184,10 @@ _MARKERS: tuple[tuple[QuestionType, tuple[str, ...]], ...] = (
         "how long", "how many hours", "hours above", "hours over", "time above",
         "sustained", "all day", "over the day", "throughout the day", "duration",
         "how much of the", "straight", "in a row", "continuous", "consecutive",
+        # Added after the paraphrase probe. "Should I send the crew out for the full
+        # day?" is a duration question in plain English and was answered with one hour.
+        "full day", "whole day", "whole shift", "full shift", "entire shift",
+        "through the afternoon", "all afternoon", "for the day",
     )),
     (QuestionType.FORECAST, (
         "will we", "will it", "will they", "going to", "next few hours", "later today",
@@ -173,6 +197,14 @@ _MARKERS: tuple[tuple[QuestionType, tuple[str, ...]], ...] = (
     (QuestionType.INTRADAY, (
         "when should", "what time", "start and stop", "start or stop", "schedule",
         "when can we", "when do we", "best time", "safe window", "shift window",
+    )),
+    # LAST deliberately. Snapshot is now a family you have to ASK for, not the place
+    # unrecognised text lands. Ordering it last keeps "how long has it been this hot"
+    # a duration question even though it also contains a snapshot marker.
+    (QuestionType.SNAPSHOT, (
+        "how hot", "how warm", "temperature", "right now", "at the moment",
+        "currently", "current heat", "what is it now", "reading",
+        "heat index", "degrees",
     )),
 )
 
@@ -187,22 +219,42 @@ DURATION_MARKERS: tuple[str, ...] = (
     "historically", "most days", "on average", "every summer",
 )
 
+#: Shown when nothing matches. It names the six families rather than saying "rephrase",
+#: because a refusal that does not tell you what WOULD work is just a dead end.
+UNRECOGNISED_MESSAGE = (
+    "I could not tell which kind of question that is, so I did not pick a layer and did "
+    "not call the API. Choosing wrongly here is not a small error: `tcm` and "
+    "`exceedance` are the same endpoint one optional string apart, and the wrong one "
+    "answers a duration question with a single hour - same shape of output, opposite "
+    "operational decision, no error raised.\n\n"
+    "Try one of the six: a **current reading**, **when** during the day, **how long** "
+    "above a threshold, whether it is **chronic**, **which site** is worst, or what "
+    "happens **later today**."
+)
+
+
 _GRANULARITY_RE = re.compile(r"(\d+)\s*(?:m\b|metre|meter)", re.IGNORECASE)
 
 
-def classify(question: str) -> QuestionType:
+def classify(question: str) -> QuestionType | None:
     """Pure string classification. Deterministic, no network, no model.
 
-    Falls back to SNAPSHOT — the narrowest, cheapest layer. Falling back to a BROAD layer
-    on an unrecognised question would spend credits on a guess; falling back to a narrow
-    one is caught by the duration-marker post-condition if it was actually a duration
-    question in disguise.
+    Returns **None** when no family matches, and None means *refuse* - not "snapshot".
+
+    This used to fall through to SNAPSHOT, described as "the narrowest, cheapest layer".
+    That was wrong, and measurably so: SNAPSHOT had no markers of its own, so it was the
+    dustbin for every phrasing the table did not recognise, and SNAPSHOT is exactly the
+    single-hour layer this project was built to warn people off. Eleven of fifteen
+    realistic supervisor paraphrases came back as a one-hour `tcm` reading.
+
+    A safety tool that cannot tell what it was asked must say so. Refusing is free, and
+    it is the same behaviour the tool already has for a non-US area or an uncovered date.
     """
     text = question.lower()
     for question_type, markers in _MARKERS:
         if any(marker in text for marker in markers):
             return question_type
-    return QuestionType.SNAPSHOT
+    return None
 
 
 def has_duration_marker(question: str) -> bool:
@@ -620,13 +672,34 @@ def route(
     demo take can be reproduced exactly.
     """
     classified = classify(question)
-    question_type = _escalate_for_duration(question, classified)
-    escalated_from = classified if question_type is not classified else None
+    unrecognised = classified is None
+
+    # A duration marker is authoritative on its own and never needed the classifier to
+    # agree. So a marker rescues an otherwise unreadable question, and it is recorded as
+    # an escalation from SNAPSHOT rather than silently becoming a duration question --
+    # "the classifier had nothing, the marker carried it" is exactly what the audit trail
+    # should say.
+    if unrecognised and has_duration_marker(question):
+        classified, unrecognised = QuestionType.SNAPSHOT, False
+
+    question_type = None if unrecognised else _escalate_for_duration(question, classified)
+    escalated_from = (
+        classified if (not unrecognised and question_type is not classified) else None
+    )
 
     refusal = check_refusals(
         lat=lat, lon=lon, date=date, end_date=end_date, granularity=granularity,
         aoi_km2=aoi_km2, question=question, question_type=question_type, now=now,
     )
+
+    # AFTER the constraint checks, deliberately. A hard, verifiable API violation -- a
+    # non-US point, a 30 m granularity that does not exist, a date outside coverage --
+    # is a better thing to tell someone than "I did not understand you", and it is true
+    # regardless of what they meant. "I could not read the question" is the last resort,
+    # not the first excuse.
+    if refusal is None and unrecognised:
+        refusal = (RefusalReason.UNRECOGNISED_QUESTION, UNRECOGNISED_MESSAGE)
+
     if refusal is not None:
         reason, message = refusal
         return LayerChoice(

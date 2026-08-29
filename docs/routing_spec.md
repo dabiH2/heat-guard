@@ -97,6 +97,41 @@ which is only meaningful once the request is otherwise valid.
 | 5 | `AOI_TOO_LARGE` | area > 15 mi² (38.85 km²) | Plan limit. |
 | 6 | `GRANULARITY_TOO_FINE` | not one of 60/80/100 m | Data is 2 m above ground at **20 m** spatial resolution. There is no street-level detail to return. |
 | 7 | `WRONG_LAYER_WOULD_MISLEAD` | see below | **The differentiator.** |
+| 8 | `UNRECOGNISED_QUESTION` | the wording matches no question family, **and** carries no duration marker | See below. Checked **last**, so a hard API violation always wins: *"30 m does not exist"* is true whatever the asker meant, and is more use than *"I could not read you"*. |
+
+### `UNRECOGNISED_QUESTION` — the one that was a bug until 2026-08-29
+
+`SNAPSHOT` used to have **no markers of its own**. It was the fall-through: anything
+the table did not recognise became a single-hour `tcm` reading. The justification
+written in the code was cost — *"falling back to a BROAD layer would spend credits on
+a guess"* — which let a cost argument beat a safety argument inside a safety tool,
+and contradicted this project's own rule that being wrong toward more data costs a
+credit while being wrong toward less costs a wrong call.
+
+It was measured, not theorised. Fifteen paraphrases a Phoenix crew supervisor would
+plausibly type were routed; **eleven returned `filter_type=1` + `tcm`** — the exact
+trap this project is built to expose. Three of them were operationally wrong:
+
+| Typed | Routed to | Should have been |
+|---|---|---|
+| *"should I send the crew out for the full day?"* | `tcm`, one hour | duration |
+| *"which of my sites should I worry about"* | `tcm`, one hour | comparison |
+| *"is today worse than yesterday"* | `tcm`, one hour | comparison |
+
+Three changes, together:
+
+1. **`SNAPSHOT` got positive markers** (`how hot`, `temperature`, `right now`, …) and
+   is ordered **last**, so it is a family you ask for rather than the place text
+   falls into. `how long has it been this hot` stays a duration question.
+2. **`COMPARISON` and `DURATION` were broadened** to catch the measured misses.
+3. **`classify()` returns `None`** when nothing matches, and `None` means refuse.
+
+The duration-marker override is unchanged and still authoritative: a marker rescues
+an otherwise unreadable question and is logged as an escalation from `SNAPSHOT`, so
+the audit trail records *the classifier had nothing, the marker carried it*. Only
+text with no family **and** no marker is refused.
+
+Guessing broad and guessing narrow are both wrong. Not guessing is free.
 
 ### `WRONG_LAYER_WOULD_MISLEAD` — the one that matters
 

@@ -254,6 +254,9 @@ def test_a_tools_error_is_reported_not_swallowed(monkeypatch):
         raise agent.tools.ToolsError("network unreachable")
 
     monkeypatch.setattr(agent.tools, "heatmap", boom)
-    out = agent.answer("Is it safe?", site_id=PHX_CHASE, date=DATE)
+    # A question that ROUTES. "Is it safe?" used to reach the API by falling through to
+    # the snapshot dustbin; it now refuses as unrecognised, so it would never call
+    # heatmap at all and this test would pass for the wrong reason.
+    out = agent.answer("How hot is it right now?", site_id=PHX_CHASE, date=DATE)
     assert out["error"] and "network unreachable" in out["error"]
     assert out["record"]["peak_f"] is None

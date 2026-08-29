@@ -225,3 +225,30 @@ def test_the_audit_view_is_never_empty_on_a_cold_container():
     assert heatguard_app.DECISIONS_SAMPLE.exists(), "the committed sample is gone"
     assert heatguard_app.recent_decisions(5), "no decisions readable from any source"
     assert heatguard_app.decisions_bytes(), "the download would serve an empty file"
+
+
+def test_an_unrecognised_question_refuses_in_the_ui_without_crashing():
+    """The unrecognised refusal carries `question_type=None` BY CONSTRUCTION. Every place
+    the UI reads `.question_type.value` is a crash waiting for the first judge who types
+    something vague — the same class of bug as the two found by clicking today.
+
+    Exercised through the real widget, both on the live preview and after the press."""
+    at = run()
+    box = [t for t in at.text_input if "own words" in t.label][0]
+    at = box.set_value("safe?").run(timeout=TIMEOUT)
+    assert not at.exception, (
+        f"typing an unrecognised question crashed the preview: "
+        f"{[f'{e.type}: {e.message}' for e in at.exception]}")
+
+    warned = " ".join(w.value for w in at.warning)
+    assert "six question types" in warned, f"no refusal preview shown; warnings: {warned}"
+
+    after = [b for b in at.button if "Ask HeatGuard" in b.label][0].click().run(
+        timeout=TIMEOUT)
+    assert not after.exception, (
+        f"pressing the button on an unrecognised question crashed: "
+        f"{[f'{e.type}: {e.message}' for e in after.exception]}")
+    for tab in after.tabs:
+        blocks = (len(tab.markdown) + len(tab.subheader)
+                  + len(tab.metric) + len(tab.table))
+        assert blocks > 0, f"tab {tab.label!r} lost its content"
