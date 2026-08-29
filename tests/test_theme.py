@@ -152,10 +152,19 @@ def test_the_stylesheet_stacks_columns_on_a_narrow_viewport():
 
 
 def test_important_is_used_sparingly():
-    """`!important` is how a stylesheet stops being maintainable. A handful is the cost of
-    overriding Streamlit's inline styles; a drift upward means the selectors are wrong."""
+    """`!important` is how a stylesheet stops being maintainable.
+
+    A handful is the unavoidable cost of one specific thing: Streamlit injects its emotion
+    stylesheet AFTER this block, so at equal specificity its declaration wins on order
+    alone and the only lever left is `!important`. That is what happened to the selected
+    tab's background — every other property in the same rule applied and background-color
+    alone computed to transparent.
+
+    The cap exists so that stops being an excuse. A rising count means the selectors are
+    wrong, not that CSS is hard; raise it only with a measurement in the commit message.
+    """
     count = theme.CSS.count("!important")
-    assert count <= 12, f"{count} uses of !important — the selectors have gone wrong"
+    assert count <= 14, f"{count} uses of !important — the selectors have gone wrong"
 
 
 # ------------------------------------------------- selectors must exist in the DOM

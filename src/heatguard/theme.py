@@ -292,9 +292,18 @@ hr { border: none; border-top: 1px solid var(--hg-border); margin: 1.6rem 0 1.35
   color: inherit;
   margin: 0;
 }
-[data-testid="stTab"]:hover { background: var(--hg-panel-2); color: var(--hg-ink); }
+/* `background-color` longhand and !important, on both of these, for a measured reason.
+   Streamlit injects its emotion stylesheet AFTER this block, so at equal specificity its
+   declaration wins on order alone. Verified on the deployed app: every other property in
+   this rule applied -- box-shadow, border-radius, padding, colour -- and background-color
+   alone computed to rgba(0, 0, 0, 0), leaving the selected tab invisible against the
+   tray. Losing one declaration out of five is the hardest kind of style bug to see. */
+[data-testid="stTab"]:hover {
+  background-color: var(--hg-panel-2) !important;
+  color: var(--hg-ink);
+}
 [data-testid="stTab"][aria-selected="true"] {
-  background: var(--hg-surface);
+  background-color: var(--hg-surface) !important;
   color: var(--hg-accent-dark);
   box-shadow: 0 1px 2px rgba(18, 24, 31, 0.10), 0 0 0 1px var(--hg-border-strong);
 }
