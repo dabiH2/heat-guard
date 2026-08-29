@@ -308,8 +308,27 @@ plausible one is a bug shipped.
 | `exceedance` with no `threshold` | `Completed`, **24.0 hours everywhere** | 200 | 🔴 **SILENT** — defaults to 30 °C | router invariant refuses to emit one |
 | Range > 30 days | HTTP **500**, non-JSON body | 500 | 🟡 server fault, not a clean rejection | `EXCEEDS_30_DAY_WINDOW`, refused up front |
 
-Three silent failures, and **all three are billed**. That is the economic argument for
-refusing in `router.py` instead of letting the API decide.
+Three silent failures in **this table**, and all three are billed. That is the economic
+argument for refusing in `router.py` instead of letting the API decide.
+
+> **Scope note — this table is the T4 probe set, and the total is six.** The README heads
+> its own table "Six ways the API fails silently", which is not a contradiction: T8 later
+> added three more of the same shape, found while hunting the demo day rather than while
+> probing constraints. The full set, all returning `Completed` with a plausible result and
+> all billed 4,220 credits:
+>
+> | # | Found in | Request | What comes back |
+> |---|---|---|---|
+> | 1 | T4 | area outside the US | zero tiles |
+> | 2 | T4 | tomorrow's date | one flat value for the whole day |
+> | 3 | T4 | `exceedance` with no `threshold` | 24.0 h against a threshold nobody chose |
+> | 4 | T4 | a Fahrenheit threshold | **0.0 h where the truth is 17.0** |
+> | 5 | T8 | a date before ~Q4 2021 | zero tiles — documented start is out by a year |
+> | 6 | T8 | some sites on some dates | zero tiles — coverage is patchy per location too |
+>
+> Numbers 5 and 6 are the same failure at different granularities: the date gap is
+> global, the site gap is per-location, and PHX-DVT on 2025-07-15 is the instance that
+> forced every headline figure to be stated over 11 sites rather than 12.
 
 ### ⚠ The forecast horizon is not "now + 12 h"
 

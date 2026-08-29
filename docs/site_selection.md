@@ -25,7 +25,14 @@ Source of truth: [`config/sites_source.yaml`](../config/sites_source.yaml).
 | PHX-ENCA | Encanto Park grounds | park_adjacent | depressed_peak | 7 | 05:30–14:00 |
 | PHX-UNHL | Union Hills Water Treatment Plant | mixed_suburban | high_peak_fast_cool | 9 | 06:00–14:30 |
 
-Bold shifts are night crews. 125 workers across 12 sites; 33 of them work nights.
+Bold shifts are night crews. **115 workers across 12 sites**; 33 of them work nights.
+
+On the demo day, 2025-07-15, **PHX-DVT returned zero tiles** — one of the documented
+silent failure modes, and coverage turns out to be patchy per location as well as per
+date. So every measured figure in the README and the written summary is stated over the
+**11 sites with data, 107 workers** (115 − 8). The twelfth site is not dropped quietly:
+it is counted as a coverage gap, which is the honest reading, rather than as a site that
+was safe.
 
 Roster spans 34 km. Each AOI is a 200 m-radius polygon of 0.124 km² — about **313×
 under the 15 mi² (38.85 km²) plan cap** that FortyGuard engineering states on camera.

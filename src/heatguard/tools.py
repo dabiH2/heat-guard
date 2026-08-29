@@ -62,7 +62,10 @@ BASE_URL = "https://api.fortyguard.com"
 POLL_BACKOFF_SECONDS = (3, 6, 12)
 
 GRANULARITIES = (60, 80, 100)
-DEFAULT_GRANULARITY = 100          # cheapest; finer costs more credits
+#: MEASURED: granularity does NOT affect cost — billing is flat per call, so 60 m is
+#: exactly as cheap as 100 m. 100 remains the default because tile count drives response
+#: size and parse time, not price.
+DEFAULT_GRANULARITY = 100
 
 # ---------------------------------------------------------------------------
 # EARLIEST USABLE DATE — measured, and it is NOT 2021-01-01.

@@ -21,7 +21,10 @@ Temperature API®.**
 
 ## The measured result
 
-Twelve Phoenix sites, 2025-07-15, 107 workers, at OSHA's high-risk band:
+2025-07-15, at OSHA's high-risk band. The roster is **twelve sites, 115 workers** — but
+**PHX-DVT returned zero tiles that day**, which is one of the silent failure modes
+documented below, so every figure here is over the **11 sites with data, 107 workers**.
+The twelfth is counted as a coverage gap, not as a site that was safe.
 
 | | |
 |---|---|
@@ -52,10 +55,20 @@ Two arguments survive contact with a buyer, and both use numbers already measure
   is roughly **$35,000** at a $55/h loaded rate — one day, one roster. The app exposes
   that rate as a slider rather than baking it in, because it is an assumption, not a
   finding, and a buyer who disagrees should be able to move it.
-- **`data/decisions.jsonl` is the other product.** Every decision is logged: question,
-  layer chosen, why, threshold, result, action, timestamp. In an OSHA citation or a
-  workers'-compensation dispute, what protects a supervisor is evidence of a consistent,
-  documented process. A screenshot of a weather app is not that.
+- **The decision log is the other product.** Every question the running app answers is
+  appended to `data/decisions.jsonl` — question, layer chosen, why, both thresholds,
+  result, action, timestamp — including the ones it *refuses*, and why it refused. In an
+  OSHA citation or a workers'-compensation dispute, what protects a supervisor is
+  evidence of a consistent, documented process. A screenshot of a weather app is not
+  that.
+
+  The runtime log is gitignored, as an append-only operational log should be. A **real
+  generated sample** is committed as
+  [`data/decisions.sample.jsonl`](data/decisions.sample.jsonl) — nine records produced by
+  running the actual agent against the committed fixtures
+  (`python scripts/make_decisions_sample.py`), covering a snapshot, a duration question
+  routed to `exceedance`, a comparison across three sites, an escalation, and three
+  refusals. Nothing in it is hand-written.
 
 ## The problem it solves
 
@@ -172,7 +185,8 @@ key in `.env`. See [`DEPLOY.md`](DEPLOY.md).
 | `docs/site_selection.md` | the twelve sites, the predictions, and how they did |
 | `docs/submission-summary.md` | the 500-word summary |
 | `data/fixtures/` | every API response, committed — the demo's data source |
-| `data/decisions.jsonl` | the audit trail: every question, layer, rationale, action |
+| `data/decisions.sample.jsonl` | a real generated sample of the audit trail — question, layer, rationale, action, refusals |
+| `scripts/make_decisions_sample.py` | regenerates that sample offline, from the committed fixtures |
 
 ## AI disclosure
 

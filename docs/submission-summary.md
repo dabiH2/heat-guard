@@ -41,7 +41,8 @@ seven ways.
 
 ## Measured result
 
-Twelve sites, 2025-07-15, 107 workers, OSHA high-risk band:
+2025-07-15, OSHA high-risk band. Roster is 12 sites / 115 workers; one returned zero
+tiles — a documented silent failure — so figures are over **11 sites, 107 workers**:
 
 | | |
 |---|---|
@@ -56,8 +57,9 @@ The dangerous window ran 13:00–20:00; nearly every shift misses it. Eight site
 **22 people in that hour instead of 18**.
 
 **Why anyone would pay.** Over-warning is the expensive error and nobody counts it.
-Second, `data/decisions.jsonl` logs every decision — what was known, when, what was
-chosen and why. In an OSHA citation, that documentation is the product.
+Second, the app logs every decision and every refusal to `data/decisions.jsonl`;
+`data/decisions.sample.jsonl` is a real generated sample. In an OSHA citation, that
+documentation is the product.
 
 **What we got wrong, reported not buried.** Per-site predictions scored 2 of 11, worse
 than chance: the API separates urban core from periphery, not surface type. And **no

@@ -6,8 +6,9 @@ dict, not a chain of `if` statements, so it can be read, diffed and tested direc
 
 **No LLM call exists in this module.** The agent parses intent and narrates; the router
 decides. That makes layer selection auditable (this is a safety tool), reproducible (demo
-takes must match exactly), and testable with zero credits and no network — 224 offline
-tests, of which ~90 cover this file.
+takes must match exactly), and testable with zero credits and no network — **336 offline
+tests, of which 123 cover this file** (`tests/test_router_table.py` 105 +
+`tests/test_router.py` 18).
 
 ---
 
@@ -90,8 +91,8 @@ which is only meaningful once the request is otherwise valid.
 | # | Reason | Trigger | Why it is a refusal and not an error |
 |---|---|---|---|
 | 1 | `OUTSIDE_US` | point outside the US coverage boxes | **A non-US AOI does not raise. It returns an empty-looking result and still spends the credit** (`[00:13:39]`: *"it's just going to spend your credit"*). This refusal is a cost control. |
-| 2 | `BEFORE_2021` | date < 2021-01-01, or unparseable | No record exists. Nothing to answer with. |
-| 3 | `BEYOND_FORECAST` | date > now + 12 h | The heatmap is the only forecasting layer, and only 12 h out. Beyond that, any answer is a historical average dressed as a forecast. |
+| 2 | `BEFORE_2021` | date < **2022-01-01**, or unparseable | The documented start is 2021-01-01; **measured, coverage begins a year later**. 2021-07-15 and 2021-10-15 both returned `Completed` with zero tiles and were billed 4,220 credits each. *(The enum name predates the measurement and is kept only to avoid churning tests.)* |
+| 3 | `BEYOND_FORECAST` | date > **today** | ⚠ **"Forecasts to now + 12 h" was measured wrong.** The API accepts `start_date` up to **today + 1 day** (HTTP 400 beyond, loud and free) — but **tomorrow returns one flat value for the whole day**: 34.34 °C with min = avg = max, against 33.7–41.9 °C for today. No diurnal structure, so `exceedance` against it is exactly 0 h or exactly 24 h. **The boundary is where the profile stops, not where the API stops accepting** — `MAX_FUTURE_DAYS_ACCEPTED=1`, `MAX_FUTURE_DAYS_USABLE=0`. Accepted ≠ answered, and it is billed. |
 | 4 | `EXCEEDS_30_DAY_WINDOW` | span > 30 days | Returns **quietly truncated**. The caller is told to split it, with the number of calls. |
 | 5 | `AOI_TOO_LARGE` | area > 15 mi² (38.85 km²) | Plan limit. |
 | 6 | `GRANULARITY_TOO_FINE` | not one of 60/80/100 m | Data is 2 m above ground at **20 m** spatial resolution. There is no street-level detail to return. |

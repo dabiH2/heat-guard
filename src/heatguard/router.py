@@ -103,8 +103,13 @@ class AnalyticType(str, Enum):
 class RefusalReason(str, Enum):
     """Grounded in verified API constraints — none of these are theatre."""
     OUTSIDE_US = "outside_us"                      # coverage is US-only
-    BEFORE_2021 = "before_2021"                    # data starts 2021-01-01
-    BEYOND_FORECAST = "beyond_forecast_horizon"    # heatmap forecasts to now +12h only
+    # Name predates the measurement: coverage actually starts ~Q4 2021, and
+    # EARLIEST_DATE is 2022-01-01. Kept as-is to avoid churning tests for no gain.
+    BEFORE_2021 = "before_2021"
+    # NOT "now + 12 h" — that was measured wrong in T4. The API accepts up to today + 1,
+    # but tomorrow returns one flat value with no diurnal structure, so the usable
+    # boundary is today. See tools.MAX_FUTURE_DAYS_ACCEPTED / _USABLE.
+    BEYOND_FORECAST = "beyond_forecast_horizon"
     EXCEEDS_30_DAY_WINDOW = "exceeds_30_day_window"  # max 30 days returned per call
     AOI_TOO_LARGE = "aoi_too_large"                # 15 mi^2 on the hackathon plan
     GRANULARITY_TOO_FINE = "granularity_too_fine"  # only 60 / 80 / 100 m exist
