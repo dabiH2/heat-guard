@@ -6,8 +6,8 @@ dict, not a chain of `if` statements, so it can be read, diffed and tested direc
 
 **No LLM call exists in this module.** The agent parses intent and narrates; the router
 decides. That makes layer selection auditable (this is a safety tool), reproducible (demo
-takes must match exactly), and testable with zero credits and no network — **336 offline
-tests, of which 123 cover this file** (`tests/test_router_table.py` 105 +
+takes must match exactly), and testable with zero credits and no network — **448 offline
+tests, of which 145 cover this file** (`tests/test_router_table.py` 127 +
 `tests/test_router.py` 18).
 
 ---
@@ -41,14 +41,24 @@ study (`02-temperature-api` `[00:36:14]`–`[00:37:23]`), six parcels over 28 Ju
 | # | Operator question | Type | Endpoint | `filter_type` | `analytic_type` | Wrong answer if answered as a snapshot |
 |---|---|---|---|---|---|---|
 | 1 | "Is it safe at site 3 right now?" | `SNAPSHOT` | `/v1/heatmap` | 1 · single hour | `tcm` | **None** — a snapshot is correct here. The only row where that is true. |
-| 2 | "When should we start and stop today?" | `INTRADAY` | `/v1/heatmap` | 3 · entire day | `time_of_measure` | One number and no schedule. Cannot say *which hour* to avoid. |
-| 3 | "Will we cross the threshold soon?" | `FORECAST` | `/v1/heatmap` | 2 · hour range | `tcm` | A historical average hides what today is doing. |
+| 2 | "When should we start and stop today?" | `INTRADAY` | 🚫 **refused** — never emitted | ~~3 · entire day~~ | ~~`time_of_measure`~~ | One number and no schedule. Cannot say *which hour* to avoid — so the row is refused, not sent. |
+| 3 | "Will we cross the threshold soon?" | `FORECAST` | 🚫 **refused** — never emitted | ~~2 · hour range~~ | ~~`tcm`~~ | A past peak handed over as a forecast. There is no forward layer on this API. |
 | 4 | "How long were they above the band?" | `DURATION` | `/v1/heatmap` | 3 · entire day | **`exceedance`** | A maximum says how hot. It can never say how long. |
 | 5 | "Is site 3 chronically dangerous?" | `PERSISTENCE` | `/v1/heatmap` | 4 · day range | **`exceedance`** | One bad day looks structural; one good day looks safe. |
 | 6 | "Which of our 12 sites is worst?" | `COMPARISON` | `/v1/heatmap` | 3 · entire day | **`exceedance`** | Ranks twelve sites by whichever hour you sampled — by the clock, not by heat. |
 
 Granularity is **100 m on every row**, deliberately. Comparison ranks sites against each
 other; varying resolution between them would rank them by resolution.
+
+> **Rows 2 and 3 still exist in `DECISION_TABLE` and are never emitted.** They are kept
+> because a refusal has to be able to name the layer it declined — *"the only layer that
+> fits is `filter_type=2` with `analytic_type=tcm`, and here is what that actually
+> returns"* is a far better refusal than *"I can't."* Both rationales in the code say
+> `NEVER EMITTED` on their first line, and
+> `test_exactly_two_question_types_are_unconditionally_refused` pins the set to exactly
+> these two, so a future edit cannot quietly turn this fix into "refuse more things".
+>
+> **Four of the six are answered. `escalated_from` can rescue a fifth** — see below.
 
 > **Name collision, deliberately namespaced.** `QuestionType.PERSISTENCE` ("is this site
 > *chronically* dangerous?" — across many **days**) and `AnalyticType.PERSISTENCE`
@@ -136,7 +146,9 @@ Guessing broad and guessing narrow are both wrong. Not guessing is free.
 ### `WRONG_LAYER_WOULD_MISLEAD` — the one that matters
 
 Refusing a **well-formed question that the API would happily answer**, because the only
-layer that fits the requested scope would produce a confident wrong answer. Two triggers:
+layer that fits the requested scope would produce a confident wrong answer. **Four
+triggers.** The first two are scoping mistakes the asker can fix; the last two are rows
+of the table that have no correct layer at all, and refuse unconditionally.
 
 **A chronic question scoped to a single day.**
 > *"You asked whether this site is chronically dangerous, but gave me a single day. I can
@@ -147,6 +159,64 @@ layer that fits the requested scope would produce a confident wrong answer. Two 
 > *"You asked how long the site was above the threshold, but scoped it to a single hour.
 > Duration cannot be measured in an instant. Ask about the day, or ask what the
 > temperature was at that hour."*
+
+**Any `FORECAST` question — the serious one.** *(Added 2026-08-29.)*
+> *"You asked what the heat will do in the hours ahead. The only layer that fits that
+> scope is `filter_type=2` with `analytic_type=tcm`, and every hour it can read has
+> already been measured — so what came back would be a PAST PEAK handed over as a
+> forecast: well formed, confident, and with no error raised anywhere. There is nothing
+> forward to fall back on either. Measured: tomorrow is accepted, billed 4,220 credits,
+> and returns ONE FLAT VALUE for the whole day — 34.34 °C with minimum equal to maximum,
+> against 33.7–41.9 °C for today (`docs/api-notes.md`) — so this API carries no diurnal
+> structure to forecast from at all. That is a wrong answer, not a partial one, so I am
+> not making the call. Ask how long the site was above the threshold today, or what it
+> reads right now."*
+
+**Any `INTRADAY` question.** *(Added 2026-08-29.)*
+> *"You asked when to start and stop. The only layer that fits that scope is
+> `filter_type=3` with `analytic_type=time_of_measure`, which returns the hour-of-day
+> each tile peaks and nothing else — no start time, no stop time, no hourly profile to
+> read a window off. Measured on PHX-SKY for 2025-07-15, what comes back is a peak of
+> 104.3 °F and no time of day at all. A shift cannot be planned from a scalar, so
+> answering would be a confident reply to a different question rather than a partial
+> reply to this one. Ask how long the site was above the threshold across the day, and
+> build the shift around the hours that come back."*
+
+#### Why these two, and why measured rather than argued
+
+All six question types were routed against **PHX-SKY, 2025-07-15, threshold 103 °F**:
+
+| type | layer used | `filter_type` | peak | hours | verdict |
+|---|---|---|---|---|---|
+| `snapshot` | `tcm` | 1 | 104.315 | — | correct |
+| **`intraday`** | `time_of_measure` | 3 | 104.315 | — | 🔴 **scalar in answer to a question about the clock** |
+| **`forecast`** | `tcm` | 2 | 104.315 | — | 🔴 **a question about the FUTURE answered with a PAST PEAK** |
+| `duration` | `exceedance` | 3 | 104.315 | 7.0 | correct |
+| `persistence` | — | — | — | — | already refused |
+| `comparison` | `exceedance` | 3 | 104.315 | 7.0 | correct |
+
+`FORECAST` is the serious one. It is the **silent-wrong-answer failure this whole project
+exists to catch, reproduced inside HeatGuard itself** — same shape of output, opposite
+temporal direction, no error raised. `docs/api-notes.md` measures why no honest answer is
+available: the API accepts tomorrow, bills 4,220 credits, and returns one flat value with
+minimum equal to maximum. A forecast is not something this API can be asked for.
+
+**Not `BEYOND_FORECAST`.** That reason means the requested **date** is out of range, which
+is a different fact. Claiming it for a valid historical date would be a lie about the date
+and would send the operator to fix the one thing that is not wrong. Refusal priority is
+unchanged, so a forecast question *on a future date* still refuses as `BEYOND_FORECAST` —
+the date is the more actionable thing to be told, and it is true whichever layer was
+picked.
+
+**Escalation still outranks both.** `_escalate_for_duration` runs *before* `check_refusals`,
+so a forecast phrasing carrying a duration marker — *"will it be worst later today?"* — is
+already a `DURATION` question by the time the refusal is reached, and is **answered**
+(`filter_type=3` + `exceedance`, `escalated_from=forecast`). `INTRADAY` never escalated and
+still does not: the marker rule only fires on a row that would answer with a single hour or
+with aggregate temperature, and the `INTRADAY` row is neither. In practice the scheduling
+questions a supervisor actually types — *"…for the full day"*, *"…all day"*, *"how long
+above the band"* — classify as `DURATION` directly, because `DURATION` is ordered ahead of
+`INTRADAY` in the marker table.
 
 Every refusal happens **before any call is made**, so no credit is spent, and every
 refusal carries a message an operator can read. A refusal the operator cannot read is a

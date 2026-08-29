@@ -392,7 +392,21 @@ def test_refuses_tomorrow_even_though_the_api_accepts_and_bills_for_it():
 
 
 def test_accepts_today():
-    assert not r("Will we cross the threshold?", date=NOW.date().isoformat()).refused
+    """Today is inside the usable window — the boundary is tomorrow, not today.
+
+    This test used to ask "Will we cross the threshold?" and assert `not refused`, which
+    quietly encoded the FORECAST defect fixed on 2026-08-29: a question about the future
+    answered from a past peak. A forecast phrasing is now refused on LAYER grounds
+    whatever the date, so asserting `not refused` on one would prove nothing about dates
+    at all. Asked with a question the router can actually answer, and the forecast
+    phrasing is kept as the explicit proof that it fails for the other reason.
+    """
+    today = NOW.date().isoformat()
+    assert not r("How long were they above the threshold?", date=today).refused
+
+    forecast = r("Will we cross the threshold?", date=today)
+    assert forecast.refusal is RefusalReason.WRONG_LAYER_WOULD_MISLEAD, (
+        "today must not be refused as a DATE — the date is fine, the layer is not")
 
 
 def test_the_two_future_refusals_explain_themselves_differently():
@@ -462,6 +476,205 @@ def test_refuses_a_duration_question_scoped_to_a_single_hour():
     c = r("How long were they above the band at 2pm?")
     assert c.refused and c.refusal is RefusalReason.WRONG_LAYER_WOULD_MISLEAD
     assert "instant" in c.refusal_message
+
+
+# ------------------------- the two layers that answered the wrong question (2026-08-29)
+#
+# MEASURED. All six question types routed against PHX-SKY, 2025-07-15, threshold 103 °F:
+#
+#   snapshot     -> tcm,             filter_type=1, peak 104.315, hours None
+#   intraday     -> time_of_measure, filter_type=3, peak 104.315, hours None   <- WRONG
+#   forecast     -> tcm,             filter_type=2, peak 104.315, hours None   <- WRONG
+#   duration     -> exceedance,      filter_type=3, peak 104.315, hours 7.0
+#   persistence  -> REFUSED (wrong_layer_would_mislead)
+#   comparison   -> exceedance,      filter_type=3, peak 104.315, hours 7.0
+#
+# FORECAST is the serious one: a question about the FUTURE answered with a PAST PEAK,
+# confidently, with no error raised. That is the silent-wrong-answer failure this whole
+# project exists to catch, reproduced inside HeatGuard itself.
+
+def test_refuses_a_forecast_question_because_there_is_no_forecast_layer():
+    """The one that was answering a question about the future with a past peak.
+
+    `docs/api-notes.md` measures it: tomorrow is accepted, billed 4,220 credits, and
+    comes back as ONE FLAT VALUE for the whole day with no diurnal structure. So a
+    genuine forecast is not available from this API at any date, and filter_type=2 reads
+    only hours that have already happened. Refusing is the only honest answer.
+    """
+    c = r("Will we cross the threshold in the next few hours?")
+    assert c.question_type is QuestionType.FORECAST
+    assert c.refused and c.refusal is RefusalReason.WRONG_LAYER_WOULD_MISLEAD
+    assert c.analytic_type is None, "a refusal must not name a layer it declined to use"
+    assert c.filter_type is None and c.endpoint is None
+    assert "no credit was spent" in c.rationale
+
+
+def test_the_forecast_refusal_names_the_measured_api_behaviour():
+    """A refusal asserting something unmeasured is theatre. This one cites the probe."""
+    message = r("Will it get worse later today?").refusal_message
+    assert "flat" in message.lower()
+    assert "34.34" in message, "the measured tomorrow value is the whole argument"
+    assert "diurnal" in message
+    assert "api-notes.md" in message
+    assert "filter_type=2" in message and "analytic_type=tcm" in message
+
+
+def test_the_forecast_refusal_is_about_the_layer_not_the_date():
+    """BEYOND_FORECAST means the requested DATE is out of range — a different fact.
+
+    Claiming it for a perfectly valid historical date would be a lie about the date, and
+    would tell the operator to change the one thing that is not wrong.
+    """
+    c = r("Will we cross the threshold soon?", date="2025-07-15")
+    assert c.refusal is RefusalReason.WRONG_LAYER_WOULD_MISLEAD
+    assert c.refusal is not RefusalReason.BEYOND_FORECAST
+
+
+def test_a_future_date_still_refuses_on_the_date_first():
+    """Refusal priority is unchanged: time is checked before question/layer mismatch.
+
+    "That date returns one flat value and bills you" is the more actionable thing to be
+    told, and it is true regardless of which layer would have been picked.
+    """
+    tomorrow = (NOW + timedelta(days=1)).date().isoformat()
+    assert r("Will we cross the threshold?", date=tomorrow).refusal \
+        is RefusalReason.BEYOND_FORECAST
+
+
+def test_refuses_an_intraday_question_because_the_layer_carries_no_time_of_day():
+    """'When should we start and stop today?' routed to time_of_measure and came back
+    with a scalar peak — no start time, no stop time, no hourly profile. A scalar is not
+    a schedule."""
+    c = r("When should we start and stop today?")
+    assert c.question_type is QuestionType.INTRADAY
+    assert c.refused and c.refusal is RefusalReason.WRONG_LAYER_WOULD_MISLEAD
+    assert c.analytic_type is None
+    assert c.filter_type is None and c.endpoint is None
+    assert "no credit was spent" in c.rationale
+
+
+def test_the_intraday_refusal_says_what_the_layer_actually_returns():
+    message = r("What time is the safe window at Encanto Park?").refusal_message
+    assert "analytic_type=time_of_measure" in message
+    for phrase in ("no start time", "no stop time", "no hourly profile"):
+        assert phrase in message, f"{phrase!r} missing — the refusal must be specific"
+
+
+@pytest.mark.parametrize("question", [
+    "Will we cross the threshold in the next few hours?",
+    "When should we start and stop today?",
+])
+def test_neither_refusal_reaches_the_api_or_carries_a_threshold(question):
+    """A refusal that still emitted parameters would be a call waiting to happen."""
+    c = r(question)
+    assert c.params == {}
+    assert c.threshold_f is None and c.direction is None and c.granularity is None
+    assert len(c.refusal_message) > 40
+
+
+# -------------------------------------------- escalation still outranks both refusals
+
+def test_a_forecast_question_with_a_duration_marker_still_escalates_and_is_answered():
+    """ESCALATION WINS. `_escalate_for_duration` runs BEFORE `check_refusals`, so by the
+    time the FORECAST refusal is reached the question is no longer a forecast question —
+    it is a DURATION question, and duration questions get answered.
+
+    The FORECAST row is filter_type=2 + tcm, so the marker rule fires on it (it fires on
+    any row that would answer with a single hour or with aggregate temperature).
+    """
+    c = r("Will it be worst later today?")
+    assert not c.refused, "a duration marker must still rescue a forecast phrasing"
+    assert c.escalated_from is QuestionType.FORECAST
+    assert c.question_type is QuestionType.DURATION
+    assert c.filter_type == 3
+    assert c.analytic_type is AnalyticType.EXCEEDANCE
+
+
+def test_an_intraday_phrasing_with_a_duration_marker_is_refused_because_it_never_escalated():
+    """ACTUAL BEHAVIOUR, asserted rather than assumed.
+
+    Escalation only fires on a row that would answer with a single hour or with aggregate
+    temperature. The INTRADAY row is filter_type=3 + time_of_measure — neither — so
+    `_escalate_for_duration` leaves it alone, and it always has. The refusal therefore
+    applies. Refusing is safe (it is never a wrong answer) and the message says what to
+    ask instead, so this is not the escalation path being lost.
+
+    Note the phrasings that read as duration in plain English — 'all day', 'full day',
+    'how long' — classify as DURATION directly, because DURATION is ordered ahead of
+    INTRADAY in the marker table. Only a marker the classifier's own DURATION list does
+    not carry (here, 'worst') can land on INTRADAY at all.
+    """
+    q = "What time is it worst here?"
+    assert classify(q) is QuestionType.INTRADAY
+    assert has_duration_marker(q)
+
+    c = r(q)
+    assert c.escalated_from is None, "INTRADAY has never escalated on a duration marker"
+    assert c.question_type is QuestionType.INTRADAY
+    assert c.refusal is RefusalReason.WRONG_LAYER_WOULD_MISLEAD
+
+
+@pytest.mark.parametrize("question", [
+    "When should we start and stop for the full day?",
+    "Will we be above it all day?",
+    "What time should we schedule around, and how long above the band?",
+])
+def test_the_plain_english_scheduling_questions_are_still_answered(question):
+    """The refusals must not swallow the questions a supervisor actually asks. Each of
+    these carries a classifier DURATION phrase, so each routes to exceedance."""
+    c = r(question)
+    assert not c.refused, f"{question!r} became unanswerable"
+    assert c.analytic_type is AnalyticType.EXCEEDANCE
+    assert c.filter_type == 3
+
+
+# ------------------------------------------------------------------ regression guard
+
+@pytest.mark.parametrize("question, expected_type, filter_type, analytic_type", [
+    ("Is it safe at site 3 right now?",  QuestionType.SNAPSHOT,   1, AnalyticType.TCM),
+    ("How long were they above the danger band?",
+                                         QuestionType.DURATION,   3, AnalyticType.EXCEEDANCE),
+    ("Which of our 12 sites is worst?",  QuestionType.COMPARISON, 3, AnalyticType.EXCEEDANCE),
+])
+def test_the_answered_rows_route_exactly_as_before(
+        question, expected_type, filter_type, analytic_type):
+    """Only FORECAST and INTRADAY changed. Pinning the other three stops this fix from
+    quietly turning into "refuse more things"."""
+    c = r(question)
+    assert not c.refused
+    assert c.question_type is expected_type
+    assert c.filter_type == filter_type
+    assert c.analytic_type is analytic_type
+
+
+def test_persistence_still_refuses_a_single_day_exactly_as_before():
+    """Untouched by this change, and pinned so it stays that way — its message is the
+    pattern the two new refusals were written against."""
+    c = r("Is site 3 chronically dangerous?")
+    assert c.question_type is QuestionType.PERSISTENCE
+    assert c.refusal is RefusalReason.WRONG_LAYER_WOULD_MISLEAD
+    assert "one bad day looks structural" in c.refusal_message
+    assert not r("Is site 3 chronically dangerous?", end_date="2025-07-29").refused
+
+
+def test_exactly_two_question_types_are_unconditionally_refused():
+    """The whole change, stated as one assertion a judge can check against the spec."""
+    always_refused = set()
+    for question, question_type in (
+        ("Is it safe at site 3 right now?",                    QuestionType.SNAPSHOT),
+        ("When should we start and stop today?",               QuestionType.INTRADAY),
+        ("Will we cross the threshold in the next few hours?", QuestionType.FORECAST),
+        ("How long were they above the danger band?",          QuestionType.DURATION),
+        ("Is site 3 chronically dangerous?",                   QuestionType.PERSISTENCE),
+        ("Which of our 12 sites is worst?",                    QuestionType.COMPARISON),
+    ):
+        # PERSISTENCE is answerable — it just needs the day range it asks about.
+        choice = r(question, end_date="2025-07-29")
+        assert classify(question) is question_type
+        if choice.refused:
+            always_refused.add(question_type)
+
+    assert always_refused == {QuestionType.FORECAST, QuestionType.INTRADAY}
 
 
 def test_every_refusal_carries_a_human_message():

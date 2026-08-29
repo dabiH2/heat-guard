@@ -14,7 +14,8 @@
 param(
     [string]$Out      = "heatguard-pitch.mp4",
     [string]$ListFile = "takes.txt",
-    [double]$Expected = 180.2,      # the script's timed length, from the rehearsal player
+    [double]$Expected = 0,          # 0 = read it from the list file's "Expected total:" comment
+    [double]$Ceiling  = 180.0,      # HARD organiser cap: 3:00. Over this is a rule violation.
     [switch]$ForceReencode
 )
 
@@ -43,6 +44,19 @@ $takes = Get-Content $ListFile |
          ForEach-Object { $Matches[1] }
 
 if ($takes.Count -eq 0) { Fail "No 'file' entries found in $ListFile" }
+
+# Expected length lives in the list file, so v1 (takes.txt, 180.2 s) and v2
+# (takes-v2.txt, 177 s) each carry their own without needing a flag.
+if ($Expected -le 0) {
+    $line = Get-Content $ListFile | Where-Object { $_ -match "Expected total:\s*([\d.]+)\s*s" } | Select-Object -First 1
+    if ($line -and $line -match "Expected total:\s*([\d.]+)\s*s") {
+        $Expected = [double]$Matches[1]
+        OK "Scripted length $([math]::Round($Expected,1))s, read from $ListFile"
+    } else {
+        $Expected = 180.2
+        Warn "No 'Expected total:' comment in $ListFile — falling back to 180.2 s."
+    }
+}
 
 $missing = $takes | Where-Object { -not (Test-Path $_) }
 if ($missing) {
@@ -141,16 +155,42 @@ if (-not $didCopy) {
 $final = [double](& ffprobe -v error -show_entries format=duration -of csv=p=0 -- "$Out")
 $mb    = [math]::Round((Get-Item $Out).Length / 1MB, 1)
 
-Write-Host ("`n" + ("=" * 62)) -ForegroundColor Green
-Write-Host ("  {0}" -f $Out) -ForegroundColor Green
-Write-Host ("  {0}   {1} MB   {2}" -f (Hms $final), $mb, $(if ($didCopy) { "lossless copy" } else { "re-encoded" }))
-Write-Host ("=" * 62) -ForegroundColor Green
+$over = $final - $Ceiling
+
+if ($over -gt 0) {
+    # The 3:00 cap is an organiser RULE, not a style guideline. Shipping 3:01 risks the
+    # entry, so this has to be impossible to scroll past.
+    Write-Host ("`n" + ("!" * 62)) -ForegroundColor Red
+    Write-Host ("  OVER THE 3:00 CEILING BY {0:N1} SECONDS  —  {1}" -f $over, (Hms $final)) -ForegroundColor Red
+    Write-Host ("!" * 62) -ForegroundColor Red
+    Write-Host @"
+
+  $Out exists, but DO NOT UPLOAD IT. Three minutes is the organisers' hard
+  maximum. Trim the tail off your longest take rather than re-recording -- every
+  take ends on a hold or a beat end, so you lose silence, not words:
+
+      ffmpeg -i T6.mp4 -t 24.0 -c copy T6-trim.mp4
+
+  then point $ListFile at the trimmed file and run this again.
+
+"@ -ForegroundColor Yellow
+} else {
+    Write-Host ("`n" + ("=" * 62)) -ForegroundColor Green
+    Write-Host ("  {0}" -f $Out) -ForegroundColor Green
+    Write-Host ("  {0}   {1} MB   {2}" -f (Hms $final), $mb, $(if ($didCopy) { "lossless copy" } else { "re-encoded" }))
+    Write-Host ("  {0:N1}s under the 3:00 ceiling" -f [math]::Abs($over)) -ForegroundColor Green
+    Write-Host ("=" * 62) -ForegroundColor Green
+}
+
 Write-Host @"
 
   Before you upload, watch it once end to end and check:
     - no API key, .env, terminal or file path is visible in any frame
     - the red 13:00-20:00 band is legible at playback size
-    - audio level is even across the tab switch (T6 -> T7), the one audible join
+    - audio level is even across the ONE tab switch, the only audible join
+      (v1: T6 -> T7 · v2: T3 -> T4, and back at T8 -> T9)
     - it opens on a number, not on a title card
+    - v2 only: the ranked table visibly RE-ORDERS between T5 and T6
+    - v2 only: the 'Mechanism' expander is OPEN in T7
 
 "@

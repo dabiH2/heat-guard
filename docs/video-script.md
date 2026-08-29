@@ -1,5 +1,16 @@
 # HeatGuard — pitch video script
 
+> ## ⚠️ THIS IS THE **v1** SCRIPT. Do not record from it.
+>
+> The Ask tab was rebuilt on 29 Aug 2026 and every app number below has moved: the `$55/h`
+> slider is now `$51.23`, the single `$35,363` is now a range, the six-preset dropdown is
+> gone, and the "peak is a poor predictor of harm" thesis was **withdrawn as unsupportable**.
+>
+> **Current script: [`video-script-v2.md`](video-script-v2.md)** · rehearse with
+> [`video/rehearsal-v2.html`](video/rehearsal-v2.html) · stitch with `takes-v2.txt`.
+>
+> Kept only so the v1 cut stays reproducible.
+
 *FortyGuard Hackathon'26 · ~3:00 · screen capture + voiceover, delivered live by Gabriele
 Desimini. No AI narration, no on-screen face required.*
 

@@ -1,0 +1,1261 @@
+<title>HeatGuard Rehearsal Player — v2 (user-centric)</title>
+<style>
+:root{
+  --bg:#f7f7f5; --panel:#fcfcfb; --ink:#0b0b0b; --ink2:#52514e; --muted:#898781;
+  --grid:#e1e0d9; --axis:#c3c2b7; --safe:#c3c2b7; --danger:#d03b3b;
+  --band:rgba(208,59,59,0.10); --ghost:#dedcd4; --line:#e1e0d9;
+  --ok:#2e7d5b; --warn:#b8791f; --accentbg:#fdf3f3;
+  --blue:#3f6fb5; --bluebg:rgba(70,110,190,0.10);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#111110; --panel:#1a1a19; --ink:#ffffff; --ink2:#c3c2b7; --muted:#898781;
+    --grid:#2c2c2a; --axis:#383835; --safe:#4a4a46; --danger:#d03b3b;
+    --band:rgba(208,59,59,0.18); --ghost:#33332f; --line:#2c2c2a;
+    --ok:#5fbf95; --warn:#d8a355; --accentbg:#241a1a;
+    --blue:#7ea3dd; --bluebg:rgba(70,110,190,0.18);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#111110; --panel:#1a1a19; --ink:#ffffff; --ink2:#c3c2b7; --muted:#898781;
+  --grid:#2c2c2a; --axis:#383835; --safe:#4a4a46; --danger:#d03b3b;
+  --band:rgba(208,59,59,0.18); --ghost:#33332f; --line:#2c2c2a;
+  --ok:#5fbf95; --warn:#d8a355; --accentbg:#241a1a;
+  --blue:#7ea3dd; --bluebg:rgba(70,110,190,0.18);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.5;}
+body.over{box-shadow:inset 0 0 0 7px var(--danger);}
+.wrap{max-width:1240px;margin:0 auto;padding:20px 18px 56px;}
+h1{font-size:19px;margin:0 0 2px;letter-spacing:-.01em}
+.sub{color:var(--muted);font-size:13px;margin:0 0 16px}
+.sub b{color:var(--ink2)}
+
+/* ---------- over-ceiling banner ---------- */
+#overbanner{display:none;position:fixed;left:0;right:0;top:0;z-index:50;
+  background:var(--danger);color:#fff;font-weight:700;font-size:14px;
+  padding:9px 16px;letter-spacing:.02em;text-align:center;
+  animation:alarm .85s steps(1,end) infinite}
+body.over #overbanner{display:block}
+@keyframes alarm{0%,50%{filter:none}50.01%,100%{filter:brightness(.72)}}
+
+/* ---------- transport ---------- */
+.transport{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+  padding:12px 14px;margin-bottom:14px}
+.trow{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+button{font:inherit;font-size:13px;padding:7px 13px;border-radius:7px;cursor:pointer;
+  border:1px solid var(--line);background:var(--panel);color:var(--ink);transition:.12s}
+button:hover{border-color:var(--muted)}
+button.primary{background:var(--danger);border-color:var(--danger);color:#fff;font-weight:600}
+button.primary:hover{filter:brightness(1.08)}
+button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+button.timing{background:var(--warn);border-color:var(--warn);color:#fff;font-weight:700}
+.clock{font-variant-numeric:tabular-nums;font-size:26px;font-weight:700;
+  letter-spacing:-.02em;min-width:132px}
+.clock .of{font-size:14px;font-weight:400;color:var(--muted)}
+.spacer{flex:1}
+label.ctl{font-size:12px;color:var(--ink2);display:flex;align-items:center;gap:6px}
+input[type=range]{accent-color:var(--danger);width:104px}
+
+/* ---------- progress ---------- */
+.bar{position:relative;height:30px;margin-top:12px;background:var(--grid);
+  border-radius:6px;overflow:hidden;cursor:pointer}
+.seg{position:absolute;top:0;bottom:0;border-right:1px solid var(--panel);
+  font-size:10px;color:var(--ink2);padding:7px 0 0 6px;white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;user-select:none}
+.seg.money{background:var(--band)}
+.seg.cur{box-shadow:inset 0 -3px 0 0 var(--ink)}
+.zone{position:absolute;top:0;bottom:0;font-size:9px;color:#fff;font-weight:700;
+  padding:8px 0 0 5px;white-space:nowrap;overflow:hidden;letter-spacing:.04em}
+.zone.margin{background:var(--warn)}
+.zone.over{background:var(--danger)}
+.play{position:absolute;top:0;bottom:0;left:0;width:2px;background:var(--danger);
+  box-shadow:0 0 0 1px rgba(208,59,59,.35)}
+
+/* ---------- ceiling ---------- */
+.ceiling{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:11px;
+  border-top:1px solid var(--line);padding-top:11px}
+.ceilbox{border-radius:8px;padding:7px 12px;font-size:12.5px;font-weight:600;
+  display:flex;align-items:baseline;gap:9px;border:1px solid var(--line)}
+.ceilbox .big{font-size:21px;font-weight:700;font-variant-numeric:tabular-nums;
+  letter-spacing:-.02em}
+.ceilbox.ok{background:rgba(46,125,91,.10);border-color:rgba(46,125,91,.36);color:var(--ok)}
+.ceilbox.warn{background:rgba(184,121,31,.12);border-color:rgba(184,121,31,.42);color:var(--warn)}
+.ceilbox.over{background:var(--danger);border-color:var(--danger);color:#fff;
+  animation:alarm .85s steps(1,end) infinite}
+.ceilnote{font-size:12px;color:var(--ink2);max-width:640px}
+.ceilnote b{color:var(--ink)}
+
+/* ---------- stage ---------- */
+.stage{display:grid;grid-template-columns:1.42fr 1fr;gap:14px;align-items:start}
+@media(max-width:940px){.stage{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.card h2{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);
+  margin:0;padding:10px 14px;border-bottom:1px solid var(--line);font-weight:600;
+  display:flex;justify-content:space-between;align-items:center;gap:8px}
+.screen{padding:16px 14px;min-height:392px}
+.cue{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+  padding:3px 8px;border-radius:5px;background:var(--grid);color:var(--ink2)}
+.cue.fire{background:var(--danger);color:#fff;animation:flash .5s ease-out}
+@keyframes flash{from{transform:scale(1.22)}to{transform:scale(1)}}
+
+/* ---------- prompter ---------- */
+.prompt{padding:16px 16px 18px;min-height:392px;display:flex;flex-direction:column}
+.beatname{font-size:12px;color:var(--danger);font-weight:700;margin-bottom:2px}
+.beatmeta{font-size:11.5px;color:var(--muted);margin-bottom:14px}
+.now{font-size:22px;line-height:1.42;font-weight:600;letter-spacing:-.01em;
+  min-height:150px;transition:opacity .15s}
+.now em{font-style:normal;color:var(--danger)}
+.next{margin-top:auto;padding-top:14px;border-top:1px solid var(--line);
+  font-size:13.5px;color:var(--muted);line-height:1.45}
+.next b{color:var(--ink2);font-weight:600;display:block;font-size:10.5px;
+  text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
+.hold{font-size:20px;font-weight:700;color:var(--danger);letter-spacing:.02em}
+.hold small{display:block;font-size:13px;font-weight:400;color:var(--ink2);
+  letter-spacing:0;margin-top:8px}
+.holdbar{height:5px;background:var(--grid);border-radius:3px;margin-top:14px;overflow:hidden}
+.holdbar i{display:block;height:100%;background:var(--danger);width:0}
+
+/* ---------- panels ---------- */
+.grid2{display:grid;grid-template-columns:1.42fr 1fr;gap:14px;align-items:start;margin-top:14px}
+@media(max-width:940px){.grid2{grid-template-columns:1fr}}
+.pnl{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.pnl h3{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);
+  margin:0 0 9px;font-weight:600}
+table.tk{border-collapse:collapse;width:100%;font-size:12px}
+table.tk th{text-align:left;font-weight:600;color:var(--muted);font-size:10px;
+  text-transform:uppercase;letter-spacing:.05em;padding:0 8px 5px 0;
+  border-bottom:1px solid var(--line)}
+table.tk td{padding:4px 8px 4px 0;border-bottom:1px solid var(--line);
+  vertical-align:middle;font-variant-numeric:tabular-nums}
+table.tk tr.cur td{background:var(--grid)}
+table.tk tr.key td{background:var(--band)}
+table.tk .id{font-weight:700}
+table.tk button{padding:2px 7px;font-size:11px;border-radius:5px}
+.d{font-weight:700}
+.d.ok{color:var(--ok)}.d.long{color:var(--danger)}.d.short{color:var(--blue)}
+.d.none{color:var(--muted);font-weight:400}
+.rec{margin:0;padding:0;list-style:none;font-size:12.5px;line-height:1.75}
+.rec li{display:flex;gap:9px;align-items:baseline}
+.rec li .n{color:var(--muted);font-variant-numeric:tabular-nums;min-width:15px}
+.rec li b{min-width:26px}
+.rec li.switch{color:var(--danger);font-weight:700;font-size:11.5px;
+  letter-spacing:.04em;text-transform:uppercase;margin:5px 0;border-top:1px dashed var(--danger);
+  border-bottom:1px dashed var(--danger);padding:4px 0}
+.rec li.cur{background:var(--grid);border-radius:5px;padding:1px 5px;margin-left:-5px}
+.tot{margin-top:10px;padding-top:9px;border-top:1px solid var(--line);font-size:12.5px;
+  color:var(--ink2)}
+.tot b{color:var(--ink)}
+.pill{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;
+  font-weight:700;margin-left:6px}
+.pill.ok{background:var(--ok);color:#fff}
+.pill.warn{background:var(--warn);color:#fff}
+.pill.over{background:var(--danger);color:#fff}
+
+/* ---------- app replica ---------- */
+.metrics{display:flex;gap:26px;flex-wrap:wrap;margin:10px 0 4px}
+.metric{min-width:140px}
+.metric .k{font-size:12px;color:var(--ink2)}
+.metric .v{font-size:38px;font-weight:400;letter-spacing:-.02em;line-height:1.15}
+.metric .dl{font-size:12px;color:var(--ok);font-weight:600}
+.callout{border-radius:8px;padding:11px 13px;font-size:12.5px;margin-top:12px;
+  background:rgba(46,125,91,.10);border:1px solid rgba(46,125,91,.28)}
+.callout.red{background:var(--accentbg);border-color:rgba(208,59,59,.35)}
+.callout.blue{background:var(--bluebg);border-color:rgba(70,110,190,.28)}
+.callout.amber{background:rgba(184,121,31,.12);border-color:rgba(184,121,31,.40)}
+.quote{border-left:3px solid var(--axis);padding:2px 0 2px 14px;font-size:13px;
+  color:var(--ink2);line-height:1.55;margin-bottom:10px}
+.quote b{color:var(--ink)}
+.src{color:var(--blue);text-decoration:underline;font-size:11.5px}
+.tabs{display:flex;gap:20px;border-bottom:1px solid var(--line);margin:2px 0 14px;
+  font-size:13px;color:var(--ink2);padding-bottom:8px}
+.tabs .t.sel{color:var(--danger);font-weight:600;box-shadow:0 9px 0 -7px var(--danger)}
+.h4{font-size:14px;font-weight:700;margin:14px 0 6px}
+.h4:first-child{margin-top:0}
+.note{font-size:11.5px;color:var(--muted);margin-top:9px}
+.note b{color:var(--ink2)}
+.note.flag{color:var(--danger)}
+table.dt{border-collapse:collapse;width:100%;font-size:11px;margin-top:8px}
+table.dt th{text-align:left;font-weight:600;color:var(--muted);border-bottom:1px solid var(--line);
+  padding:5px 7px 5px 0;font-size:10px;text-transform:uppercase;letter-spacing:.05em}
+table.dt td{padding:4px 7px 4px 0;border-bottom:1px solid var(--line);vertical-align:top}
+table.dt code{background:var(--grid);padding:1px 4px;border-radius:4px;font-size:10.5px}
+table.dt .em{color:var(--danger);font-weight:700}
+.slider{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--ink2);margin:8px 0}
+.track{height:4px;background:var(--grid);border-radius:3px;width:170px;position:relative}
+.track i{position:absolute;left:0;top:0;bottom:0;width:35%;background:var(--danger);border-radius:3px}
+.track u{position:absolute;left:35%;top:-5px;width:14px;height:14px;border-radius:50%;
+  background:var(--danger);transform:translateX(-7px)}
+.foot{margin-top:22px;font-size:12px;color:var(--muted);line-height:1.6;
+  border-top:1px solid var(--line);padding-top:14px}
+.foot b{color:var(--ink2)}
+code{background:var(--grid);padding:1px 5px;border-radius:4px;font-size:11.5px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+
+/* ---------- streamlit widget mocks ---------- */
+.wlab{font-size:11.5px;color:var(--ink2);margin:9px 0 3px;font-weight:500}
+.sel,.txt{border:1px solid var(--line);background:var(--bg);border-radius:6px;
+  padding:6px 9px;font-size:12px;display:flex;justify-content:space-between;
+  align-items:center;gap:8px}
+.sel::after{content:"⌄";color:var(--muted);font-size:14px;line-height:0.6}
+.txt{color:var(--ink)}
+.hot{border-color:var(--danger);box-shadow:0 0 0 2px var(--band)}
+.cap{font-size:11px;color:var(--ink2);margin-top:4px}
+.cap b{color:var(--ink)}
+.badge{border-radius:8px;padding:10px 12px;font-size:12.5px;margin-top:11px;
+  background:var(--bluebg);border:1px solid rgba(70,110,190,.34);color:var(--ink)}
+.badge .ic{font-size:15px;margin-right:6px}
+.badge.shot{border:2px solid var(--danger);background:var(--accentbg);
+  box-shadow:0 0 0 4px var(--band);padding:13px 14px;font-size:14px}
+.badge.shot code{background:var(--danger);color:#fff;font-weight:700;font-size:13px;
+  padding:2px 7px}
+.stwarn{border-radius:8px;padding:10px 12px;font-size:12.5px;margin-top:11px;
+  background:rgba(184,121,31,.13);border:1px solid rgba(184,121,31,.42)}
+.stwarn.deny{background:var(--accentbg);border:2px solid var(--danger)}
+.radio{font-size:12px;color:var(--ink2);margin-top:4px;line-height:1.7}
+.radio i{display:inline-block;width:10px;height:10px;border-radius:50%;
+  border:1px solid var(--muted);margin-right:6px;vertical-align:-1px}
+.radio .on i{background:var(--danger);border-color:var(--danger)}
+.gobtn{background:var(--danger);color:#fff;font-weight:600;font-size:12.5px;
+  text-align:center;border-radius:7px;padding:7px 0;margin-top:11px}
+.gobtn.pressed{filter:brightness(.85);box-shadow:inset 0 0 0 2px rgba(255,255,255,.35)}
+.exp{border:1px solid var(--line);border-radius:7px;margin-top:10px;overflow:hidden}
+.exp .hd{font-size:12px;font-weight:600;padding:7px 11px;background:var(--grid);
+  display:flex;gap:7px;align-items:center}
+.exp .bd{padding:10px 11px;font-size:12.5px;color:var(--ink2)}
+.exp.open .hd{color:var(--danger)}
+.dim{opacity:.42}
+.divider{height:1px;background:var(--line);margin:12px 0}
+
+/* ---------- rebuilt Ask tab: input band, chips, readout, ranked table ---------- */
+.f3{display:grid;grid-template-columns:5fr 2fr 3fr;gap:12px;align-items:start}
+@media(max-width:700px){.f3{grid-template-columns:1fr}}
+.msel{border:1px solid var(--line);background:var(--bg);border-radius:6px;padding:5px 6px;
+  display:flex;flex-wrap:wrap;gap:4px;min-height:34px}
+.msel.hot{border-color:var(--danger);box-shadow:0 0 0 2px var(--band)}
+.pillx{display:inline-flex;align-items:center;gap:6px;background:var(--grid);color:var(--ink);
+  border-radius:5px;padding:2px 6px;font-size:11px;line-height:1.45;max-width:100%}
+.pillx i{font-style:normal;color:var(--muted);font-size:12px}
+.radio.rowr{display:flex;gap:14px;flex-wrap:wrap;margin-top:6px}
+.chiprow{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:8px 0 2px}
+.egbtn{border:1px solid var(--line);background:var(--panel);border-radius:7px;
+  padding:6px 4px;font-size:11px;text-align:center;color:var(--ink);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.egbtn.on{border-color:var(--danger);background:var(--accentbg);color:var(--danger);
+  font-weight:700;box-shadow:0 0 0 3px var(--band)}
+.scope{font-size:13px;font-weight:700;margin:2px 0 10px}
+.headline{font-size:17px;font-weight:700;letter-spacing:-.01em;margin:2px 0 8px}
+table.rank{border-collapse:collapse;width:100%;font-size:11.5px;margin-top:6px;
+  font-variant-numeric:tabular-nums}
+table.rank th{text-align:left;font-weight:600;color:var(--muted);font-size:10px;
+  text-transform:uppercase;letter-spacing:.05em;padding:5px 8px 5px 0;
+  border-bottom:1px solid var(--axis)}
+table.rank td{padding:6px 8px 6px 0;border-bottom:1px solid var(--line);vertical-align:middle}
+table.rank th.rk,table.rank td.rk{font-weight:700;color:var(--ink)}
+table.rank tr.top td{background:var(--band);font-weight:600}
+table.rank .mv{font-size:10px;font-weight:700;letter-spacing:.03em;margin-left:5px}
+table.rank .mv.up{color:var(--ok)}
+table.rank .mv.dn{color:var(--blue)}
+table.rank .mv.eq{color:var(--muted);font-weight:400}
+table.rank .same{color:var(--danger);font-weight:700}
+.reorder{display:grid;grid-template-columns:1fr 22px 1fr;gap:8px;align-items:center;
+  margin-top:11px;font-size:11px}
+.reorder ol{margin:4px 0 0;padding-left:19px;line-height:1.65}
+.reorder .box{border:1px solid var(--line);border-radius:7px;padding:7px 9px}
+.reorder .box.was{opacity:.6}
+.reorder .box.now2{border-color:var(--danger);background:var(--accentbg)}
+.reorder b{display:block;font-size:9.5px;text-transform:uppercase;letter-spacing:.07em;
+  color:var(--muted);margin-bottom:2px}
+.reorder .arw{text-align:center;font-size:18px;color:var(--danger);font-weight:700}
+table.mech{border-collapse:collapse;width:100%;font-size:11px;margin:2px 0 0}
+table.mech th{text-align:left;font-weight:600;color:var(--muted);font-size:9.5px;
+  text-transform:uppercase;letter-spacing:.05em;padding:4px 10px 4px 0;
+  border-bottom:1px solid var(--line)}
+table.mech td{padding:5px 10px 5px 0;border-bottom:1px solid var(--line);vertical-align:top;
+  line-height:1.5}
+table.mech td:first-child{white-space:nowrap;font-weight:600;color:var(--ink);width:1%}
+table.mech code{font-size:10.5px}
+.tiebreak{border:2px solid var(--danger);background:var(--accentbg);border-radius:9px;
+  padding:12px 14px;margin-top:12px;font-size:12.5px;line-height:1.55;
+  box-shadow:0 0 0 4px var(--band)}
+.tiebreak .hd{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+  color:var(--danger);margin-bottom:6px}
+.tiebreak .say{border-left:3px solid var(--danger);padding:3px 0 3px 11px;margin:8px 0;
+  font-size:13px;font-weight:600;color:var(--ink)}
+.tiebreak .dont{color:var(--ink2);font-size:12px}
+</style>
+
+<div id="overbanner">⛔ PAST THE 3:00 CEILING — over 180.0 s is a rule violation, not a style problem. Cut, do not re-record. See §6 of the script.</div>
+
+<div class="wrap">
+  <h1>HeatGuard — rehearsal player <b style="color:var(--danger)">v2</b> · user-centric cut</h1>
+  <p class="sub">Nine takes, 2:57, against a <b>3:00 hard ceiling</b>. Narration is verbatim from
+    <code>docs/video-script-v2.md</code> §1 — speak it, do not improve it. Frames are mocks of the
+    real app, built from <code>app.py</code> and the committed fixtures.
+    <b>T4–T8 were rebuilt on 29 Aug for the new <code>Ask a question</code> tab</b> — crew
+    multi-select, free-text box, four example chips, one routing readout. If your screen still
+    shows a preset dropdown or a single <code>Site</code> picker, you are on an old build.
+    <b>This is a practice tool, not the submission.</b>
+    v1 lives on untouched in <code>rehearsal.html</code>.</p>
+
+  <div class="transport">
+    <div class="trow">
+      <button class="primary" id="play">▶ Play</button>
+      <button id="restart">↺ Restart</button>
+      <div class="clock"><span id="t">0:00</span><span class="of"> / 2:57</span></div>
+      <div class="spacer"></div>
+      <button id="timer">⏱ Time me</button>
+      <button id="loop">🔁 Loop take: off</button>
+      <button id="voice">🔇 Scratch voice: off</button>
+      <label class="ctl">Rate <input type="range" id="rate" min="0.7" max="1.4" step="0.05" value="1"><span id="ratev">1.00</span></label>
+      <label class="ctl">Speed <input type="range" id="speed" min="0.5" max="2" step="0.25" value="1"><span id="speedv">1×</span></label>
+    </div>
+    <div class="bar" id="bar"><div class="play" id="ph"></div></div>
+    <div class="ceiling">
+      <div class="ceilbox ok" id="ceilbox">
+        <span class="big" id="ceilnum">0.0 s</span><span id="ceilstate">under</span>
+      </div>
+      <div class="ceilnote" id="ceilnote"></div>
+    </div>
+  </div>
+
+  <div class="stage">
+    <div class="card">
+      <h2><span>On screen — what you are capturing</span><span class="cue" id="cue">no action</span></h2>
+      <div class="screen" id="screen"></div>
+    </div>
+    <div class="card">
+      <h2>Teleprompter</h2>
+      <div class="prompt">
+        <div class="beatname" id="bn">T1 — who I am</div>
+        <div class="beatmeta" id="bm">0:00–0:16 · 16.0 s</div>
+        <div class="now" id="now">Press <b>Play</b>. Speak the large line out loud, in time with it.</div>
+        <div class="next"><b>Next</b><span id="nx">—</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="pnl">
+      <h3>Per-take timing · scripted vs you</h3>
+      <table class="tk" id="tktable"></table>
+      <div class="tot" id="tktot"></div>
+    </div>
+    <div class="pnl">
+      <h3>Record in this order — three screen states, not nine</h3>
+      <ul class="rec" id="recorder"></ul>
+      <div class="tot">Name the files <b>T1.mp4 … T9.mp4</b> and let each run ~1 s past your last
+        word — that tail is your trim margin. Stitch with
+        <code>assemble.ps1 -ListFile takes-v2.txt</code>.</div>
+    </div>
+  </div>
+
+  <div class="foot" id="foot"></div>
+</div>
+
+<script>
+/* ============================================================================
+   HeatGuard rehearsal player, v2.
+
+   Engine is a straight port of docs/video/rehearsal.html (v1): the same clock,
+   the same seek/loop/speech handling, the same frame swap on cue change. What
+   changed is the CONTENT (nine v2 takes, verbatim from docs/video-script-v2.md
+   §1), the FRAMES (the Ask tab is now the spine), and three new affordances the
+   3:00 hard ceiling demands: a ceiling readout, per-take timing, and the
+   recording-order helper.
+
+   Nothing here fetches anything. No CDN, no fonts, no images.
+   ============================================================================ */
+
+/* ---------------------------------------------------------------- real data
+   the_day rows: ported verbatim from v1, which ported them from
+   src/heatguard/charts.py the_day(). Unchanged for v2 — this figure is still T3.
+   name, crew, night, shift segments [start,end], measured exposed hours, label. */
+const DAY_ROWS = [
+ {n:"27th Avenue Resource Innovation…",c:22,ni:0,s:[[5.5,14]],  ex:[13,1], l:"22 worker-hours"},
+ {n:"Loop 202 South Mountain corrido…",c:18,ni:1,s:[[19,24],[0,5]],ex:[19,1],l:"18 worker-hours"},
+ {n:"Tres Rios wetlands, 91st Ave re…",c:11,ni:0,s:[[6,14.5]], ex:[13,1], l:"11 worker-hours"},
+ {n:"Encanto Park grounds",           c:7, ni:0,s:[[5.5,14]],  ex:[13,1], l:"7 worker-hours"},
+ {n:"Chase Tower block, N Central Ave",c:6,ni:1,s:[[21,24],[0,5.5]],ex:null,l:"no exposure"},
+ {n:"Estrella Mountain desert-edge y…",c:6,ni:0,s:[[5,13]],    ex:null,   l:"no exposure"},
+ {n:"Roosevelt Row corridor works",   c:4, ni:1,s:[[20,24],[0,4.5]],ex:null,l:"no exposure"},
+ {n:"Sky Harbor airfield ramp",       c:14,ni:0,s:[[5,13.5]],  ex:null,   l:"no exposure"},
+ {n:"South Mountain Park north trail…",c:5,ni:0,s:[[5,13]],    ex:null,   l:"no exposure"},
+ {n:"Superior Court complex, W Jeffe…",c:5,ni:1,s:[[21,24],[0,5.5]],ex:null,l:"no exposure"},
+ {n:"Union Hills Water Treatment Pla…",c:9,ni:0,s:[[6,14.5]],  ex:null,   l:"no exposure"}
+];
+
+/* The roster, read from config/sites.csv. Twelve rows, as the app's dataframe shows.
+   Columns match app.py: Site, Archetype, Predicted, Crew, Shift, Night.
+   Crew is PER SITE and is never summed here — the script forbids stating a headcount
+   alongside "twelve sites". */
+const ROSTER = [
+ ["Sky Harbor airfield ramp","industrial_asphalt","high_peak_long_tail",14,"05:00–13:30",0],
+ ["27th Avenue Resource Innovation Campus","industrial_asphalt","high_peak_long_tail",22,"05:30–14:00",0],
+ ["Deer Valley airport industrial apron","industrial_asphalt","high_peak_long_tail",8,"06:00–14:30",0],
+ ["Chase Tower block, N Central Ave","downtown_canyon","clipped_peak_long_tail",6,"21:00–05:30",1],
+ ["Superior Court complex, W Jefferson St","downtown_canyon","clipped_peak_long_tail",5,"21:00–05:30",1],
+ ["Roosevelt Row corridor works","downtown_canyon","clipped_peak_long_tail",4,"20:00–04:30",1],
+ ["South Mountain Park north trailhead","desert_edge","high_peak_fast_cool",5,"05:00–13:00",0],
+ ["Estrella Mountain desert-edge yard","desert_edge","high_peak_fast_cool",6,"05:00–13:00",0],
+ ["Loop 202 South Mountain corridor paving","desert_edge","high_peak_fast_cool",18,"19:00–05:00",1],
+ ["Tres Rios wetlands, 91st Ave reclamation","park_adjacent","depressed_peak",11,"06:00–14:30",0],
+ ["Encanto Park grounds","park_adjacent","depressed_peak",7,"05:30–14:00",0],
+ ["Union Hills Water Treatment Plant","mixed_suburban","high_peak_fast_cool",9,"06:00–14:30",0]
+];
+
+/* ------------------------------------------------------- the Ask tab's three crews
+   The Ask tab was REBUILT on 29 Aug: the six-preset selectbox and the single-site picker
+   are gone, replaced by a crew multi-select, a free-text box and four example chips. The
+   frames below are drawn from that surface.
+
+   These three are ask.DEFAULT_CREW_IDS = ("PHX-27TH", "PHX-CHASE", "PHX-UNHL"), which is
+   what the tab opens on — so T4 needs no interaction at all. Labels are ask.crew_option()
+   verbatim: name · N crew · HH:MM–HH:MM, plus 🌙 when night_shift is True.
+
+   Every figure is measured, not invented: peak_f and hours_103 from
+   data/fixtures/t8/analysis_2025-07-15.json, in-shift hours from
+   shift_exposure_2025-07-15.json, crew size and shift window from config/sites.csv, the
+   call from ask.shift_rule_call(). Reproduced offline through agent.answer() +
+   ask.build() before this file was written.
+
+   NOTE THE TWO PEAKS. 104.435 and 104.431 are FOUR THOUSANDTHS of a degree apart and both
+   render as 104.4 in the table and 104 °F in the headline. That is not a defect in the
+   mock — it is the T6 talking point, and the tiebreak warning on that frame exists because
+   a presenter who claims a visible gap will be contradicted by the screen behind them. */
+const CREWS = [
+ {id:"PHX-27TH",  name:"27th Avenue Resource Innovation Campus", crew:22, shift:"05:30–14:00",
+  night:false, peak:104.431, hours:7.0,     inshift:"1.0 h", call:"50:10 work/rest", band:"danger"},
+ {id:"PHX-CHASE", name:"Chase Tower block, N Central Ave",       crew:6,  shift:"21:00–05:30",
+  night:true,  peak:104.435, hours:7.0,     inshift:"0.0 h", call:"55:5 work/rest",  band:"danger"},
+ {id:"PHX-UNHL",  name:"Union Hills Water Treatment Plant",      crew:9,  shift:"06:00–14:30",
+  night:false, peak:102.580, hours:4.38197, inshift:"0.0 h", call:"55:5 work/rest",  band:"extreme caution"}
+];
+const ASK_DATE = "2025-07-15";
+/* 22 + 6 + 9. Legal to state because it names THESE THREE SELECTED CREWS, which is what
+   app.py's scope line sums. It is not, and must never be read as, a roster headcount
+   beside "twelve sites". */
+const HEADCOUNT = 37;
+const crewOption = c => `${c.name} · ${c.crew} crew · ${c.shift}${c.night?" 🌙":""}`;
+const crewLabel  = c => `${c.name}${c.night?" 🌙":""}`;
+
+/* The four example chips, ask.EXAMPLES, label-for-label. The fourth is deliberately a
+   question that refuses — the demo is built into the control, so T8 has nothing to hunt. */
+const EG = ["Right now","Hours above","Worst crew","Start and stop · refuses"];
+
+/* ============================================= figure: the_day (port of charts.py) */
+function theDay(){
+  const L=268,R=108,TOP=56,ROW=28,BAR=13,W=980,PW=W-L-R,H=TOP+DAY_ROWS.length*ROW+40;
+  const x=h=>L+(h/24)*PW, p=[];
+  p.push(`<svg viewBox="0 0 ${W} ${H}" width="100%" style="background:var(--panel);border-radius:8px">`);
+  const bx=x(13), bw=x(20)-x(13);
+  p.push(`<rect x="${bx}" y="${TOP-20}" width="${bw}" height="${H-TOP-8}" fill="var(--band)"/>`);
+  [bx,bx+bw].forEach(v=>p.push(`<line x1="${v}" y1="${TOP-20}" x2="${v}" y2="${H-28}" stroke="var(--danger)" stroke-width="1.5"/>`));
+  p.push(`<text x="${bx+bw/2}" y="${TOP-28}" text-anchor="middle" font-size="12.5" font-weight="600" fill="var(--danger)">above 103 °F · 13:00–20:00</text>`);
+  for(let h=0;h<=24;h+=3){const g=x(h);
+    p.push(`<line x1="${g}" y1="${TOP-20}" x2="${g}" y2="${H-28}" stroke="var(--grid)" stroke-width="1"/>`);
+    p.push(`<text x="${g}" y="${H-12}" text-anchor="middle" font-size="11" fill="var(--muted)">${String(h).padStart(2,"0")}:00</text>`);}
+  DAY_ROWS.forEach((r,i)=>{
+    const y=TOP+i*ROW, cy=y+BAR/2, exposed=!!r.ex;
+    p.push(`<text x="${L-14}" y="${cy+4}" text-anchor="end" font-size="12.5" fill="var(--ink)">${r.n}</text>`);
+    p.push(`<text x="16" y="${cy+4}" font-size="11.5" fill="var(--muted)" style="font-variant-numeric:tabular-nums">${String(r.c).padStart(2," ")}${r.ni?" 🌙":""}</text>`);
+    r.s.forEach(([a,b])=>p.push(`<rect x="${x(a)}" y="${y}" width="${x(b)-x(a)}" height="${BAR}" rx="4" fill="var(--safe)" opacity="0.55"/>`));
+    if(exposed) p.push(`<rect x="${x(r.ex[0])}" y="${y}" width="${x(r.ex[0]+r.ex[1])-x(r.ex[0])}" height="${BAR}" rx="4" fill="var(--danger)"/>`);
+    p.push(`<text x="${W-R+10}" y="${cy+4}" font-size="11.5" font-weight="${exposed?600:400}" fill="${exposed?"var(--danger)":"var(--muted)"}">${r.l}</text>`);
+  });
+  return p.join("")+"</svg>";
+}
+
+/* ============================================================ frame components */
+const TABS = sel => `<div class="tabs">${["📋 The morning call","Ask a question","⚠️ The trap","How it decides"]
+  .map((t,i)=>`<span class="t${i===sel?" sel":""}">${t}</span>`).join("")}</div>`;
+
+/* ---------------------------------------------------- the Ask tab, top to bottom
+   ONE builder for all five Ask frames, because the point the presenter has to internalise
+   is that almost nothing moves between them. The crews, the date and the threshold never
+   change across T4–T8. What changes is the question box, which chip is lit, the one-line
+   routing readout, and what sits below the divider. Everything else is constant, and
+   drawing it constant is the whole reason this is a single function.
+
+   Order is app.py's `with decision_tab:` order exactly: the three-column input band
+   (Crews 5 / Date 2 / Threshold 3), the Question box, the four chips, the live routing
+   readout, the Ask HeatGuard button, a divider, then the scope line and the output. */
+function askInput(o){
+  return `<div class="f3">
+      <div>
+        <div class="wlab">Crews</div>
+        <div class="msel${o.hotCrews?" hot":""}">${
+          CREWS.map(c=>`<span class="pillx">${crewOption(c)}<i>×</i></span>`).join("")}</div>
+      </div>
+      <div>
+        <div class="wlab">Date</div>
+        <div class="sel"><span>${ASK_DATE}</span></div>
+      </div>
+      <div>
+        <div class="wlab">Threshold</div>
+        <div class="radio rowr">
+          <span><i></i>91 °F · OSHA moderate</span>
+          <span class="on"><i></i>103 °F · OSHA high</span>
+        </div>
+      </div>
+    </div>
+    <div class="wlab">Question</div>
+    <div class="txt${o.hotQ?" hot":""}"><span>${o.question}</span></div>
+    <div class="chiprow">${EG.map(e=>
+      `<span class="egbtn${o.chip===e?" on":""}">${e}</span>`).join("")}</div>
+    ${o.readout}
+    <div class="gobtn${o.pressed?" pressed":""}">Ask HeatGuard</div>
+    <div class="divider"></div>
+    <div class="scope">${CREWS.length} crews · ${HEADCOUNT} workers · ${ASK_DATE}
+      · threshold 103 °F heat index</div>
+    ${o.out||""}`;
+}
+
+/* The routing readout. ONE LINE, rendered before any call is made and costing nothing —
+   st.info with the 🧭 icon when the question routes, st.warning with 🚫 when it refuses.
+   Strings are app.py's f-strings with the values route() actually returns for these
+   questions at this site and date. */
+const READ = {
+  comparison:`<div class="badge"><span class="ic">🧭</span>Reads as <b>comparison</b> →
+    <code>filter_type=3</code>, <code>analytic_type=exceedance</code></div>`,
+  snapshot:`<div class="badge"><span class="ic">🧭</span>Reads as <b>snapshot</b> →
+    <code>filter_type=1</code>, <code>analytic_type=tcm</code></div>`,
+  duration:`<div class="badge shot"><span class="ic">🧭</span>Reads as <b>duration</b> →
+    <code>filter_type=3</code>, <code>analytic_type=exceedance</code></div>`,
+  refused:`<div class="stwarn deny"><span class="ic">🚫</span> Reads as <b>intraday</b> →
+    <b>refused</b> (<code>wrong_layer_would_mislead</code>). No call would be made.</div>`
+};
+
+/* Said once per chip frame, because the highlight is the one thing in these mocks that the
+   live app does not do. */
+const CHIPNOTE = `<b>The ring on the chip is rehearsal scaffolding.</b> Streamlit buttons do
+  not stay lit — the chip you clicked looks exactly like the other three a moment later.
+  What proves the click landed is the <b>question box</b> and the <b>readout</b>, which is
+  why both are drawn hot.`;
+
+/* The empty state under the divider before the button is pressed — and after any chip
+   click, because a Streamlit button resets to False on the rerun a chip triggers. That is
+   why T8 needs no button press and why this box is what is on screen during it. */
+const EMPTY = `<div class="badge"><span class="ic">⬆️</span><b>Press Ask HeatGuard to run
+  the layer named above.</b> One crew answers as a card, two or more as a ranking, worst
+  first. Routing has already happened — the button only fetches what that layer needs.</div>`;
+
+/* ------------------------------------------------------------------ the ranked table
+   Two or more crews always answer as a RANKING, never a card — st.dataframe of
+   ask.build().rows. The columns change with the layer, and so does the order:
+
+     snapshot  ranks on peak_f     → Chase, 27th Avenue, Union Hills
+     duration  ranks on day_hours  → 27th Avenue, Chase, Union Hills
+
+   The flip is NOT a visible gap in the numbers. Chase and 27th Avenue tie at exactly
+   7.0 hours and their peaks are 0.004 °F apart; ask.rank() breaks the tie on in-shift
+   hours, then headcount. `moves` draws the position change so the re-order is the thing
+   the eye lands on, and it is rehearsal scaffolding — the live table has no such column. */
+function rankTable(mode,moves){
+  const dur = mode==="duration";
+  const order = dur ? [CREWS[0],CREWS[1],CREWS[2]] : [CREWS[1],CREWS[0],CREWS[2]];
+  const was  = {"PHX-CHASE":1,"PHX-27TH":2,"PHX-UNHL":3};   // where T5's table put them
+  const col  = dur ? "▸ Hours ≥ 103 °F" : "▸ Peak °F";
+  const col2 = dur ? "In shift" : "NWS band";
+  return `<table class="rank">
+    <tr><th>#</th><th>Crew</th><th class="rk">${col}</th><th>${col2}</th>
+      <th>Size</th><th>Shift</th><th>Morning call</th></tr>
+    ${order.map((c,i)=>{
+      const d = was[c.id]-(i+1), mv = !moves ? ""
+        : `<span class="mv ${d>0?"up":d<0?"dn":"eq"}">${d>0?"▲ was "+was[c.id]
+            :d<0?"▼ was "+was[c.id]:"— held"}</span>`;
+      const primary = dur ? c.hours.toFixed(1)+" h" : c.peak.toFixed(1);
+      const tie = !dur && c.peak>103 ? ` class="same"` : "";
+      return `<tr class="${i===0?"top":""}">
+        <td>${i+1}${mv}</td><td>${crewLabel(c)}</td>
+        <td class="rk"><span${tie}>${primary}</span></td>
+        <td>${dur?c.inshift:c.band}</td>
+        <td>${c.crew}</td><td>${c.shift}</td><td>${c.call}</td></tr>`;
+    }).join("")}
+  </table>`;
+}
+
+/* The ⚙ Mechanism expander. COLLAPSED by default in the app — st.expander with no
+   `expanded=True` — and the label already names the layer, so a shut expander still tells
+   a reader which layer produced the number above it. */
+function mech(label,open,rows){
+  return `<div class="exp${open?" open":""}">
+    <div class="hd">${open?"▾":"▸"} ⚙&nbsp; Mechanism · ${label}</div>
+    ${open?`<div class="bd"><table class="mech">
+      <tr><th>Step</th><th>This answer</th></tr>
+      ${rows.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join("")}
+    </table></div>`:""}</div>`;
+}
+
+/* ask.mechanism_rows() for the duration answer this cut actually records, captured by
+   running agent.answer() + ask.mechanism_rows() offline against PHX-27TH, 2025-07-15,
+   103 °F, ranked_over=3. Nothing here is paraphrased. */
+const MECH_DURATION = [
+ ["Question read as","duration"],
+ ["Endpoint","<code>/v1/heatmap</code>"],
+ ["filter_type","<code>3</code>"],
+ ["analytic_type","<code>exceedance</code>"],
+ ["granularity","<code>100 m</code>"],
+ ["direction","<code>above</code>"],
+ ["Why this layer","Hours above threshold across the whole day (filter_type=3, "+
+   "analytic_type=exceedance). The API counts the hours per tile server-side; this is a "+
+   "measurement, not an estimate derived from a peak."],
+ ["What a snapshot would have said","A maximum tells you how hot it got. It can never "+
+   "tell you how long it stayed there — and OSHA records deaths at a daily maximum of "+
+   "only 86 °F."],
+ ["Unit conversion","103 °F heat index → 102 °F air → 38.80 °C sent, at this site's "+
+   "measured 26% humidity. OSHA bands are heat index; exceedance thresholds air "+
+   "temperature. In dry Phoenix air the equivalent runs above the OSHA number, under "+
+   "monsoon humidity below."],
+ ["Calls made","<code>tcm, exceedance</code> — one crew, from the committed cache"],
+ ["Ranking source","3 crews ranked from the committed roll-up for this date "+
+   "(data/fixtures/t8), not from 3 calls"]
+];
+
+/* ============================================================ frames */
+const FRAMES = {
+
+/* -------------------------------------------------------------------- T1 */
+header:()=>TABS(0)+
+  `<div class="quote"><b>A safety manager with twelve Phoenix sites decides each morning
+    where crews can work.</b> Today that decision comes from a single city-wide forecast
+    high. OSHA records outdoor-worker heat-stroke deaths at a daily maximum heat index of
+    only <b>86 °F</b> — inside the <i>Caution</i> band
+    (<span class="src">OSHA, Heat Hazard Recognition</span>, 2026). OSHA's own instruction
+    on that forecast is blunt: <i>do not rely solely on the Heat Index reported by weather
+    forecasts for your safety at work, as it may underestimate your actual risk</i>
+    (<span class="src">OSHA, Heat Hazard Recognition</span>, 2026).</div>
+   <div class="quote"><b>Every occupational heat limit in force is defined as <i>time at a
+    condition</i>, not as a peak.</b> NIOSH's Recommended Alert Limit and Recommended
+    Exposure Limit are expressed as one-hour time-weighted averages and published for 60,
+    45, 30 and 15 minute work periods (<span class="src">NIOSH 2016-106, §8.1</span>, 2016).
+    ACGIH's TLV has the same shape — work allocated per hour at a given WBGT
+    (<span class="src">ACGIH TLV, as tabulated in NIOSH 2016-106 pp.100-101</span>, 2017) —
+    and ISO 7933's output is a maximum allowable exposure <i>time</i> rather than a
+    temperature ceiling (<span class="src">ISO 7933:2023</span>, 2023). NIOSH removed its
+    ceiling limit recommendations in 2016 (<span class="src">NIOSH 2016-106, §8.1</span>,
+    2016), so there is no peak limit left to compare a daily maximum against at all.
+    <b>A daily peak cannot be checked against any of them. Hours above a threshold can.</b></div>
+   <p class="note"><b>T1 frame.</b> Scroll position: the two blockquotes under the title, both
+     readable, cursor still. The <b>86 °F</b> line and the "do not rely solely on the Heat
+     Index" quote are the two things that must be legible behind you.</p>
+   <p class="note flag">⚠️ The v1 line <b>"Peak temperature is a poor predictor of harm.
+     Duration above a threshold is the signal."</b> was WITHDRAWN as unsupportable. It is not
+     on this screen and it must not be said. What replaced it is the standards-architecture
+     claim in the second blockquote.</p>`,
+
+/* -------------------------------------------------------------------- T2 */
+metrics:()=>TABS(0)+
+  `<div class="h4">Why the calls differ from the forecast</div>
+   <div style="font-size:12.5px;color:var(--ink2)">Every site on the roster peaked between
+     <b>102.6 and 104.5 °F</b> — a spread of <b>1.9 °F</b>. By peak alone they are the same
+     day at the same place, and a city-wide figure would call all of them dangerous.</div>
+   <div class="metrics">
+     <div class="metric"><div class="k">City-wide figure · worker-hours</div><div class="v">701</div></div>
+     <div class="metric"><div class="k">Scoped to real shifts · worker-hours</div><div class="v">58</div><div class="dl">↓ −643</div></div>
+     <div class="metric"><div class="k">Over-count</div><div class="v">92%</div></div>
+   </div>
+   <div class="callout">✅ <b>643 worker-hours of 'unsafe exposure' that nobody was standing
+     in.</b> The dangerous window on this day runs roughly 13:00–20:00 — almost entirely
+     outside every shift on the roster. A city-wide call to stop work would have been 92%
+     wrong, and expensive.</div>
+   <div class="dim" style="margin-top:14px;border-top:1px dashed var(--line);padding-top:10px">
+     <div class="h4">What that is worth</div>
+     <div class="slider">Loaded labour rate, $/hour
+       <div class="track"><i></i><u></u></div><b style="color:var(--ink)">$51.23</b>
+       <span style="color:var(--muted)">(25 – 100)</span></div>
+     <div style="font-size:11px;color:var(--muted)">Floor · mandated rest only &nbsp;·&nbsp;
+       Ceiling · fully idle labour &nbsp;·&nbsp; Cost of being wrong the other way</div>
+   </div>
+   <p class="note"><b>T2 frame.</b> <code>[SCROLL]</code> down at the head of the take and land
+     on the three metric cards. The "What that is worth" section may enter frame at the tail —
+     that is fine, it rewards anyone who pauses.</p>
+   <p class="note flag">⚠️ <b>Do not narrate the money.</b> v2 never says a dollar figure aloud.
+     The rate is <code>$51.23</code> now, not $55, and the output is a range, not the single
+     $35,363 of v1. If a judge asks in Q&amp;A, the answer is at the top of the script file.</p>`,
+
+/* -------------------------------------------------------------------- T3 */
+theDay:()=>TABS(0)+
+  `<div class="h4">The day, hour by hour</div>
+   <div style="font-size:12px;color:var(--ink2);margin-bottom:8px">Each bar is one crew's
+     shift. The red band is the only window that was actually above threshold.
+     <b>Almost every shift misses it</b> — that is the 92% in one picture.</div>`+theDay()+
+  `<p class="note">Night shifts cross midnight and are drawn as two segments on a single
+     00:00–24:00 axis — the crew really is outside during both.</p>
+   <p class="note"><b>T3 frame.</b> <code>[SCROLL]</code> from the metric cards to this figure,
+     then <b>freeze</b>. All eleven rows, the red 13:00–20:00 band and the right-hand
+     "no exposure" labels must be in frame at once before the 3-second hold starts.</p>
+   <p class="note flag">The <b>3-second hold</b> inside this take is on the do-not-cut list. It
+     is the one moment the viewer derives the conclusion instead of being told it.</p>`,
+
+/* -------------------------------------------------------------------- T4 */
+askCrews:()=>TABS(1)+askInput({
+    hotCrews:true,
+    question:"Which of these crews is worst today?",
+    readout:READ.comparison,
+    out:EMPTY
+  })+
+  `<p class="note"><b>T4 frame — the tab opens exactly like this.</b>
+     <code>[CLICK]</code> the <b>Ask a question</b> tab and <b>touch nothing else</b>. The three
+     crews are <code>ask.DEFAULT_CREW_IDS</code>, already selected; the date is already the demo
+     date; the threshold radio already sits on <b>103 °F</b>; the box is already seeded with
+     <code>ask.DEFAULT_QUESTION</code>. <b>The default IS the shot.</b></p>
+   <p class="note">What has to be legible behind you is the <b>crew multi-select</b>: each row
+     reads <i>name · N crew · shift window</i>, and <b>Chase Tower carries the 🌙</b>. That is
+     the whole "headcount, shift window, and whether these are the people working nights" line,
+     rendered before you have asked anything. The 🧭 readout below already says
+     <b>comparison</b> — the seeded question is a comparison, so the routing is live on a cold
+     open with no call made.</p>
+   <p class="note flag">The tab has been <b>rebuilt</b>. There is no preset dropdown and no
+     single-site picker any more — if either is on your screen you are running an old build.
+     Pull the current app before you record.</p>`,
+
+/* -------------------------------------------------------------------- T5 */
+askSnapshot:()=>TABS(1)+askInput({
+    chip:"Right now", hotQ:true, pressed:true,
+    question:"How hot is it at this crew's site right now?",
+    readout:READ.snapshot,
+    out:`<div class="headline">Chase Tower block, N Central Ave is hottest of 3 crews
+       · 104 °F peak</div>`
+      +rankTable("snapshot",false)
+      +`<div class="cap" style="margin-top:8px">Snapshot layer: ranked by what each site
+        reached, not by how long. Ranked by peak, the layer this question asked for — and these
+        crews are <b>1.9 °F</b> apart by it. Ask how long instead and the order changes.</div>`
+      +mech("snapshot → analytic_type=tcm, filter_type=1",false)
+  })+
+  `<p class="note"><b>T5 frame.</b> <code>[CLICK]</code> the <b>Right now</b> chip — the box
+     fills and the readout flips to <b>snapshot</b> in one rerun — then <code>[CLICK]</code>
+     <b>Ask HeatGuard</b>. The table below the divider is ranked <b>by peak</b>, and Chase Tower
+     takes the top row.</p>
+   <p class="note flag">⚠️ <b>Rows 1 and 2 both read 104.4.</b> That is correct and it is the
+     line you are about to say: <i>"every one of them is a hundred and four degrees. By peak,
+     they're the same place."</i> Do not point at the peak column as if it separated them — it
+     does not, and T6 is built on it not separating them. Full warning on the T6 frame.</p>
+   <p class="note">${CHIPNOTE} Both the readout and the ranked table must be in frame together
+     — widen the window until they are, then <b>do not resize for the rest of the session</b>.</p>`,
+
+/* -------------------------------------------------------------------- T6 */
+askDuration:()=>TABS(1)+askInput({
+    chip:"Hours above", hotQ:true, pressed:true,
+    question:"How many hours were they above the threshold today?",
+    readout:READ.duration,
+    out:`<div class="headline">27th Avenue Resource Innovation Campus is worst of 3 crews
+       · 7.0 h above 103 °F</div>`
+      +rankTable("duration",true)
+      +`<div class="reorder">
+         <div class="box was"><b>T5 · ranked by peak</b><ol>
+           <li>Chase Tower · 6 crew</li><li>27th Avenue · 22 crew</li>
+           <li>Union Hills · 9 crew</li></ol></div>
+         <div class="arw">→</div>
+         <div class="box now2"><b>T6 · ranked by hours</b><ol>
+           <li>27th Avenue · 22 crew</li><li>Chase Tower · 6 crew</li>
+           <li>Union Hills · 9 crew</li></ol></div>
+       </div>`
+      +`<div class="cap" style="margin-top:8px">Duration layer: ranked by hours above 103 °F
+        across the whole day. Morning sheet leads with the same crew, reached the other way —
+        by hours inside each crew's own shift rather than across the whole day.</div>`
+      +mech("duration → analytic_type=exceedance, filter_type=3",false)
+  })+
+  `<p class="note flag"><b>T6 frame — THIS IS THE SHOT.</b> Same crews, same date, same
+     threshold, same screen — and the table comes back in a <b>different order</b>. That is the
+     entire product, shown rather than claimed, and it is the only moment where the viewer
+     watches the tool change its mind. It is on the do-not-cut list. The ▲/▼ markers and the
+     before/after strip are rehearsal scaffolding; the live table shows one order only.</p>
+   <div class="tiebreak">
+     <div class="hd">⚠️ Read this before you narrate T6</div>
+     <b>The re-order is a TIE-BREAK, not a gap in the numbers.</b> Chase Tower leads on peak by
+     <b>0.004 °F</b> (104.435 vs 104.431) and the two top crews tie at <b>exactly 7.0 hours</b>
+     — eight of eleven sites do, which is this project's own published finding. The flip is
+     decided by <code>ask.rank()</code>'s tie-break: hours inside the shift (1.0 vs 0.0), then
+     headcount (22 vs 6).
+     <div class="dont">On camera the table prints <b>104.4</b> twice and the headline prints
+       <b>104 °F</b>. If you say "look, a different number", a judge sees two identical numbers
+       behind you and stops trusting the tool. The claim has to match the pixels.</div>
+     <div class="say">Say — T5: “every one of them is a hundred and four degrees — by peak
+       they're the same place.”</div>
+     <div class="say">Say — T6: “it re-ranks on the one with twenty-two people in it.”</div>
+     <div class="dont">Said that way the tie <i>is</i> the argument: peak ranked tiles and could
+       not separate them, duration plus crew size ranked <b>crews</b> and did. Do not reach for
+       a bigger number — there isn't one, and you don't need one.</div>
+   </div>
+   <p class="note">${CHIPNOTE}</p>
+   <p class="note">The <b>2-second hold</b> sits between "Watch the order" and "It re-ranks".
+     Let the table sit. It is the only thing on screen that matters.</p>`,
+
+/* -------------------------------------------------------------------- T7 */
+askAnswer:()=>TABS(1)+askInput({
+    question:"How many hours were they above the threshold today?",
+    readout:READ.duration.replace(' shot"','"'),
+    out:`<div class="headline">27th Avenue Resource Innovation Campus is worst of 3 crews
+       · 7.0 h above 103 °F</div>`
+      +rankTable("duration",false)
+      +`<div class="cap" style="margin-top:8px">Duration layer: ranked by hours above 103 °F
+        across the whole day. Morning sheet leads with the same crew, reached the other way —
+        by hours inside each crew's own shift rather than across the whole day.</div>`
+      +mech("duration → analytic_type=exceedance, filter_type=3",true,MECH_DURATION)
+  })+
+  `<p class="note"><b>T7 frame.</b> <code>[CLICK]</code> the <b>⚙ Mechanism</b> expander
+     directly under the table. Nothing else moves — the answer above it is still T6's, and this
+     take is only about opening the drawer under it.</p>
+   <p class="note flag">⚠️ <b>The expander is COLLAPSED by default</b>
+     (<code>st.expander</code> in <code>_render_mechanism</code>, no <code>expanded=True</code>).
+     It is drawn open here because that is what has to be on screen. <b>Open it on camera at
+     the head of the take, or before you start recording</b> — narrate a shut drawer and the
+     take is dead. This is the single easiest way to lose T7.</p>
+   <p class="note">The two rows you are actually talking about are <b>analytic_type</b> and
+     <b>What a snapshot would have said</b>. They are what "one optional string apart in the
+     same API call" means, sitting one above the other in the same table. Everything above them
+     — endpoint, filter_type, granularity, direction — is identical between the two layers, and
+     that is the point: nothing errors, nothing warns, only the answer changes.</p>
+   <p class="note">Rows are <code>ask.mechanism_rows()</code> verbatim for this exact answer,
+     captured offline. The live expander carries <b>one further row below "Ranking source"</b>
+     naming the file each decision is written to; it is real, it is just not the shot.</p>
+   <p class="note flag">⚠️ <b>Script hygiene.</b> §1 of <code>video-script-v2.md</code> still
+     carries a <b>second blockquote</b> under T7 — <i>"Now I run it… a tool I trust"</i> — left
+     behind from v1. It is 59 words on top of the 52 this take is budgeted for; both together
+     need 44 s in a 23 s slot, and it describes a panel that no longer exists. <b>The
+     teleprompter runs the first block only.</b> Delete the second from the script file so the
+     next person does not read it.</p>`,
+
+/* -------------------------------------------------------------------- T8 */
+askRefusal:()=>TABS(1)+askInput({
+    chip:"Start and stop · refuses", hotQ:true,
+    question:"When should we start and stop today?",
+    readout:READ.refused,
+    out:EMPTY
+  })+
+  `<p class="note"><b>T8 frame.</b> <code>[CLICK]</code> the fourth chip,
+     <b>Start and stop · refuses</b>. The 🚫 warning <b>replaces</b> the 🧭 readout in the same
+     position, and that is the whole take — <b>no button press</b>. The refusal happens in the
+     routing preview, before the wire, so nothing is fetched and nothing is spent. Below the
+     divider the scope line is unchanged and the empty state is back, because a Streamlit button
+     resets to false on the rerun the chip triggers.</p>
+   <p class="note">The chip is <b>labelled</b> <code>Start and stop · refuses</code> in
+     <code>ask.EXAMPLES</code>, so the demo is built into the control and there is nothing to
+     hunt for on camera. Verified: <code>route()</code> classifies
+     <i>"When should we start and stop today?"</i> as <b>intraday</b> and refuses it as
+     <code>wrong_layer_would_mislead</code>. The wording drawn above is app.py's warning
+     f-string.</p>
+   <p class="note">It is the <i>best</i> refusal in the set:
+     <code>wrong_layer_would_mislead</code> is the one that is about judgement rather than
+     coverage — declining a well-formed question the API would happily answer, because the only
+     layer that fits would produce a confident reply to a different question. Three of the six
+     shapes refuse; across the whole surface that is <b>144 paths, 72 answered, 72 refused,
+     zero errors</b>.</p>
+   <p class="note">${CHIPNOTE}</p>`,
+
+/* -------------------------------------------------------------------- T9 */
+predictions:()=>TABS(0)+
+  `<div class="h4">The twelve sites and their predictions</div>
+   <div style="font-size:12.5px;color:var(--ink2)">Each site carried a <b>falsifiable
+     prediction</b> written before any data was fetched. <b>Two of eleven came true — worse
+     than chance.</b> They are reported rather than dropped, because
+     <code>site_selection.md</code> committed to reporting them and a roster where every
+     prediction held would be evidence of tuning.</div>
+   <table class="dt">
+     <tr><th>Site</th><th>Archetype</th><th class="em">Predicted</th><th>Crew</th><th>Shift</th><th>Night</th></tr>
+     ${ROSTER.map(r=>`<tr><td>${r[0]}</td><td><code>${r[1]}</code></td>
+       <td><code>${r[2]}</code></td><td>${r[3]}</td><td>${r[4]}</td>
+       <td>${r[5]?"🌙":""}</td></tr>`).join("")}
+   </table>
+   <p class="note"><b>T9 frame.</b> <code>[CLICK]</code> back to <b>📋 The morning call</b> and
+     <code>[SCROLL]</code> here. The <b>Predicted</b> column and the "Two of eleven came true"
+     line must both be in frame. End the video here.</p>
+   <p class="note flag"><b>"Two came true" is on the do-not-cut list.</b> Reporting a failed
+     hypothesis unprompted is worth more than any feature you could show instead. Say it
+     plainly and do not soften it.</p>
+   <p class="note">Twelve rows, and the app's roll-up says eleven sites, because one returned no
+     tiles. Say <b>"twelve job sites"</b> and stop — <b>never state a headcount alongside it</b>.
+     The Crew column is per site and is deliberately never summed anywhere in this cut.</p>`
+};
+
+/* ============================================================ the nine takes
+   Boundaries and lengths from docs/video-script-v2.md §2. Total 177.0 s against a
+   180.0 s HARD ceiling. Recording order is screen-state order, not script order. */
+const TAKES=[
+ {id:"T1",beat:"who I am",        t0:0.0,  t1:16.0, rec:1, frame:"header",      tab:"morning call",
+  screen:"Morning call · header quote",        act:"none — dead still"},
+ {id:"T2",beat:"today's method",  t0:16.0, t1:37.0, rec:2, frame:"metrics",     tab:"morning call",
+  screen:"Morning call · → metric cards",      act:"SCROLL down at head"},
+ {id:"T3",beat:"what it costs",   t0:37.0, t1:60.0, rec:3, frame:"theDay",      tab:"morning call",
+  screen:"Morning call · the day, hour by hour",act:"SCROLL at head, then FREEZE · 3 s hold inside"},
+ {id:"T4",beat:"the crews",       t0:60.0, t1:73.0, rec:5, frame:"askCrews",    tab:"Ask",
+  screen:"Ask · 3 crews already selected",     act:"CLICK tab only — change nothing"},
+ {id:"T5",beat:"ask naturally",   t0:73.0, t1:97.0, rec:6, frame:"askSnapshot", tab:"Ask",
+  screen:"Ask · ranked by peak",               act:"CLICK 'Right now' chip, then Ask HeatGuard"},
+ {id:"T6",beat:"ask properly",    t0:97.0, t1:122.0,rec:7, frame:"askDuration", tab:"Ask",
+  screen:"Ask · the table RE-ORDERS",          act:"CLICK 'Hours above' chip, then Ask HeatGuard · 2 s hold inside"},
+ {id:"T7",beat:"why it changed",  t0:122.0,t1:143.0,rec:8, frame:"askAnswer",   tab:"Ask",
+  screen:"Ask · ⚙ Mechanism open",             act:"CLICK the ⚙ Mechanism expander"},
+ {id:"T8",beat:"it refuses",      t0:143.0,t1:159.0,rec:9, frame:"askRefusal",  tab:"Ask",
+  screen:"Ask · 🚫 refusal in the readout",    act:"CLICK 'Start and stop · refuses' chip — no button press"},
+ {id:"T9",beat:"net benefit",     t0:159.0,t1:177.0,rec:4, frame:"predictions", tab:"morning call",
+  screen:"Morning call · predictions table",   act:"CLICK tab · SCROLL"}
+];
+
+/* ============================================================ the script
+   VERBATIM from docs/video-script-v2.md §1. Do not paraphrase, do not improve.
+   [takeIndex, kind, text | hold-seconds, frameOverride]
+   kind "l" = a line you speak · kind "h" = scripted silence. */
+const S=[
+ [0,"l","I'm going to do this as a user, not a demo."],
+ [0,"l","For the next three minutes I'm the safety supervisor at a Phoenix contractor, with <em>twelve</em> outdoor job sites."],
+ [0,"l","Every morning, one call: who works, who rotates, who stops."],
+
+ [1,"l","Today I make that call from one number. The forecast high for Phoenix, measured at Sky Harbor airport, applied to all twelve sites."],
+ [1,"l","OSHA's own guidance says don't do that. Outdoor workers have died of heatstroke when the day's maximum heat index was <em>eighty-six</em>."],
+ [1,"l","Here is what that one number costs me."],
+
+ [2,"l","<em>Seven hundred and one</em> worker-hours flagged unsafe. Scoped to the shifts my crews actually work — <em>fifty-eight</em>.","metrics"],
+ [2,"h",3.0],
+ [2,"l","Each bar is one crew's shift. The red band is the only window that was genuinely dangerous, one o'clock to eight in the evening. Look how many shifts miss it entirely."],
+
+ /* T4–T8 were rewritten on 29 Aug, after the Ask tab was rebuilt. These are the rewritten
+    lines, verbatim. The v1 wording — "the site I'm actually worried about", "is it safe at
+    this site right now", "watch the badge", "Different layer" — described the preset
+    dropdown and is dead. */
+ [3,"l","That's the roll-up. Now the three crews I'm actually worried about."],
+ [3,"l","Each one is a crew, not a map tile — headcount, shift window, and whether these are the people working nights."],
+
+ [4,"l","First I ask it the way I'd say it out loud: <em>how hot is it right now?</em>"],
+ [4,"l","Before it fetches anything it tells me how it read that — a snapshot, one reading, one moment. Ranked that way, Chase Tower is my worst crew."],
+ [4,"l","And every one of them is <em>a hundred and four</em> degrees. By peak, they're the same place."],
+
+ [5,"l","So I ask what I actually meant. <em>How many hours were they above the threshold?</em>"],
+ [5,"l","Same crews, same day, same screen. Watch the order."],
+ [5,"h",2.0],
+ [5,"l","It re-ranks. My worst crew is now the one with <em>twenty-two</em> people in it, not the one that was a hundredth of a degree hotter. Peak ranked tiles. This ranks crews."],
+
+ /* T7 is §1's 52-word block, which is what its 23 s budget pays for. video-script-v2.md
+    still carries a SECOND blockquote under T7 — "Now I run it… a tool I trust" — left over
+    from v1; it is another 59 words and putting both on this take would need 44 s. It is
+    not narrated. See the T7 frame note. */
+ [6,"l","And this is the part I'd have to defend. It shows me which layer it used and why, in one place, next to the answer."],
+ [6,"l","Those two questions are <em>one optional string</em> apart in the same API call. Same endpoint, same parameters, no error either way — and the opposite operational decision."],
+
+ [7,"l","And when I ask something the data can't answer, it says so, and makes <em>no call at all</em>."],
+ [7,"l","It doesn't guess. Every question, every layer, every refusal gets logged — and that log is what I hand an inspector."],
+
+ [8,"l","What I get is a defensible morning. The same fifteen minutes, but a decision per crew instead of one number for a city."],
+ [8,"l","One thing I'd rather not show you: twelve predictions written down first. <em>Two</em> came true. It's in the app, not buried."]
+];
+
+/* Build the cue list.
+   v1 derived each cue's length from its word count at 150 wpm and let the total fall out
+   of that. v2 cannot: the take boundaries in §2 are fixed, and a take that drifts a second
+   is a take that will not stitch. So holds keep their scripted length EXACTLY and the
+   remaining time inside each take is shared between its spoken lines in proportion to word
+   count. Every take therefore lands on its scripted boundary and the total is 177.0 s by
+   construction. */
+const words = s => s.replace(/<[^>]+>/g," ").split(/\s+/).filter(x=>/[a-z0-9]/i.test(x)).length;
+const CUES=[];
+TAKES.forEach((k,ti)=>{
+  const rows=S.filter(r=>r[0]===ti);
+  const held=rows.filter(r=>r[1]==="h").reduce((a,r)=>a+r[2],0);
+  const speak=(k.t1-k.t0)-held;
+  const totW=rows.filter(r=>r[1]==="l").reduce((a,r)=>a+words(r[2]),0);
+  k.w=totW; k.hold=held; k.cues=rows.length;
+  let t=k.t0;
+  rows.forEach((r,j)=>{
+    const dur = r[1]==="h" ? r[2] : speak*words(r[2])/totW;
+    const last = j===rows.length-1;
+    CUES.push({t0:t, t1:last?k.t1:t+dur, ti, kind:r[1],
+               text:r[1]==="h"?"":r[2], frame:r[3]||k.frame,
+               first:j===0});
+    t+=dur;
+  });
+});
+const TOTAL   = TAKES[TAKES.length-1].t1;   // 177.0 — the script
+const CEILING = 180.0;                      // 3:00 — the organisers' hard cap
+const BAR_END = 186.0;                      // playable overrun, so the cap can be SEEN
+const takeAt = x => TAKES.find(k=>x>=k.t0&&x<k.t1) || TAKES[TAKES.length-1];
+
+/* ============================================================ engine */
+const $=id=>document.getElementById(id);
+let playing=false, clock=0, last=0, spoken=-1, speed=1, voiceOn=false, rate=1, loopOn=false;
+let timing=null;                              // {ti, t0ms} while the stopwatch runs
+const measured=new Array(TAKES.length).fill(null);
+const fmt=s=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,"0")}`;
+
+/* ---- progress bar: nine take blocks, then the 3 s margin, then the overrun ---- */
+(function(){
+  const bar=$("bar");
+  TAKES.forEach((k,i)=>{
+    const d=document.createElement("div");
+    d.className="seg"+(i===5?" money":"");
+    d.id="seg"+i;
+    d.style.left=(k.t0/BAR_END*100)+"%";
+    d.style.width=((k.t1-k.t0)/BAR_END*100)+"%";
+    d.textContent=k.id;
+    d.title=`${k.id} — ${k.beat} · ${(k.t1-k.t0).toFixed(1)} s · click to jump`;
+    d.onclick=e=>{e.stopPropagation();seek(k.t0);};
+    bar.appendChild(d);
+  });
+  const m=document.createElement("div");
+  m.className="zone margin";
+  m.style.left=(TOTAL/BAR_END*100)+"%";
+  m.style.width=((CEILING-TOTAL)/BAR_END*100)+"%";
+  m.title="The 3 s margin between the script and the ceiling";
+  m.onclick=e=>{e.stopPropagation();seek(TOTAL);};
+  bar.appendChild(m);
+  const o=document.createElement("div");
+  o.className="zone over";
+  o.style.left=(CEILING/BAR_END*100)+"%";
+  o.style.width=((BAR_END-CEILING)/BAR_END*100)+"%";
+  o.textContent="OVER";
+  o.title="Past 3:00. Disqualifying length.";
+  o.onclick=e=>{e.stopPropagation();seek(CEILING+0.5);};
+  bar.appendChild(o);
+  bar.onclick=e=>{const r=bar.getBoundingClientRect();seek((e.clientX-r.left)/r.width*BAR_END);};
+})();
+
+/* ---- per-take timing table ---- */
+(function(){
+  const rows=[`<tr><th>Take</th><th>Beat</th><th>Scripted</th><th>You</th><th>Δ</th><th>Rec</th><th></th></tr>`];
+  TAKES.forEach((k,i)=>{
+    rows.push(`<tr id="tk${i}" class="${i===5?"key":""}">
+      <td class="id">${k.id}</td><td>${k.beat}</td>
+      <td>${(k.t1-k.t0).toFixed(1)} s</td>
+      <td id="tkm${i}">—</td><td id="tkd${i}" class="d none">—</td>
+      <td>#${k.rec}</td>
+      <td><button title="Jump to ${k.id} and start the stopwatch" onclick="armTake(${i})">⏱</button></td>
+    </tr>`);
+  });
+  $("tktable").innerHTML=rows.join("");
+})();
+
+/* ---- recording-order helper ---- */
+(function(){
+  const order=[...TAKES].sort((a,b)=>a.rec-b.rec);
+  const out=[];
+  order.forEach(k=>{
+    if(k.rec===5) out.push(`<li class="switch">── switch tab, once, for the whole session ──</li>`);
+    out.push(`<li id="rec${k.id}"><span class="n">${k.rec}.</span><b>${k.id}</b>
+      <span>${k.screen}<span style="color:var(--muted)"> · ${(k.t1-k.t0).toFixed(1)} s</span></span></li>`);
+  });
+  $("recorder").innerHTML=out.join("");
+})();
+
+function cueAt(x){for(const c of CUES) if(x>=c.t0&&x<c.t1) return c; return CUES[CUES.length-1];}
+function seek(x){clock=Math.max(0,Math.min(BAR_END-0.01,x));spoken=-1;stopSpeech();paint();}
+
+/* ---- the ceiling readout: green under 177, amber 177–180, red past 180 ---- */
+function paintCeiling(){
+  const box=$("ceilbox"), over=clock>CEILING, warn=!over&&clock>=TOTAL;
+  box.className="ceilbox "+(over?"over":warn?"warn":"ok");
+  $("ceilnum").textContent=clock.toFixed(1)+" s";
+  $("ceilstate").textContent = over ? "OVER THE 3:00 CEILING"
+    : warn ? "inside the 3 s margin" : "under · "+(TOTAL-clock).toFixed(1)+" s of script left";
+  $("ceilnote").innerHTML = over
+    ? `<b>Past 180.0 s.</b> The organisers cap the video at 3:00 — this is a rule violation,
+       not a style problem. Cut before you re-record: §6 of the script lists the three cuts in
+       order, cheapest damage first.`
+    : warn
+    ? `<b>Between 177.0 and 180.0 s.</b> You are in the deliberate 3-second margin. The cut
+       lands here only if a take ran long — trim a tail rather than re-recording.`
+    : `Script <b>177.0 s</b> · ceiling <b>180.0 s</b> · margin <b>3.0 s</b>. Nine takes,
+       ${CUES.length} cues, ${TAKES.reduce((a,k)=>a+k.hold,0).toFixed(0)} s of scripted hold.`;
+  document.body.classList.toggle("over", over);
+}
+
+/* ---- projected total: what you would actually ship if every take ran as timed ---- */
+function paintTotals(){
+  let proj=0, done=0;
+  TAKES.forEach((k,i)=>{
+    proj += measured[i]!==null ? measured[i] : (k.t1-k.t0);
+    if(measured[i]!==null) done++;
+  });
+  const cls = proj>CEILING ? "over" : proj>=TOTAL ? "warn" : "ok";
+  $("tktot").innerHTML=`Σ scripted <b>${TOTAL.toFixed(1)} s</b> · ceiling
+    <b>${CEILING.toFixed(1)} s</b><br>Projected total, using your times where you have them
+    (${done}/${TAKES.length} timed): <b>${proj.toFixed(1)} s</b>
+    <span class="pill ${cls}">${proj>CEILING?"over":proj>=TOTAL?"margin":"under"}</span>`;
+}
+
+function paint(){
+  const c=cueAt(clock), i=CUES.indexOf(c), k=takeAt(Math.min(clock,TOTAL-0.001));
+  const past = clock>=TOTAL;
+  $("t").textContent=fmt(clock);
+  $("ph").style.left=(clock/BAR_END*100)+"%";
+
+  TAKES.forEach((_,j)=>{
+    const seg=$("seg"+j), row=$("tk"+j), on=!past&&j===c.ti;
+    if(seg) seg.classList.toggle("cur",on);
+    if(row) row.classList.toggle("cur",on);
+    const rl=$("rec"+TAKES[j].id); if(rl) rl.classList.toggle("cur",on);
+  });
+
+  $("bn").textContent = past ? "— past the end of the script —"
+    : `${k.id} — ${k.beat}`;
+  $("bm").textContent = past ? "Nothing scripted runs here. This space is the ceiling."
+    : `${fmt(k.t0)}–${fmt(k.t1)} · ${(k.t1-k.t0).toFixed(1)} s · ${k.w} words`
+      + ` · record #${k.rec} · ${k.screen}`;
+
+  const cue=$("cue");
+  if(past){cue.textContent="stop";cue.className="cue";}
+  else if(c.first&&clock-c.t0<1.1){cue.textContent=k.act;cue.className="cue fire";}
+  else{cue.textContent=k.act.startsWith("CLICK")||k.act.startsWith("SELECT")?"held":k.act;
+       cue.className="cue";}
+
+  if($("screen").dataset.f!==c.frame){$("screen").dataset.f=c.frame;$("screen").innerHTML=FRAMES[c.frame]();}
+
+  if(past){
+    $("now").innerHTML=`<div class="hold" style="color:${clock>CEILING?"var(--danger)":"var(--warn)"}">
+      ${clock>CEILING?"⛔ OVER THE CEILING":"◼ END OF SCRIPT"}
+      <small>The script ends at 2:57.0. The organisers' cap is 3:00.0. Everything after this
+      point is margin you should not be spending. Press ↺ Restart.</small></div>`;
+  } else if(c.kind==="h"){
+    const p=(clock-c.t0)/(c.t1-c.t0)*100;
+    $("now").innerHTML=`<div class="hold">◼ HOLD — say nothing<small>${(c.t1-clock).toFixed(1)} s. Let the picture do the work. This is the part people cut. Don't.</small></div><div class="holdbar"><i style="width:${p}%"></i></div>`;
+  } else {
+    $("now").innerHTML=c.text;
+  }
+
+  const nx=CUES[i+1];
+  $("nx").textContent = (past||!nx) ? "— end —"
+    : (nx.kind==="h" ? `◼ HOLD ${(nx.t1-nx.t0).toFixed(1)} s` : nx.text.replace(/<[^>]+>/g,""));
+
+  if(timing) $("timer").textContent=`⏹ Stop ${TAKES[timing.ti].id} · ${((performance.now()-timing.t0ms)/1000).toFixed(1)} s`;
+  paintCeiling();
+  if(voiceOn&&playing&&!past&&c.kind==="l"&&spoken!==i){spoken=i;speak(c.text);}
+}
+
+/* ---- scratch voice: browser speech synthesis, generated at playback.
+   Deliberately not an exportable audio file. ---- */
+function stopSpeech(){try{speechSynthesis.cancel();}catch(e){}}
+function speak(html){
+  try{
+    const u=new SpeechSynthesisUtterance(html.replace(/<[^>]+>/g,""));
+    u.rate=rate; u.pitch=1; u.lang="en-GB";
+    const v=speechSynthesis.getVoices().find(x=>/en-GB|en_GB/.test(x.lang))
+         || speechSynthesis.getVoices().find(x=>/^en/.test(x.lang));
+    if(v)u.voice=v;
+    speechSynthesis.speak(u);
+  }catch(e){}
+}
+
+/* ---- self-timing. Optional, and the highest-value thing here for a hard cap:
+   it measures how long YOU take to read one take aloud and compares it to the
+   scripted length, so a take that runs long is caught in rehearsal and not in
+   ffmpeg. Timing pauses the transport — you read at your own pace, not its. ---- */
+function startTimer(ti){
+  timing={ti,t0ms:performance.now()};
+  playing=false; $("play").textContent="▶ Play"; stopSpeech();
+  $("timer").className="timing";
+}
+function stopTimer(){
+  if(!timing) return;
+  const secs=(performance.now()-timing.t0ms)/1000;
+  measured[timing.ti]=secs;
+  const k=TAKES[timing.ti], d=secs-(k.t1-k.t0);
+  $("tkm"+timing.ti).textContent=secs.toFixed(1)+" s";
+  const cell=$("tkd"+timing.ti);
+  cell.textContent=(d>=0?"+":"")+d.toFixed(1)+" s";
+  cell.className="d "+(Math.abs(d)<=0.5?"ok":d>0?"long":"short");
+  timing=null;
+  $("timer").className=""; $("timer").textContent="⏱ Time me";
+  paintTotals();
+}
+function armTake(i){            // called from the table's per-row buttons
+  if(timing) stopTimer();
+  seek(TAKES[i].t0);
+  startTimer(i);
+}
+$("timer").onclick=()=>{
+  if(timing) stopTimer();
+  else startTimer(TAKES.indexOf(takeAt(Math.min(clock,TOTAL-0.001))));
+};
+
+$("voice").onclick=()=>{
+  if(!("speechSynthesis" in window)){$("voice").textContent="🚫 voice unavailable here";return;}
+  voiceOn=!voiceOn; spoken=-1;
+  if(!voiceOn)stopSpeech();
+  $("voice").textContent=voiceOn?"🔊 Scratch voice: on":"🔇 Scratch voice: off";
+  $("voice").className=voiceOn?"on":"";
+  if(voiceOn){speak("");setTimeout(()=>{if(voiceOn&&!speechSynthesis.speaking&&!speechSynthesis.pending)
+    $("voice").textContent="🔊 on — if silent, open this file in Chrome";},900);}
+};
+$("loop").onclick=()=>{loopOn=!loopOn;
+  $("loop").textContent=loopOn?`🔁 Loop take: ${takeAt(Math.min(clock,TOTAL-0.001)).id}`:"🔁 Loop take: off";
+  $("loop").className=loopOn?"on":"";};
+$("rate").oninput=e=>{rate=+e.target.value;$("ratev").textContent=rate.toFixed(2);};
+$("speed").oninput=e=>{speed=+e.target.value;$("speedv").textContent=speed+"×";};
+$("play").onclick=()=>{playing=!playing;$("play").textContent=playing?"❚❚ Pause":"▶ Play";
+  if(!playing)stopSpeech(); else spoken=-1; last=performance.now();};
+$("restart").onclick=()=>{seek(0);};
+document.addEventListener("keydown",e=>{
+  if(e.code==="Space"){e.preventDefault();$("play").click();}
+  if(e.code==="ArrowRight")seek(clock+5);
+  if(e.code==="ArrowLeft")seek(clock-5);
+  if(e.code==="KeyT"){e.preventDefault();$("timer").click();}
+});
+function loop(now){
+  if(playing){const d=(now-last)/1000*speed;last=now;clock+=d;
+    // Loop wraps on the take you were inside a frame ago, so T9 — whose end IS the end of
+    // the script — repeats like every other take instead of running off into the ceiling.
+    if(loopOn){const k=takeAt(Math.max(0,Math.min(clock-d,TOTAL-0.001)));
+      if(clock>=k.t1){clock=k.t0;spoken=-1;stopSpeech();}}
+    if(clock>=BAR_END){clock=BAR_END-0.01;playing=false;$("play").textContent="▶ Play";stopSpeech();}}
+  else last=now;
+  paint(); requestAnimationFrame(loop);
+}
+paintTotals(); paint(); requestAnimationFrame(loop);
+
+/* ============================================================ notes */
+$("foot").innerHTML=`
+<b>Controls.</b> Space = play/pause · ← → = ±5 s · <b>T</b> = start/stop the stopwatch ·
+click the bar or a take block to jump. The <b>Speed</b> control changes playback only —
+rehearse at 1×. <b>Loop take</b> repeats the take you are currently inside, which is how you
+drill one take until it is clean before recording it. Each row of the timing table has a
+<b>⏱</b> button that jumps to that take and starts the stopwatch in one click.<br><br>
+
+<b>The ceiling is the constraint.</b> The bar runs to ${BAR_END.toFixed(0)} s, not to the end
+of the script, so you can see where 3:00 actually falls. The nine take blocks sum to
+<b>${TOTAL.toFixed(1)} s</b>; the amber strip is the deliberate 3-second margin; the red strip
+past <b>${CEILING.toFixed(1)} s</b> is disqualifying length. The readout under the transport is
+green under 177, amber from 177 to 180, and red — with the banner — past 180.<br><br>
+
+<b>Timing yourself is the point of the panel.</b> Scripted lengths come from §2 of the script;
+the Δ column is you minus scripted, red when you ran long. The projected total uses your
+measured times where you have them and the scripted length everywhere else, so after two or
+three takes you already know whether the cut fits. If it does not, §6 lists what to cut, in
+order: T2's OSHA sentence (~9 s), then T7's last line (~5 s), then T4's second sentence
+(~9 s). <b>Never</b> the T5→T6 badge change, the 3-second hold in T3, T8, or "two came
+true".<br><br>
+
+<b>Four things this rehearsal turned up.</b><br>
+1. <b>The T6 re-order is a tie-break, and the narration has to say so.</b> The two top crews
+tie at exactly 7.0 hours and their peaks are 0.004 °F apart — both print <b>104.4</b>. Claim a
+visible gap and the screen contradicts you. The full warning, with the two lines to say, is on
+the T6 frame; it is the highest-value thing in this file.<br>
+2. <b>T7's mechanism expander is collapsed by default.</b> <code>_render_mechanism</code> calls
+<code>st.expander</code> with no <code>expanded=True</code>, so the drawer the whole take is
+about renders shut. Open it on camera at the head of the take, or before you start
+recording.<br>
+3. <b>T8's refusal is verified and built into the UI.</b> The fourth chip is <i>labelled</i>
+<code>Start and stop · refuses</code>; <code>route()</code> reads that question as
+<b>intraday</b> and refuses it as <code>wrong_layer_would_mislead</code>. It fires in the
+routing readout with no button press and no credit spent. Nothing to hunt for, nothing to
+confirm.<br>
+4. <b>§1 of the script still carries a stale second blockquote under T7</b> — the v1 "Now I run
+it… a tool I trust" lines, describing a panel that no longer exists. The teleprompter runs the
+rewritten 52-word block only. Delete the residue from the script file.<br><br>
+
+<b>Provenance.</b> Narration is verbatim from <code>docs/video-script-v2.md</code> §1; take
+boundaries from §2. <b>The Ask tab was rebuilt on 29 Aug and these five frames were rebuilt
+with it</b>: the six-question preset selectbox, the single-site picker and the landing panel
+that used to fill the answer column are gone from the app and gone from here. What is drawn is
+<code>app.py</code>'s <code>with decision_tab:</code> block as it now stands — crew
+multi-select, date, threshold radio, free-text box, four example chips from
+<code>ask.EXAMPLES</code>, the one-line routing readout, the scope line, a ranked table, and one
+collapsed <code>⚙ Mechanism</code> expander. Every figure was reproduced offline through
+<code>agent.answer()</code>, <code>ask.crew_facts()</code>, <code>ask.rank()</code>,
+<code>ask.build()</code> and <code>ask.mechanism_rows()</code> against
+<code>config/sites.csv</code>, <code>config/thresholds.yaml</code>,
+<code>src/heatguard/router.py</code> and the committed 2025-07-15 fixtures. The hour-by-hour
+figure is the same <code>charts.py</code> port v1 used, unchanged. The withdrawn "peak is a poor
+predictor" line appears nowhere except as the two warnings that it was withdrawn. No number here
+was estimated or invented; the only headcount stated is the <b>37 workers</b> of the three
+selected crews, which is app.py's own scope line, and none is stated beside "twelve sites".`;
+</script>

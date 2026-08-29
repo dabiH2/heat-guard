@@ -1,6 +1,19 @@
 # Recording plan — nine takes, stitched with one command
 
-*Companion to [`../video-script.md`](../video-script.md). Rehearse against
+> ## ⚠️ THIS IS THE **v1** PLAN. It describes a cut that no longer matches the app.
+>
+> The Ask tab was rebuilt on 29 Aug 2026 — the six-preset dropdown is gone, the loaded rate
+> changed, and the "peak is a poor predictor" thesis was withdrawn. **Every beat below
+> references UI that no longer exists.**
+>
+> **For the current cut, use [`../video-script-v2.md`](../video-script-v2.md)** — it is
+> self-contained and carries its own take table, recording order, recorder settings,
+> pre-record checklist and stitching commands. Rehearse against
+> [`rehearsal-v2.html`](rehearsal-v2.html) and stitch with `takes-v2.txt`.
+>
+> This file is kept only so the v1 cut stays reproducible. Do not record from it.
+
+*Companion to [`../video-script.md`](../video-script.md) — **the v1 script**. Rehearse against
 [`rehearsal.html`](rehearsal.html) — press <kbd>Space</kbd>, and use **Loop take** to drill
 one take until it is clean.*
 

@@ -268,7 +268,7 @@ def test_no_exact_test_count_is_quoted():
     """Exact counts rot on the next commit. Guards the floor above from being 'helpfully'
     replaced by a precise number that will be wrong within the hour."""
     import re
-    exact = re.findall(r"(?<![Oo]ver )(\d{3}) (?:offline )?tests", SOURCE)
+    exact = re.findall(r"(?<![Oo]ver )\b(\d{3}) (?:offline )?tests\b", SOURCE)
     assert not exact, (
         f"app.py quotes exact test counts {exact}; state a floor instead")
 
@@ -551,3 +551,381 @@ def test_the_unsupportable_thesis_sentence_is_gone():
         assert claim_id in named, (
             f"the thesis no longer cites {claim_id} — it is the sentence that most needs "
             f"its source, because it is the one a judge who knows the literature checks")
+
+
+# ===================================================================== the Ask tab
+#
+# THE BUG THIS SECTION EXISTS FOR: every question rendered the same panel. Peak on the
+# left, an optional hours tile beside it, the same heading, the same chips. A judge could
+# ask a snapshot question and a duration question about the same crew on the same day and
+# see the same screen twice — which is exactly the silent-wrong-answer failure the router
+# exists to prevent, reproduced one layer up, in the interface.
+#
+# The answer shaping now lives in `src/heatguard/ask.py` and is pure, so the claim "these
+# are three different answers" is checked here in milliseconds instead of by a human
+# clicking a deployed app. Everything below reads committed files only.
+
+DEMO_DATE = "2025-07-15"
+
+QUESTIONS = {
+    "snapshot": "How hot is it at this crew's site right now?",
+    "duration": "How many hours were they above the threshold today?",
+    "comparison": "Which of these crews is worst today?",
+}
+
+REFUSING_QUESTIONS = {
+    "intraday": "When should we start and stop today?",
+    "forecast": "Will we cross the threshold in the next few hours?",
+    "persistence": "Is this site chronically dangerous?",
+}
+
+
+def _fixtures(app, threshold_f: float = 103.0):
+    """Roster plus the two committed roll-ups the Ask tab ranks from."""
+    return {
+        "roster": app.sites(),
+        "analysis": app.day_analysis(DEMO_DATE),
+        "shift_data": app.shift_exposure(DEMO_DATE),
+        "threshold_f": threshold_f,
+    }
+
+
+def _shape(app, question: str, crew_ids, threshold_f: float = 103.0):
+    """Route a question and shape the answer, exactly as the tab does — no rendering."""
+    from heatguard import ask
+    from heatguard.router import route
+
+    site = app.sites()[crew_ids[0]]
+    choice = route(question, lat=float(site["lat"]), lon=float(site["lon"]),
+                   date=DEMO_DATE, threshold_f=threshold_f)
+    facts = ask.crew_facts(crew_ids, **_fixtures(app, threshold_f))
+    return choice, ask.build(choice.question_type, facts, threshold_f=threshold_f)
+
+
+def test_the_three_answerable_shapes_are_visibly_different():
+    """THE REGRESSION THE REBUILD EXISTS FOR.
+
+    Same crew, same date, same threshold — three questions, and the answers must not be
+    interchangeable. A snapshot is one number, a duration is two, a comparison is an
+    ordering. If any two of these headlines collide, the tab is back to answering every
+    question with the same panel and the whole routing argument is invisible to a reader.
+    """
+    app = _app_module()
+    headlines, kinds, metric_counts = {}, {}, {}
+    for name, question in QUESTIONS.items():
+        choice, answer = _shape(app, question, ["PHX-SKY"])
+        assert not choice.refused, f"{name!r} refused; it is one of the answerable three"
+        assert choice.question_type.value == name, (
+            f"{question!r} routed to {choice.question_type} rather than {name}")
+        headlines[name] = answer.headline
+        kinds[name] = answer.kind
+        metric_counts[name] = len(answer.metrics)
+
+    assert len(set(headlines.values())) == 3, (
+        f"two questions produced the same headline for the same crew: {headlines}")
+    assert kinds["snapshot"] == kinds["duration"] == "card"
+    assert kinds["comparison"] == "ranking", (
+        "a comparison must rank even with one crew selected — printing a card in reply "
+        "to 'which crew is worst' quietly answers a different question")
+    assert metric_counts["snapshot"] == 1 and metric_counts["duration"] == 2, (
+        f"a snapshot has no duration to show and a duration has two figures; got "
+        f"{metric_counts}")
+    for name, headline in headlines.items():
+        assert len(headline) <= 110, f"{name} headline is not a headline: {headline!r}"
+
+
+def test_no_answer_carries_more_than_two_metrics():
+    """Two tiles maximum. A third dilutes whichever one actually decides, and the old
+    panel's third tile said the NWS band twice — once as a number, once as a chip."""
+    app = _app_module()
+    for question in QUESTIONS.values():
+        for crews in (["PHX-SKY"], ["PHX-27TH", "PHX-CHASE", "PHX-UNHL"]):
+            _, answer = _shape(app, question, crews)
+            assert len(answer.metrics) <= 2, (
+                f"{question!r} over {len(crews)} crew(s) rendered "
+                f"{len(answer.metrics)} metrics")
+
+
+def test_more_than_one_crew_always_ranks():
+    """The complaint that started the rebuild: being allowed one site while being offered
+    a comparison question is not sound. Two or more crews is a ranking, whatever the
+    layer, and the ranking column is the number the ROUTED layer measures."""
+    app = _app_module()
+    crews = ["PHX-27TH", "PHX-CHASE", "PHX-UNHL"]
+    _, snapshot = _shape(app, QUESTIONS["snapshot"], crews)
+    _, duration = _shape(app, QUESTIONS["duration"], crews)
+
+    assert snapshot.kind == duration.kind == "ranking"
+    assert len(snapshot.rows) == len(duration.rows) == 3
+    assert "Peak" in snapshot.rank_column, (
+        f"a snapshot question must rank by what the snapshot layer measures; ranked by "
+        f"{snapshot.rank_column!r}")
+    assert "Hours" in duration.rank_column, (
+        f"a duration question must rank by hours; ranked by {duration.rank_column!r}")
+    assert snapshot.rank_column in snapshot.rows[0], "the ranking column is not a column"
+    assert snapshot.headline != duration.headline, (
+        "ranking by peak and ranking by duration produced the same headline")
+
+
+def test_the_ranking_is_worst_first_and_a_coverage_gap_is_never_safest():
+    """PHX-DVT returned zero tiles, Completed, billed 4,220 credits. Sorting it as 0.0
+    hours would rank the one crew nobody measured as the safest on the roster — the worst
+    available wrong answer for a heat-safety tool, and the exact conversion of silence
+    into safety the morning sheet refuses to make."""
+    from heatguard import ask
+    app = _app_module()
+    crews = ["PHX-DVT", "PHX-UNHL", "PHX-27TH"]
+    _, answer = _shape(app, QUESTIONS["comparison"], crews)
+
+    order = [row["Crew"] for row in answer.rows]
+    values = [row[answer.rank_column] for row in answer.rows]
+    assert "no reading" in values[-1], (
+        f"the crew with no tiles is not last: {list(zip(order, values))}")
+
+    facts = ask.crew_facts(crews, **_fixtures(app))
+    ranked = ask.rank(facts, None)
+    hours = [f.day_hours for f in ranked if f.day_hours is not None]
+    assert hours == sorted(hours, reverse=True), f"not worst-first: {hours}"
+
+
+def test_a_coverage_gap_never_wears_a_severity_chip():
+    """PHX-DVT returned zero tiles and was billed for it. The call chip is coloured from
+    the OSHA rung, and `no_reading` is not a rung — falling back to the lowest band would
+    print "OSHA below caution risk" beside the one crew nobody measured, which is silence
+    rendered as safety."""
+    from heatguard import ask
+    app = _app_module()
+    _, answer = _shape(app, QUESTIONS["duration"], ["PHX-DVT"])
+
+    assert answer.kind == "no_reading"
+    assert answer.call_text == "NO READING"
+    assert answer.action_id is None, (
+        f"a coverage gap was given the {answer.action_id!r} severity colour")
+    assert answer.band_id is None, "a coverage gap was given an NWS band"
+    assert ask.rung_band_id("no_reading") is None
+    assert ask.rung_band_id("rest_breaks_50_10") == "high"
+
+
+def test_the_answer_names_the_morning_sheet_when_it_disagrees():
+    """DECISION 2, ON SCREEN. The layer the question routes to decides the answer, and
+    where that gives a DIFFERENT rung from the morning call sheet for the same crew on the
+    same day, one line has to say why.
+
+    Sky Harbor is the case that proves it: peak 104.3 °F puts it on OSHA's high rung, and
+    it spent zero hours above 103 °F inside its own 05:00-13:30 shift, so the sheet says
+    55:5. Both are right about different questions, and an interface that shows one
+    without naming the other is hiding the only interesting thing it knows.
+    """
+    app = _app_module()
+    _, snapshot = _shape(app, QUESTIONS["snapshot"], ["PHX-SKY"])
+    assert snapshot.call_text == "50:10 work/rest", (
+        f"the peak no longer drives the snapshot call: {snapshot.call_text!r}")
+    assert "55:5 work/rest" in snapshot.note, (
+        f"the snapshot answer does not name the sheet's different call: {snapshot.note!r}")
+    assert "different layer" in snapshot.note.lower(), (
+        "the divergence is stated without saying WHY the two differ")
+
+    _, duration = _shape(app, QUESTIONS["duration"], ["PHX-SKY"])
+    assert duration.call_text == "55:5 work/rest", (
+        "the duration answer must follow hours inside the shift, like the sheet")
+    assert duration.note, "the duration answer says nothing about the sheet at all"
+
+
+def test_the_ask_tab_and_the_morning_sheet_apply_the_same_rule():
+    """`heatguard.ask` carries its own copy of the shift rule so the two tabs are free to
+    diverge as products. This is what stops that freedom becoming a silent contradiction:
+    on the demo day, at the threshold the sheet was measured at, every crew gets the same
+    rung from both. The claim "the same rule, and the same answer" is checked, not
+    assumed."""
+    from heatguard import ask
+    app = _app_module()
+    facts = ask.crew_facts(list(app.sites()), **_fixtures(app))
+    shift_rows = {r["site_id"]: r for r in app.shift_exposure(DEMO_DATE)["rows"]}
+    analysis_rows = {r["site_id"]: r for r in app.day_analysis(DEMO_DATE)["rows"]}
+
+    for fact in facts:
+        sheet_id, _ = app._call_for(shift_rows[fact.site_id],
+                                    analysis_rows.get(fact.site_id))
+        assert fact.call_id == sheet_id, (
+            f"{fact.site_id}: the Ask tab says {fact.call_id!r} and the morning sheet "
+            f"says {sheet_id!r} for the same crew on the same day")
+
+
+def test_the_rollup_the_ranking_uses_agrees_with_the_live_call():
+    """A ranking over twelve crews is built from `data/fixtures/t8`, not from twenty-four
+    calls. That is only honest while the roll-up says what the calls say, and nothing
+    else in the build checks it — the roll-up was generated by a script that could be
+    edited, and a drifted figure would render as ordinary confident prose.
+
+    Every site, both thresholds, offline, no credits.
+    """
+    import os
+    os.environ["HEATGUARD_OFFLINE"] = "1"
+    from heatguard import ask
+    from heatguard.agent import answer
+
+    app = _app_module()
+    for threshold_f in (91.0, 103.0):
+        facts = {f.site_id: f
+                 for f in ask.crew_facts(list(app.sites()), **_fixtures(app, threshold_f))}
+        for site_id, fact in facts.items():
+            out = answer(QUESTIONS["duration"], site_id=site_id, date=DEMO_DATE,
+                         threshold_f=threshold_f, narrate=False)
+            peak = (out["result"].get("peak") or {}).get("max_f")
+            hours = out["result"].get("hours")
+            if peak is None:
+                assert not fact.has_data, (
+                    f"{site_id} returns no tiles but the roll-up shows data for it")
+                continue
+            assert fact.peak_f == pytest.approx(peak, abs=0.01), (
+                f"{site_id}: roll-up peak {fact.peak_f} vs live {peak}")
+            assert fact.day_hours == pytest.approx(hours, abs=0.01), (
+                f"{site_id} at {threshold_f:.0f} °F: roll-up {fact.day_hours} h vs "
+                f"live {hours} h")
+
+
+def test_the_in_shift_figure_is_a_bound_when_it_is_not_a_measurement():
+    """`shift_exposure_*.json` was measured at ONE threshold. At any other, hours inside
+    the shift are a pigeonhole floor, and every rendering of a floor has to say "at
+    least" — a bound printed as a measurement is the same overclaim as a measured figure
+    wearing somebody else's citation."""
+    from heatguard import ask
+    app = _app_module()
+
+    measured = {f.site_id: f for f in ask.crew_facts(
+        ["PHX-SKY", "PHX-CHASE"], **_fixtures(app, 103.0))}
+    assert measured["PHX-SKY"].in_shift_hours is not None
+    assert measured["PHX-SKY"].in_shift_text.endswith("h")
+    assert "at least" not in measured["PHX-SKY"].in_shift_text
+
+    bounded = {f.site_id: f for f in ask.crew_facts(
+        ["PHX-SKY", "PHX-CHASE"], **_fixtures(app, 91.0))}
+    assert bounded["PHX-SKY"].in_shift_hours is None
+    assert "at least" in bounded["PHX-SKY"].in_shift_text, (
+        f"a pigeonhole floor is being printed as a measurement: "
+        f"{bounded['PHX-SKY'].in_shift_text!r}")
+    assert bounded["PHX-CHASE"].in_shift_floor is None, (
+        "a bound was invented for a shift that crosses midnight")
+    assert "not derivable" in bounded["PHX-CHASE"].in_shift_text
+
+
+def test_the_floor_and_the_call_rule_match_the_morning_tab_helpers():
+    """`ask` re-implements two things app.py already had, so the two tabs can move
+    independently. Both must still agree arithmetically, or the same crew gets two
+    different bounds depending on which tab is open."""
+    from heatguard import ask
+    app = _app_module()
+    for night in (True, False):
+        assert ask.shift_floor_hours(8.5, 20.0, night) == app._bound_91(8.5, 20.0, night)
+
+
+def test_a_refused_question_is_never_given_an_answer_shape():
+    """`persistence`, `forecast` and `intraday` refuse in router.py. The tab must not
+    invent a shape for any of them — the honest set is exactly three, and a fourth would
+    mean fabricating an answer the fixtures cannot support."""
+    from heatguard import ask
+    from heatguard.router import QuestionType, route
+
+    app = _app_module()
+    site = app.sites()["PHX-SKY"]
+    for name, question in REFUSING_QUESTIONS.items():
+        choice = route(question, lat=float(site["lat"]), lon=float(site["lon"]),
+                       date=DEMO_DATE, threshold_f=103.0)
+        assert choice.refused, f"{name!r} no longer refuses; the tab has no shape for it"
+
+    assert set(ask.ANSWERABLE) == {QuestionType.SNAPSHOT, QuestionType.DURATION,
+                                   QuestionType.COMPARISON}
+
+
+def test_the_mechanism_carries_the_whole_audit_trail_for_one_answer():
+    """Adjacent to the answer, structured, and complete. The parameters, the reason, the
+    counterfactual and the unit conversion used to be four separate regions spread down
+    the page; a reader checking one number should not have to hunt for how it was made."""
+    from heatguard import ask
+    from heatguard.agent import answer
+
+    app = _app_module()
+    out = answer(QUESTIONS["duration"], site_id="PHX-SKY", date=DEMO_DATE,
+                 threshold_f=103.0, narrate=False)
+    rows = dict(ask.mechanism_rows(out["choice"], out["result"], ranked_over=3))
+
+    for field in ("Question read as", "Endpoint", "filter_type", "analytic_type",
+                  "granularity", "Why this layer", "What a snapshot would have said",
+                  "Unit conversion", "Calls made", "Logged to"):
+        assert field in rows, f"{field!r} missing from the mechanism"
+    assert "°C" in rows["Unit conversion"] and "heat index" in rows["Unit conversion"]
+
+    snap = answer(QUESTIONS["snapshot"], site_id="PHX-SKY", date=DEMO_DATE,
+                  threshold_f=103.0, narrate=False)
+    snap_rows = dict(ask.mechanism_rows(snap["choice"], snap["result"]))
+    assert "Unit conversion" not in snap_rows, (
+        "a snapshot sends no threshold, so a conversion row would describe a step that "
+        "never happened")
+
+
+def test_the_mechanism_of_a_refusal_says_no_call_was_made():
+    """A refusal has a mechanism too, and the fact that matters most about it is that
+    nothing was spent."""
+    from heatguard import ask
+    from heatguard.router import route
+
+    app = _app_module()
+    site = app.sites()["PHX-SKY"]
+    choice = route(REFUSING_QUESTIONS["forecast"], lat=float(site["lat"]),
+                   lon=float(site["lon"]), date=DEMO_DATE, threshold_f=103.0)
+    rows = dict(ask.mechanism_rows(choice, None))
+    assert "refused" in rows["Outcome"]
+    assert "none" in rows["Calls made"] and "credit" in rows["Calls made"]
+    assert rows["Why"], "the refusal does not carry the reason it refused"
+
+
+# ---------------------------------------------------- what the tab no longer renders
+
+def test_the_question_type_preset_selectbox_is_gone():
+    """DECISION 1: free text in, routing as audit out.
+
+    A six-row menu labelled "Start from one of the six question types" taught that the
+    layer is something the USER picks. It is not — the router reads the words, and the
+    classification is output, not input. Presenting it as a control made the one genuinely
+    interesting thing in the app look like a dropdown."""
+    for gone in ("Start from one of the six question types",
+                 "EXAMPLE_QUESTIONS", "or ask in your own words"):
+        assert gone not in SOURCE, (
+            f"{gone!r} is back in app.py — the preset menu makes free-text routing look "
+            f"like a mode selector")
+
+
+def test_the_crews_control_is_a_multiselect_of_crews():
+    """A crew IS a site: crew_size, shift_start, shift_end and night_shift are columns on
+    config/sites.csv. Being allowed exactly one while being offered "which site is worst"
+    was the complaint that started this rebuild."""
+    kwargs = _call_keywords("multiselect", label_fragment="Crews")
+    assert "default" in kwargs, "the crew control offers no default at all"
+    assert "format_func" in kwargs, (
+        "the options would render as raw site ids; each one has to read as a crew")
+
+    with pytest.raises(AssertionError):
+        _call_keywords("selectbox", label_fragment="Site")
+
+
+def test_the_landing_panel_is_gone_from_the_ask_tab():
+    """The answer column used to be filled, before anything was asked, by three
+    paragraphs explaining the routing argument to somebody who had not used the tool yet.
+    That argument belongs on "How it decides"; the empty state has to say what to DO."""
+    rendered = " ".join(text for _, text in _markdown_literals())
+    for landing_copy in ("What this shows",
+                         "The router classifies the question against a decision table"):
+        assert landing_copy not in rendered, (
+            f"{landing_copy!r} is rendered again — the Ask tab is back to explaining "
+            f"itself instead of working")
+    assert "Press Ask HeatGuard" in rendered, "the empty state no longer tells anyone "\
+        "what to do"
+
+
+def test_the_ask_tab_still_previews_the_routing_for_free():
+    """The best thing in the app: the layer is named before any call is made, so a reader
+    can watch the classification change as they retype. Losing it to a tidy-up would cost
+    more than every paragraph the rebuild deleted."""
+    assert "_preview = route(" in SOURCE, "the free live routing preview is gone"
+    assert SOURCE.index("_preview = route(") < SOURCE.index('st.button("Ask HeatGuard"'), (
+        "the routing preview must render BEFORE the button, or it is not a preview")

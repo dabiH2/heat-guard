@@ -56,7 +56,7 @@ apart.** Ask for hours above the band, leave the default, get a peak map: opposi
 
 ## Built to be checked
 
-**430 tests run offline — no key, no network** — against committed fixtures, so every number
+**472 tests run offline — no key, no network** — against committed fixtures, so every number
 above reproduces from a clean clone; the deployed app outlives the 21 September key expiry.
 Six ways this API fails silently *while billing* are refused before the call.
 

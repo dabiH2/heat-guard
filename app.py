@@ -48,9 +48,14 @@ if os.environ.get("HEATGUARD_ONLINE", "").strip().lower() not in ("1", "true", "
 
 from heatguard import tools                                    # noqa: E402
 from heatguard import agent                                    # noqa: E402
+from heatguard import ask                                      # noqa: E402
 from heatguard.agent import answer, load_sites                 # noqa: E402
 from heatguard import charts                                  # noqa: E402
-from heatguard.bands import action_for, band_for, load_thresholds  # noqa: E402
+# `band_for` / `action_for` are no longer imported here. The Ask tab used to key its
+# heading on `action_for(peak_f)` and disagree with the morning sheet about the same crew
+# on the same day; band and action selection now happens in `heatguard.ask`, which is pure
+# and testable, and this file only renders what it returns.
+from heatguard.bands import load_thresholds                    # noqa: E402
 from heatguard import evidence                                 # noqa: E402
 from heatguard import theme                                    # noqa: E402
 from heatguard.router import AnalyticType, RefusalReason, route       # noqa: E402
@@ -89,28 +94,18 @@ MANDATED_REST_FRACTION = 0.125
 # The demo day and the sites whose data is committed to the cache. Anything outside this
 # set cannot be answered offline, so the UI does not offer it.
 DEMO_DATE = "2025-07-15"
-THRESHOLD_CHOICES = {
-    "91 °F — OSHA moderate risk (work/rest cycles begin)": 91.0,
-    "103 °F — OSHA high risk (50:10 cycles, buddy system)": 103.0,
-}
 
-# One canonical phrasing per row of the decision table. These are STARTING POINTS, not a
-# fixed menu: the router reads the words, so editing the text can change the layer. That
-# is the point, and the live preview underneath makes it visible.
-EXAMPLE_QUESTIONS = {
-    "snapshot": ("Snapshot — what is it right now?",
-                 "Is it safe at this site right now?"),
-    "intraday": ("Intraday — when do we start and stop?",
-                 "When should we start and stop today?"),
-    "forecast": ("Forecast — will we cross soon?",
-                 "Will we cross the threshold in the next few hours?"),
-    "duration": ("Duration — how long above the band?",
-                 "How many hours were they above the danger threshold?"),
-    "persistence": ("Chronic — is this site always like this?",
-                    "Is this site chronically dangerous?"),
-    "comparison": ("Comparison — which site is worst?",
-                   "Which of our sites is worst today?"),
+# Reported at both, because the number changes materially between them. The labels are
+# deliberately short: this is a control in a working form, not a place to teach OSHA.
+THRESHOLD_CHOICES = {
+    "91 °F · OSHA moderate": 91.0,
+    "103 °F · OSHA high": 103.0,
 }
+#: 103 °F. It is the threshold `data/fixtures/t8/shift_exposure_*.json` was measured at,
+#: so it is the only one where hours INSIDE a crew's shift are a measurement rather than
+#: a pigeonhole floor — and a default that lands on the weaker of two available answers
+#: teaches the tool is weaker than it is.
+DEFAULT_THRESHOLD_INDEX = 1
 
 
 @st.cache_data
@@ -812,9 +807,35 @@ with today_tab:
             "gradient dominates street-level surface differences. The thesis survives "
             "that; the site-selection hypothesis does not."
         )
-def _render_answer(site: dict, site_id: str, date: str, question: str,
-                   threshold_f: float) -> None:
-    """Route the question, run the plan, and render the outcome.
+def _render_mechanism(choice, result: dict | None, *, ranked_over: int = 0) -> None:
+    """The audit trail for the answer directly above it. Collapsed, structured, adjacent.
+
+    ADJACENT, not filed elsewhere. This used to be a run of headings, an info box, a
+    four-column parameter row and two separate expanders spread down the page, which meant
+    a reader checking one number had to scroll past three paragraphs to find out how it
+    was produced. It is now one expander whose label already names the layer, holding a
+    definition list — every row a fact about THIS answer.
+
+    A table rather than prose on purpose: the brief is that the mechanism be auditable,
+    and an auditor reads rows, not paragraphs.
+    """
+    rows = ask.mechanism_rows(choice, result, ranked_over=ranked_over)
+    if choice.refused:
+        read_as = (choice.question_type.value if choice.question_type
+                   else "not recognised")
+        label = f"⚙  Mechanism · {read_as} → refused, no call made"
+    else:
+        label = (f"⚙  Mechanism · {choice.question_type.value} → "
+                 f"analytic_type={choice.analytic_type.value}, "
+                 f"filter_type={choice.filter_type}")
+    with st.expander(label):
+        st.table({"Step": [name for name, _ in rows],
+                  "This answer": [value for _, value in rows]})
+
+
+def _render_answer(facts: list, date: str, question: str,
+                   threshold_f: float, preview) -> None:
+    """Run the plan the router already chose, and render the outcome.
 
     ⚠️ EVERY EARLY EXIT HERE IS `return`, NEVER `st.stop()`.
 
@@ -826,10 +847,28 @@ def _render_answer(site: dict, site_id: str, date: str, question: str,
 
     That shipped, and it meant a judge opening the app cold saw two empty tabs, including
     the one carrying the strongest evidence for the 35% criterion. Use `return`.
+
+    ONE CALL, WHATEVER THE CREW COUNT. The crew the answer is ABOUT — the one the ranking
+    puts first — goes through `agent.answer()`, so the figures in the headline are what
+    the chosen layer actually returned and the decision lands in `data/decisions.jsonl`.
+    Every other selected crew is read from the committed roll-ups, because ranking twelve
+    crews must not cost twenty-four calls. `tests/test_app_surface.py` pins the roll-ups
+    against the live path so the two cannot drift.
     """
+    if not facts:
+        st.info("**Select at least one crew above.** A crew is a site: the roster carries "
+                "its headcount and shift window.", icon="👷")
+        return
+
+    ordered = ask.rank(facts, preview.question_type)
+    lead = ordered[0]
+
+    # Refusals go through `answer()` too. It makes no call when the router refuses, and
+    # the refusal has to reach `data/decisions.jsonl` — a log that records only answers
+    # cannot show what was declined, which is the half that matters in an audit.
     with st.spinner("Routing, then fetching…"):
         try:
-            out = answer(question, site_id=site_id, date=date,
+            out = answer(question, site_id=lead.site_id, date=date,
                          threshold_f=threshold_f, narrate=False)
         except tools.CacheMiss as exc:
             st.error(f"**Not in the cached set.** {exc}", icon="📦")
@@ -847,232 +886,195 @@ def _render_answer(site: dict, site_id: str, date: str, question: str,
     # it. A missing fixture is a boring, expected condition; it must render as one.
     if out.get("error"):
         st.error(f"**No data behind this question.** {out['error']}", icon="📦")
-        st.caption(
-            "The routing decision above still stands. It was made before the call, from "
-            "the wording alone, and cost nothing — which is the point of making it first."
-        )
+        _render_mechanism(choice, result)
         return
 
-    # ---------------------------------------------------------- refusal path
+    # ------------------------------------------------------------- refusal path
+    # Rendered generically, from the LayerChoice alone. `forecast` and `intraday` refuse
+    # for reasons router.py measured, and nothing here special-cases either of them: a
+    # refusal panel with a branch per reason is a panel that will be wrong about the next
+    # reason somebody adds.
     if choice.refused:
-        st.error(f"**Refused — {choice.refusal.value.replace('_', ' ')}**", icon="🚫")
-        st.markdown(choice.refusal_message)
-        st.success(
-            "**No API call was made, so no credit was spent.** Three FortyGuard "
-            "failure modes return `Completed` with a plausible-looking empty result "
-            "*and charge for it* — a non-US area, a date outside real coverage, and "
-            "tomorrow's date. Refusing here is a cost control as much as a "
-            "correctness one.",
-            icon="✅",
-        )
-        return
-
-    if result.get("empty"):
-        st.warning(
-            "**The API returned no tiles for this area and date.** That is a "
-            "coverage gap, not a safe reading — it is deliberately *not* reported "
-            "as an all-clear.", icon="⚠️")
-        return
-
-    # ------------------------------------------------------------ the answer
-    peak = result["peak"]
-    band = band_for(peak["max_f"])
-    action = action_for(peak["max_f"])
-
-    st.subheader(f"{site['name']} · {date}")
-
-    # TWO numbers, not three, and they are the whole argument side by side: the one a
-    # forecast gives you, and the one that changes the decision. The NWS band used to sit
-    # here as a third metric and now renders as a coloured chip under the action, where
-    # the colour is next to the call it qualifies. A third tile diluted the contrast and
-    # said the band twice.
-    #
-    # Column count follows what actually exists. A snapshot question has no duration, and
-    # a fixed three-column row left a visible empty tile that read as a failed render.
-    tiles = [("Peak heat index", f"{peak['max_f']:.0f} °F",
-              "The number a forecast would report.")]
-    if result.get("hours") is not None:
-        tiles.append((f"Hours above {threshold_f:.0f} °F", f"{result['hours']:.1f} h",
-                      "What the duration layer measures. This is the one that changes "
-                      "the decision."))
-    cols = st.columns(len(tiles))
-    for col, (label, value, tip) in zip(cols, tiles):
-        col.metric(label, value, help=tip)
-
-    # The heading comes from the shift-scoped rule that produced the call sheet, not from
-    # action_for(peak_f). Ten of twelve sites peak within 1.9 °F of one another, so a
-    # peak-keyed ladder answers 50:10 for almost all of them — and tab 1, which keys on
-    # hours inside the shift, would disagree with this tab about the same crew on the same
-    # day in the same words. `action` is still shown below as the OSHA chip, because it is
-    # the band the peak genuinely falls in; it is just not the call.
-    _day = shift_exposure(date) or {"rows": []}
-    _shift_row = next((r for r in _day["rows"] if r["site_id"] == site_id), None)
-    _an = day_analysis(date) or {"rows": []}
-    _an_row = next((r for r in _an["rows"] if r["site_id"] == site_id), None)
-    if _shift_row is not None:
-        _call_id, _call_text = _call_for(_shift_row, _an_row)
-        st.markdown(f"### Today's call — {_call_text}")
+        read_as = (f"Read as *{choice.question_type.value}*" if choice.question_type
+                   else "Not recognised as any of the six question types")
+        # Same shape as an answer — headline, one line, mechanism — because a refusal IS
+        # the answer here, not an error state. It gets the same prominence a number would.
+        st.markdown(f"### Refused — {choice.refusal.value.replace('_', ' ')}")
+        st.error(f"{read_as}. No call was made, so no credit was spent.", icon="🚫")
         st.caption(
-            f"From the hours this crew was above {_day.get('threshold_f_heat_index', 103):.0f}"
-            f" °F *inside its own shift window* — the same rule, and the same answer, as "
-            f"the morning call sheet. Not from the day's peak."
+            "Answerable here: what a site reached (snapshot), how long it stayed above "
+            "the threshold (duration), and which crew is worst (comparison). The "
+            "measurement behind this refusal is in the mechanism below."
         )
-    else:
-        st.markdown(f"### Action — {action.action.replace('_', ' ')}")
-    # Colour is the fastest channel for severity, so it is spent here and only here: the
-    # band the forecast would report, and the OSHA action that is actually being called
-    # for. Chips rather than st.metric because metric cannot render HTML, and because the
-    # severity belongs next to the decision it qualifies, not stacked with two numbers.
-    st.markdown(
-        theme.band_chip(band.id, f"NWS {band.id.replace('_', ' ')}")
-        + "&nbsp;&nbsp;"
-        + theme.band_chip(action.id, f"OSHA {action.id.replace('_', ' ')} risk"),
-        unsafe_allow_html=True,
-    )
-    st.markdown(action.label)
+        _render_mechanism(choice, result)
+        return
 
-    # ----------------------------------------------- the routing decision itself
-    st.divider()
-    st.markdown("#### The layer, and why")
-    st.info(choice.rationale, icon="🧭")
+    # ---------------------------------------------------------------- the answer
+    # The SHAPE comes from the routed layer, not from a fixed template. A snapshot is one
+    # number, a duration is two, and a comparison is a ranking — see src/heatguard/ask.py,
+    # which is pure so the three shapes can be tested without a browser.
+    lead = ask.with_measured(lead, result)
+    shaped = ask.build(choice.question_type, [lead] + list(ordered[1:]),
+                       threshold_f=threshold_f)
 
-    detail = st.columns(4)
-    detail[0].markdown(f"**Endpoint**\n\n`{choice.endpoint}`")
-    detail[1].markdown(f"**filter_type**\n\n`{choice.filter_type}`")
-    detail[2].markdown(
-        f"**analytic_type**\n\n`{choice.analytic_type.value if choice.analytic_type else '—'}`")
-    detail[3].markdown(f"**granularity**\n\n`{choice.granularity} m`")
+    st.markdown(f"### {shaped.headline}")
 
-    if choice.escalated_from is not None:
-        st.warning(
-            f"The wording carried a duration marker, so this was read as a duration "
-            f"question rather than a *{choice.escalated_from.value}* one. The marker "
-            f"list overrides the classifier deliberately — being wrong toward more "
-            f"data costs a credit, being wrong toward less costs a wrong call.",
-            icon="↗️")
+    chips = []
+    if shaped.band_id:
+        chips.append(theme.band_chip(
+            shaped.band_id, f"NWS {shaped.band_id.replace('_', ' ')}"))
+    if shaped.action_id:
+        chips.append(theme.band_chip(
+            shaped.action_id, f"OSHA {shaped.action_id.replace('_', ' ')} risk"))
+    # Colour is the fastest channel for severity and it is spent here, next to the call
+    # it qualifies. Chips rather than a metric tile because `st.metric` cannot render
+    # HTML, and because a severity stacked with two numbers reads as a third number.
+    if shaped.call_text:
+        st.markdown(
+            f"**Call — {shaped.call_text}**&nbsp;&nbsp;&nbsp;"
+            + "&nbsp;&nbsp;".join(chips),
+            unsafe_allow_html=True)
 
-    with st.expander("What a snapshot would have said instead"):
-        st.markdown(choice.wrong_answer_if_snapshot)
+    if shaped.metrics:
+        cols = st.columns(len(shaped.metrics))
+        for col, metric in zip(cols, shaped.metrics):
+            col.metric(metric.label, metric.value, help=metric.help)
 
-    if result.get("threshold_c_air") is not None:
-        with st.expander("The unit conversion behind that threshold"):
-            st.markdown(
-                f"OSHA bands are **heat index**. `exceedance` thresholds **air "
-                f"temperature**. At this site's measured "
-                f"**{result['humidity_pct']:.0f}%** humidity:\n\n"
-                f"- OSHA threshold: **{result['threshold_f_heat_index']:.0f} °F heat index**\n"
-                f"- Equivalent air temperature: **{result['threshold_f_air']:.0f} °F**"
-                f" = **{result['threshold_c_air']:.2f} °C** ← what is sent\n\n"
-                f"In dry Phoenix air the equivalent runs *above* the OSHA number; "
-                f"under monsoon humidity it runs *below*. Same threshold, different "
-                f"air temperature, depending on the day."
-            )
+    if shaped.rows:
+        st.dataframe(list(shaped.rows), use_container_width=True, hide_index=True)
 
-    st.caption(f"Logged to `data/decisions.jsonl` · "
-               f"calls made: {', '.join(result.get('calls', [])) or 'none'}")
+    st.caption(" ".join(part for part in (shaped.lead, shaped.note) if part))
+
+    # ------------------------------------------------------------ the mechanism
+    _render_mechanism(choice, result, ranked_over=len(ordered))
 
 
+def _use_example(text: str) -> None:
+    """Fill the question box from an example chip.
+
+    An `on_click` callback rather than a plain `if st.button(...)`, and that is not a
+    style preference. Streamlit refuses to let session state for a widget key be written
+    after that widget has been instantiated in the same run, so a chip placed BELOW the
+    box — where a reader expects suggestions — could not set it any other way. Callbacks
+    run before the rerun, so the assignment is legal and the chips can sit where they
+    belong.
+    """
+    st.session_state["ask_question"] = text
 
 
 # ========================================================================== decision
+#
+# THE WORKING SURFACE. Input band across the top, answer beneath it, mechanism collapsed
+# under the answer — and nothing else at first glance.
+#
+# What this tab used to be: a six-row preset selectbox that made free text look like a
+# menu, a single-site picker that could not answer the comparison question it offered, and
+# a three-paragraph "What this shows" panel occupying the entire answer column until
+# somebody pressed a button. The panel explained the product to a reader who had not used
+# it yet, which is a landing page, not a tool.
+#
+# Three decisions drive the rebuild:
+#
+#   1. FREE TEXT IN, ROUTING AS AUDIT OUT. The preset menu is gone. The user types the
+#      question; the router classifies it and the classification is rendered as auditable
+#      output beside the answer, not as a control the user operates.
+#   2. THE ANSWER FOLLOWS THE QUESTION. Shape and headline come from the routed layer, and
+#      where that disagrees with the morning call sheet for the same crew, one line says
+#      why. That disagreement is the entire thesis; hiding it would be hiding the product.
+#   3. A CREW IS A SITE. `crew_size`, `shift_start`, `shift_end` and `night_shift` are
+#      columns on config/sites.csv, so the control picks CREWS, and picks more than one —
+#      being allowed only one site while being offered a comparison question was not sound.
 
 with decision_tab:
-    left, right = st.columns([1, 2])
+    roster = sites()
+    available = cached_dates() or [DEMO_DATE]
 
-    with left:
-        st.subheader("Ask")
-        roster = sites()
-        site_id = st.selectbox(
-            "Site",
-            options=list(roster),
-            format_func=lambda s: f"{roster[s]['name']}  ·  {roster[s]['archetype']}",
-        )
-        site = roster[site_id]
+    # ------------------------------------------------------------------- input
+    # One band, three controls, no prose between them. Who, when, and against what — the
+    # three things that scope every answer below, and nothing that is not one of them.
+    crew_col, date_col, threshold_col = st.columns([5, 2, 3])
 
-        shift = f"{site['shift_start']}–{site['shift_end']}"
-        night = site["night_shift"] == "True"
-        st.caption(
-            f"**{site['crew_size']} crew** · shift {shift}"
-            f"{' 🌙 **night**' if night else ''} · predicted `{site['expected_profile']}`"
-        )
+    _default_crews = [c for c in ask.DEFAULT_CREW_IDS if c in roster] or list(roster)[:3]
+    crew_ids = crew_col.multiselect(
+        "Crews",
+        options=list(roster),
+        default=_default_crews,
+        format_func=lambda s: ask.crew_option(roster[s]),
+        help="A crew is a site. Headcount and shift window are how a supervisor names "
+             "one. Pick two or more and the answer becomes a ranking.",
+    )
+    date = date_col.selectbox(
+        "Date", options=available,
+        index=available.index(DEMO_DATE) if DEMO_DATE in available else 0)
+    threshold_label = threshold_col.radio(
+        "Threshold", list(THRESHOLD_CHOICES), index=DEFAULT_THRESHOLD_INDEX,
+        horizontal=True)
+    threshold_f = THRESHOLD_CHOICES[threshold_label]
 
-        available = cached_dates() or [DEMO_DATE]
-        date = st.selectbox("Date", options=available,
-                            index=available.index(DEMO_DATE)
-                            if DEMO_DATE in available else 0)
+    # The box is seeded once so a cold visit answers something real on the first press,
+    # and the chips below are examples rather than a mode selector — the router reads the
+    # words, so editing one of them can change the layer, which is the point.
+    st.session_state.setdefault("ask_question", ask.DEFAULT_QUESTION)
+    question = st.text_input(
+        "Question", key="ask_question", placeholder=ask.QUESTION_PLACEHOLDER)
 
-        # Questions are NOT a fixed list — the router pattern-matches free text against
-        # marker phrases. But an empty box invites arbitrary input and shows nothing back,
-        # so the six rows are offered as starting points and the classification is
-        # previewed live. Routing costs nothing and touches no network, so there is no
-        # reason to make anyone press a button to find out which layer they will get.
-        preset = st.selectbox(
-            "Start from one of the six question types",
-            options=list(EXAMPLE_QUESTIONS),
-            format_func=lambda k: EXAMPLE_QUESTIONS[k][0],
-            help="One row of the decision table each. Edit the text afterwards — the "
-                 "router reads the words, not the menu.",
-        )
-        question = st.text_input(
-            "…or ask in your own words",
-            value=EXAMPLE_QUESTIONS[preset][1],
-            key=f"q_{preset}",
-            help="The wording decides the analysis layer. Try 'is it safe right now?' "
-                 "against 'how long were they above the band?' — same site, same day, "
-                 "different layer, different answer.",
-        )
+    _chip_cols = st.columns(len(ask.EXAMPLES))
+    for _col, (_label, _text) in zip(_chip_cols, ask.EXAMPLES):
+        _col.button(_label, key=f"eg_{_label}", on_click=_use_example, args=(_text,),
+                    use_container_width=True)
 
-        # Live preview. This is the whole IP, made visible before any call is made.
-        _preview = route(question, lat=float(site["lat"]), lon=float(site["lon"]),
-                         date=date)
-        if _preview.refused and _preview.question_type is None:
-            # The unrecognised refusal has no question_type BY CONSTRUCTION — that is the
-            # whole point of it, and dereferencing .value here would crash the script and
-            # blank every tab. Same class of bug as the two already fixed today.
-            st.warning(
-                "**Not recognised as any of the six question types**, so no layer would "
-                "be picked and no call would be made. Snapshot is no longer the "
-                "fall-through — guessing narrow is how a one-hour reading gets passed "
-                "off as a duration answer.", icon="🚫")
-        elif _preview.refused:
-            st.warning(
-                f"Reads as **{_preview.question_type.value}** → would be **refused** "
-                f"(`{_preview.refusal.value}`). No call would be made.", icon="🚫")
-        else:
-            _esc = (f" · escalated from *{_preview.escalated_from.value}*"
-                    if _preview.escalated_from else "")
-            st.info(
-                f"Reads as **{_preview.question_type.value}** → "
+    # Live routing preview — the whole IP, visible before anything is fetched and costing
+    # nothing. Kept from the old tab because it is the best thing in it; compressed to one
+    # line because it is a status readout, not an essay.
+    _anchor = roster[crew_ids[0]] if crew_ids else next(iter(roster.values()))
+    _preview = route(question, lat=float(_anchor["lat"]), lon=float(_anchor["lon"]),
+                     date=date)
+    if _preview.refused and _preview.question_type is None:
+        # The unrecognised refusal has no question_type BY CONSTRUCTION — that is the
+        # whole point of it, and dereferencing .value here would crash the script and
+        # blank every tab. Same class of bug as the two already fixed today.
+        st.warning("**Not recognised as any of the six question types** → no layer, no "
+                   "call. Snapshot is not the fall-through: guessing narrow is how a "
+                   "one-hour reading gets passed off as a duration answer.", icon="🚫")
+    elif _preview.refused:
+        st.warning(f"Reads as **{_preview.question_type.value}** → **refused** "
+                   f"(`{_preview.refusal.value}`). No call would be made.", icon="🚫")
+    else:
+        _esc = (f" · escalated from *{_preview.escalated_from.value}*"
+                if _preview.escalated_from else "")
+        st.info(f"Reads as **{_preview.question_type.value}** → "
                 f"`filter_type={_preview.filter_type}`, "
-                f"`analytic_type={_preview.analytic_type.value}`{_esc}",
-                icon="🧭")
+                f"`analytic_type={_preview.analytic_type.value}`{_esc}", icon="🧭")
 
-        threshold_label = st.radio("Threshold", list(THRESHOLD_CHOICES),
-                                   help="Reported at both, because the number changes "
-                                        "materially between them.")
-        threshold_f = THRESHOLD_CHOICES[threshold_label]
+    go = st.button("Ask HeatGuard", type="primary")
 
-        go = st.button("Ask HeatGuard", type="primary", use_container_width=True)
-        st.caption("Routing already happened, above, for free. The button only fetches "
-                   "the data the chosen layer needs.")
+    st.divider()
 
-    with right:
-        if go:
-            _render_answer(site, site_id, date, question, threshold_f)
-        else:
-            st.subheader("What this shows")
-            st.markdown(
-                "The router classifies the question against a decision table **before "
-                "any API call is made**, picks the analysis layer, states why, and "
-                "refuses when the data cannot answer it.\n\n"
-                "`tcm` and `exceedance` are the *same endpoint*, the *same* "
-                "`filter_type`, the *same* area — **one optional string apart**. Ask a "
-                "duration question, let the default stand, and you get a "
-                "well-formatted map of peak temperature with no error and no hint the "
-                "question went unanswered."
-            )
+    # ------------------------------------------------------------------ output
+    #
+    # The scope line. Not prose — it is the four facts that decide what the answer below
+    # is ABOUT, restated where the answer is, so a screenshot of the result carries its
+    # own scope and nobody has to scroll back to the controls to know what they are
+    # looking at. Every figure in it is measured from config/sites.csv and the committed
+    # fixtures, so none of them carries a citation.
+    _headcount = sum(int(roster[c]["crew_size"]) for c in crew_ids)
+    st.markdown(
+        f"**{len(crew_ids)} crew{'' if len(crew_ids) == 1 else 's'} · {_headcount} "
+        f"workers · {date} · threshold {threshold_f:.0f} °F heat index**")
 
-
+    if go:
+        _render_answer(
+            ask.crew_facts(crew_ids, roster=roster, analysis=day_analysis(date),
+                           shift_data=shift_exposure(date), threshold_f=threshold_f),
+            date, question, threshold_f, _preview)
+    else:
+        # The empty state tells the reader what to do, not what to admire. The three
+        # paragraphs that used to live here explained the routing argument to somebody
+        # who had not yet asked anything; that argument belongs on "How it decides", and
+        # the routing readout above already demonstrates it for free.
+        st.info("**Press Ask HeatGuard to run the layer named above.** One crew answers "
+                "as a card, two or more as a ranking, worst first. Routing has already "
+                "happened — the button only fetches what that layer needs.", icon="⬆️")
 
 
 # ============================================================================== trap
@@ -1196,8 +1198,10 @@ with method_tab:
         "serves a committed fixture cache. It needs no API key, so there is nothing to "
         "leak and nothing that breaks when the FortyGuard key expires — and **clicking "
         "around cannot spend a credit**. Every path you can click here was verified "
-        "offline: 12 sites × 6 question shapes × 2 thresholds, 36 answered, 12 refused "
-        "by design, **zero cache misses**.\n\n"
+        "offline: 12 sites × 6 question shapes × 2 thresholds = **144 paths — 72 "
+        "answered, 72 refused by design, zero errors, zero cache misses**. Half of them "
+        "refuse because three of the six question shapes cannot be answered honestly "
+        "from this API, and saying so is the product.\n\n"
         "**The build is sound.** Over 400 tests, all offline — no network, no credits, no "
         "key. Layer selection is deterministic, and its post-conditions *crash* rather "
         "than emit a layer already known to be wrong."

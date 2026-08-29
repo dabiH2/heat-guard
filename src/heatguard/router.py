@@ -334,10 +334,12 @@ DECISION_TABLE: dict[QuestionType, Plan] = {
         direction=None,
         needs_threshold=False,
         rationale=(
-            "Whole day, keyed on when each tile peaks (filter_type=3, "
-            "analytic_type=time_of_measure). Deciding when to start and stop needs the "
-            "SHAPE of the day, not its height — the hour the site peaks is what moves "
-            "the shift, not the number it peaks at."
+            "NEVER EMITTED — refused as WRONG_LAYER_WOULD_MISLEAD. The row is kept "
+            "because a refusal has to be able to name the layer it declined. Whole day "
+            "keyed on when each tile peaks (filter_type=3, "
+            "analytic_type=time_of_measure) gives the hour of the maximum and nothing "
+            "else: no start time, no stop time, no hourly profile. Deciding when to "
+            "start and stop needs the SHAPE of the day, and this layer does not carry it."
         ),
         wrong_answer_if_snapshot=(
             "A single hour gives one number and no schedule. It cannot tell you which "
@@ -353,13 +355,17 @@ DECISION_TABLE: dict[QuestionType, Plan] = {
         direction=None,
         needs_threshold=False,
         rationale=(
-            "Forward hour range inside the +12 h horizon (filter_type=2, "
-            "analytic_type=tcm). The heatmap is the only layer that forecasts at all, "
-            "and only 12 hours out."
+            "NEVER EMITTED — refused as WRONG_LAYER_WOULD_MISLEAD. The row is kept "
+            "because a refusal has to be able to name the layer it declined. A forward "
+            "hour range (filter_type=2, analytic_type=tcm) reads only hours that have "
+            "already been measured, and the '+12 h horizon' this row used to claim was "
+            "measured wrong in T4: the API accepts tomorrow and returns one flat value "
+            "with no diurnal structure. There is no forecast layer on this API."
         ),
         wrong_answer_if_snapshot=(
             "A historical average hides what today is doing. A single past hour cannot "
-            "answer a question about the hours ahead."
+            "answer a question about the hours ahead — which is why this row is refused "
+            "rather than emitted."
         ),
     ),
 
@@ -601,6 +607,48 @@ def check_refusals(
             "You asked how long the site was above the threshold, but scoped it to a "
             "single hour. Duration cannot be measured in an instant. Ask about the day, "
             "or ask what the temperature was at that hour.",
+        )
+
+    # MEASURED DEFECT, fixed 2026-08-29. Routed all six question types against PHX-SKY on
+    # 2025-07-15 at 103 °F. FORECAST returned filter_type=2 + tcm, peak 104.315 °F, no
+    # error: a question about the FUTURE answered with a PAST PEAK. That is the exact
+    # silent-wrong-answer failure this project exists to catch, reproduced inside
+    # HeatGuard itself. It is refused here rather than in the classifier because the
+    # question is well formed and correctly understood — what is missing is a layer.
+    #
+    # NOT BEYOND_FORECAST. That reason means the requested DATE is out of range, which is
+    # a different fact and would be a lie about a perfectly valid historical date.
+    if question_type is QuestionType.FORECAST:
+        return (
+            RefusalReason.WRONG_LAYER_WOULD_MISLEAD,
+            "You asked what the heat will do in the hours ahead. The only layer that "
+            "fits that scope is filter_type=2 with analytic_type=tcm, and every hour it "
+            "can read has already been measured — so what came back would be a PAST "
+            "PEAK handed over as a forecast: well formed, confident, and with no error "
+            "raised anywhere. There is nothing forward to fall back on either. Measured: "
+            "tomorrow is accepted, billed 4,220 credits, and returns ONE FLAT VALUE for "
+            "the whole day — 34.34 °C with minimum equal to maximum, against 33.7-41.9 °C "
+            "for today (`docs/api-notes.md`) — so this API carries no diurnal structure "
+            "to forecast from at all. That is a wrong answer, not a partial one, so I am "
+            "not making the call. Ask how long the site was above the threshold today, "
+            "or what it reads right now.",
+        )
+
+    # Same probe, same date. INTRADAY routed to filter_type=3 + time_of_measure and came
+    # back with peak 104.315 °F and hours None — a scalar in answer to a question about
+    # the clock. The layer names a time of day and the result carries none.
+    if question_type is QuestionType.INTRADAY:
+        return (
+            RefusalReason.WRONG_LAYER_WOULD_MISLEAD,
+            "You asked when to start and stop. The only layer that fits that scope is "
+            "filter_type=3 with analytic_type=time_of_measure, which returns the "
+            "hour-of-day each tile peaks and nothing else — no start time, no stop time, "
+            "no hourly profile to read a window off. Measured on PHX-SKY for 2025-07-15, "
+            "what comes back is a peak of 104.3 °F and no time of day at all. A shift "
+            "cannot be planned from a scalar, so answering would be a confident reply to "
+            "a different question rather than a partial reply to this one. Ask how long "
+            "the site was above the threshold across the day, and build the shift around "
+            "the hours that come back.",
         )
 
     return None
