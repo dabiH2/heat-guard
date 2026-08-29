@@ -462,15 +462,23 @@ def _render_answer(site: dict, site_id: str, date: str, question: str,
 
     st.subheader(f"{site['name']} · {date}")
 
-    cols = st.columns(3)
-    cols[0].metric("Peak heat index", f"{peak['max_f']:.0f} °F",
-                   help="The number a forecast would report.")
+    # TWO numbers, not three, and they are the whole argument side by side: the one a
+    # forecast gives you, and the one that changes the decision. The NWS band used to sit
+    # here as a third metric and now renders as a coloured chip under the action, where
+    # the colour is next to the call it qualifies. A third tile diluted the contrast and
+    # said the band twice.
+    #
+    # Column count follows what actually exists. A snapshot question has no duration, and
+    # a fixed three-column row left a visible empty tile that read as a failed render.
+    tiles = [("Peak heat index", f"{peak['max_f']:.0f} °F",
+              "The number a forecast would report.")]
     if result.get("hours") is not None:
-        cols[1].metric(f"Hours above {threshold_f:.0f} °F",
-                       f"{result['hours']:.1f} h",
-                       help="What the duration layer measures. This is the one that "
-                            "changes the decision.")
-    cols[2].metric("NWS band", band.id.replace("_", " ").title())
+        tiles.append((f"Hours above {threshold_f:.0f} °F", f"{result['hours']:.1f} h",
+                      "What the duration layer measures. This is the one that changes "
+                      "the decision."))
+    cols = st.columns(len(tiles))
+    for col, (label, value, tip) in zip(cols, tiles):
+        col.metric(label, value, help=tip)
 
     st.markdown(f"### Action — {action.action.replace('_', ' ')}")
     # Colour is the fastest channel for severity, so it is spent here and only here: the

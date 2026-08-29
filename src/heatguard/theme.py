@@ -103,13 +103,26 @@ def _mix_with_white(hex_colour: str, weight: float) -> str:
 
 
 def band_chip(band_id: str, label: str) -> str:
-    """An inline severity chip. Colour carries the meaning, text carries the detail."""
+    """An inline severity chip. Colour carries the meaning, text carries the detail.
+
+    EVERY colour is written inline, including the text colour and the dot. The first
+    version set one CSS custom property inline and read it back from the stylesheet with
+    `color: var(--chip)`. Measured on the deployed app: the tint and border arrived, and
+    the TEXT came back rgb(18, 24, 31) -- inherited ink, not the band colour. Streamlit
+    sanitises the HTML it accepts under `unsafe_allow_html`, and the custom property does
+    not survive it, so `var(--chip)` resolved to nothing and fell through to inheritance.
+
+    The chip still looked plausible, which is the problem: a red-tinted pill with
+    black text on a DANGER reading is a signal quietly not sent. Nothing here may depend
+    on a declaration that a sanitiser is free to drop.
+    """
     colour = colour_for_band(band_id)
+    tint = _mix_with_white(colour, 0.11)
+    edge = _mix_with_white(colour, 0.34)
     return (
-        f'<span class="hg-chip" style="--chip:{colour};'
-        f'background:{_mix_with_white(colour, 0.11)};'
-        f'border-color:{_mix_with_white(colour, 0.34)}">'
-        f'<span class="hg-chip-dot"></span>{label}</span>'
+        f'<span class="hg-chip" style="color:{colour};background:{tint};'
+        f'border:1px solid {edge}">'
+        f'<span class="hg-chip-dot" style="background:{colour}"></span>{label}</span>'
     )
 
 
@@ -131,12 +144,40 @@ def heat_scale_legend() -> str:
 
 # ------------------------------------------------------------------------------- css
 #
-# Selector notes, because these break silently across Streamlit versions and a broken
-# selector looks identical to "the style did not load":
-#   * `data-testid` attributes are the stable contract; class names are not.
-#   * Written against Streamlit 1.62. Every rule is additive — if a selector stops
-#     matching, the app degrades to stock Streamlit rather than to a broken layout.
-#   * No `!important` except where Streamlit sets an inline style we must beat.
+# SELECTORS ARE VERIFIED LIVE, NOT GUESSED.
+#
+# The first version of this stylesheet targeted `[data-baseweb="tab-list"]`,
+# `[data-baseweb="tab"]` and `[data-baseweb="select"]`. It shipped, the tests passed, and
+# every one of those rules was dead: **Streamlit 1.62 removed BaseWeb entirely** --
+# `document.querySelectorAll('[data-baseweb]')` returns nothing on the deployed app. The
+# tab bar simply kept its stock appearance, which is indistinguishable from "the CSS did
+# not load", which is indistinguishable from "this is how I wanted it to look".
+#
+# Every id below was read out of the live DOM at https://heat-fortyguard.streamlit.app
+# on 2026-08-29 against Streamlit 1.62, and `tests/test_theme.py` refuses any selector
+# that is not in this set. Adding one means checking it in a browser first.
+#
+# Tabs in 1.62 are react-aria: a `[role="tablist"]` containing `[data-testid="stTab"]`
+# DIVs (not buttons) carrying `aria-selected`, plus a `.react-aria-SelectionIndicator`
+# element for the sliding underline, which this stylesheet hides.
+
+#: Read out of the deployed DOM on 2026-08-29, Streamlit 1.62. The test uses this as an
+#: allow-list, so an unverified selector fails rather than silently doing nothing.
+VERIFIED_TESTIDS = frozenset({
+    "stAlert", "stAlertContainer", "stAlertContentError", "stAlertContentInfo",
+    "stAlertContentSuccess", "stAlertContentWarning", "stApp", "stAppViewContainer",
+    "stBaseButton-primary", "stBaseButton-secondary", "stButton", "stCaptionContainer",
+    "stColumn", "stDataFrame", "stDownloadButton", "stElementContainer", "stExpander",
+    "stExpanderDetails", "stHeader", "stHeading", "stHorizontalBlock", "stLayoutWrapper",
+    "stMain", "stMainBlockContainer", "stMarkdown", "stMarkdownContainer", "stMetric",
+    "stMetricLabel", "stMetricValue", "stRadio", "stRadioGroup", "stRadioOption",
+    "stSelectbox", "stSlider", "stTab", "stTabPanel", "stTable", "stTabs", "stTextInput",
+    "stTextInputField", "stTextInputRootElement", "stTooltipIcon", "stVerticalBlock",
+    "stWidgetLabel",
+})
+#: `stAlertContentWarning` is the one id not observed directly -- no warning was on screen
+#: during the sweep. It is included on the symmetry of the other three alert contents, and
+#: the cost of being wrong is one untinted left border.
 
 _CSS = """
 <style>
@@ -159,7 +200,7 @@ _CSS = """
              Consolas, monospace;
 }
 
-html, body, [class*="css"], [data-testid="stAppViewContainer"] {
+[data-testid="stApp"], [data-testid="stAppViewContainer"] {
   font-family: var(--hg-sans);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
@@ -167,7 +208,7 @@ html, body, [class*="css"], [data-testid="stAppViewContainer"] {
 
 /* Streamlit's default top padding costs most of the first screenful, and the first
    screenful is the entire time-to-value budget. */
-.block-container, [data-testid="stMainBlockContainer"] {
+[data-testid="stMainBlockContainer"] {
   padding-top: 2.2rem;
   padding-bottom: 4rem;
   max-width: 1180px;
@@ -175,17 +216,23 @@ html, body, [class*="css"], [data-testid="stAppViewContainer"] {
 
 /* ------------------------------------------------------------------ type hierarchy */
 
-h1, [data-testid="stHeading"] h1 {
+[data-testid="stHeading"] h1 {
   font-size: 2.05rem;
   font-weight: 680;
   letter-spacing: -0.021em;
   color: var(--hg-ink);
   margin-bottom: 0.15rem;
 }
-h2 { font-size: 1.42rem; font-weight: 640; letter-spacing: -0.014em; color: var(--hg-ink); }
-h3 { font-size: 1.12rem; font-weight: 640; letter-spacing: -0.008em; color: var(--hg-ink); }
-h4 { font-size: 0.97rem; font-weight: 660; color: var(--hg-ink);
-     text-transform: none; margin-top: 1.5rem; }
+[data-testid="stHeading"] h2 {
+  font-size: 1.42rem; font-weight: 640; letter-spacing: -0.014em; color: var(--hg-ink);
+}
+[data-testid="stHeading"] h3 {
+  font-size: 1.12rem; font-weight: 640; letter-spacing: -0.008em; color: var(--hg-ink);
+}
+[data-testid="stMarkdownContainer"] h3 { font-size: 1.12rem; font-weight: 640; }
+[data-testid="stMarkdownContainer"] h4 {
+  font-size: 0.97rem; font-weight: 660; color: var(--hg-ink); margin-top: 1.5rem;
+}
 
 [data-testid="stMarkdownContainer"] p,
 [data-testid="stMarkdownContainer"] li {
@@ -200,9 +247,9 @@ h4 { font-size: 0.97rem; font-weight: 660; color: var(--hg-ink);
   line-height: 1.5;
 }
 
-/* Inline code is load-bearing here — filter_type=3, analytic_type=exceedance. It should
+/* Inline code is load-bearing here -- filter_type=3, analytic_type=exceedance. It should
    read as a precise machine value, not as decorated prose. */
-code, [data-testid="stMarkdownContainer"] code {
+[data-testid="stMarkdownContainer"] code {
   font-family: var(--hg-mono);
   font-size: 0.845em;
   background: var(--hg-panel-2);
@@ -213,17 +260,15 @@ code, [data-testid="stMarkdownContainer"] code {
   white-space: nowrap;
 }
 
-hr, [data-testid="stDivider"] hr {
-  border: none;
-  border-top: 1px solid var(--hg-border);
-  margin: 1.6rem 0 1.35rem;
-}
+hr { border: none; border-top: 1px solid var(--hg-border); margin: 1.6rem 0 1.35rem; }
 
 /* ------------------------------------------------------------------------- tabs */
-/* A segmented control. The stock underline is easy to miss, and "which tab am I on"
-   is the single most common orientation failure in a multi-tab Streamlit app. */
+/* A segmented control. 1.62 tabs are react-aria: [role="tablist"] wrapping
+   [data-testid="stTab"] DIVs with aria-selected, plus a sliding indicator element.
+   The stock underline is easy to miss, and "which tab am I on" is the most common
+   orientation failure in a multi-tab Streamlit app. */
 
-[data-testid="stTabs"] [data-baseweb="tab-list"] {
+[data-testid="stTabs"] [role="tablist"] {
   gap: 0.28rem;
   background: var(--hg-panel);
   border: 1px solid var(--hg-border);
@@ -233,28 +278,30 @@ hr, [data-testid="stDivider"] hr {
   overflow-x: auto;
   scrollbar-width: thin;
 }
-[data-testid="stTabs"] [data-baseweb="tab"] {
+[data-testid="stTab"] {
   height: auto;
   padding: 0.5rem 0.95rem;
   border-radius: 7px;
-  font-size: 0.9rem;
-  font-weight: 560;
   color: var(--hg-ink-soft);
   white-space: nowrap;
   transition: background 120ms ease, color 120ms ease;
 }
-[data-testid="stTabs"] [data-baseweb="tab"]:hover {
-  background: var(--hg-panel-2);
-  color: var(--hg-ink);
+[data-testid="stTab"] [data-testid="stMarkdownContainer"] p {
+  font-size: 0.9rem;
+  font-weight: 560;
+  color: inherit;
+  margin: 0;
 }
-[data-testid="stTabs"] [data-baseweb="tab"][aria-selected="true"] {
+[data-testid="stTab"]:hover { background: var(--hg-panel-2); color: var(--hg-ink); }
+[data-testid="stTab"][aria-selected="true"] {
   background: var(--hg-surface);
   color: var(--hg-accent-dark);
-  box-shadow: 0 1px 2px rgba(18, 24, 31, 0.10),
-              0 0 0 1px var(--hg-border-strong);
+  box-shadow: 0 1px 2px rgba(18, 24, 31, 0.10), 0 0 0 1px var(--hg-border-strong);
 }
-[data-testid="stTabs"] [data-baseweb="tab-highlight"],
-[data-testid="stTabs"] [data-baseweb="tab-border"] { display: none; }
+[data-testid="stTab"][aria-selected="true"] [data-testid="stMarkdownContainer"] p {
+  font-weight: 640;
+}
+.react-aria-SelectionIndicator { display: none; }
 
 /* ---------------------------------------------------------------------- metrics */
 /* Instrument panel, not infographic: bordered, aligned, unambiguous. */
@@ -285,70 +332,74 @@ hr, [data-testid="stDivider"] hr {
 
 /* --------------------------------------------------------------------- controls */
 
-.stButton > button, [data-testid="stBaseButton-primary"],
-[data-testid="stBaseButton-secondary"], [data-testid="stDownloadButton"] > button {
+[data-testid="stBaseButton-primary"],
+[data-testid="stBaseButton-secondary"],
+[data-testid="stDownloadButton"] button {
   border-radius: 7px;
   font-weight: 600;
   font-size: 0.9rem;
   padding: 0.52rem 1.05rem;
   transition: background 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
 }
-.stButton > button[kind="primary"], [data-testid="stBaseButton-primary"] {
+[data-testid="stBaseButton-primary"] {
   background: var(--hg-accent);
   border: 1px solid var(--hg-accent);
   color: #FFFFFF;
 }
-.stButton > button[kind="primary"]:hover, [data-testid="stBaseButton-primary"]:hover {
+[data-testid="stBaseButton-primary"]:hover {
   background: var(--hg-accent-dark);
   border-color: var(--hg-accent-dark);
 }
-.stButton > button[kind="secondary"], [data-testid="stBaseButton-secondary"],
-[data-testid="stDownloadButton"] > button {
+[data-testid="stBaseButton-secondary"], [data-testid="stDownloadButton"] button {
   background: var(--hg-surface);
   border: 1px solid var(--hg-border-strong);
   color: var(--hg-ink);
 }
-.stButton > button[kind="secondary"]:hover,
-[data-testid="stDownloadButton"] > button:hover {
+[data-testid="stBaseButton-secondary"]:hover,
+[data-testid="stDownloadButton"] button:hover {
   border-color: var(--hg-accent);
   color: var(--hg-accent-dark);
   background: var(--hg-accent-wash);
 }
 
-label, [data-testid="stWidgetLabel"] p {
+[data-testid="stWidgetLabel"] p {
   font-size: 0.845rem !important;
   font-weight: 600 !important;
   color: var(--hg-ink) !important;
 }
 
-[data-baseweb="select"] > div, [data-testid="stTextInput"] input {
+[data-testid="stSelectbox"] > div > div,
+[data-testid="stTextInputRootElement"] {
   border-radius: 7px;
   border-color: var(--hg-border-strong);
   font-size: 0.9rem;
 }
-[data-testid="stTextInput"] input:focus, [data-baseweb="select"] > div:focus-within {
+[data-testid="stTextInputRootElement"]:focus-within {
   border-color: var(--hg-accent) !important;
   box-shadow: 0 0 0 2px var(--hg-accent-wash) !important;
 }
+[data-testid="stRadioOption"] { font-size: 0.885rem; }
 
 /* ----------------------------------------------------------------------- alerts */
 /* A left rule instead of a full wash. Full-bleed tinted blocks read as decoration and,
    at this density, three stacked ones look like an error state. */
 
-[data-testid="stAlert"] {
+[data-testid="stAlertContainer"] {
   border-radius: 0 var(--hg-radius) var(--hg-radius) 0;
   border: 1px solid var(--hg-border);
   border-left-width: 3px;
   padding: 0.78rem 1rem;
-  font-size: 0.905rem;
 }
-[data-testid="stAlert"] p { font-size: 0.905rem; line-height: 1.58; }
+[data-testid="stAlert"] [data-testid="stMarkdownContainer"] p {
+  font-size: 0.905rem;
+  line-height: 1.58;
+}
 [data-testid="stAlertContentInfo"]    { border-left-color: var(--hg-accent); }
 [data-testid="stAlertContentSuccess"] { border-left-color: #2E7D5B; }
 [data-testid="stAlertContentWarning"] { border-left-color: #DD7327; }
 [data-testid="stAlertContentError"]   { border-left-color: #C6342C; }
 
-[data-testid="stExpander"] {
+[data-testid="stExpander"] details {
   border: 1px solid var(--hg-border);
   border-radius: var(--hg-radius);
   background: var(--hg-surface);
@@ -365,6 +416,9 @@ label, [data-testid="stWidgetLabel"] p {
 [data-testid="stDataFrame"] { overflow-x: auto; }
 
 /* ------------------------------------------------------ severity chips + legend */
+/* Colours arrive INLINE, per chip -- see band_chip(). Streamlit's HTML sanitiser drops
+   inline CSS custom properties, so anything read back with var() silently loses its
+   value. This block owns geometry only. */
 
 .hg-chip {
   display: inline-flex;
@@ -375,17 +429,9 @@ label, [data-testid="stWidgetLabel"] p {
   font-size: 0.8rem;
   font-weight: 620;
   line-height: 1.5;
-  color: var(--chip);
-  background: var(--hg-panel);          /* overridden inline, per chip */
-  border: 1px solid var(--hg-border);   /* overridden inline, per chip */
   white-space: nowrap;
 }
-.hg-chip-dot {
-  width: 0.44rem; height: 0.44rem;
-  border-radius: 999px;
-  background: var(--chip);
-  flex: none;
-}
+.hg-chip-dot { width: 0.44rem; height: 0.44rem; border-radius: 999px; flex: none; }
 
 .hg-legend {
   display: flex;
@@ -399,8 +445,7 @@ label, [data-testid="stWidgetLabel"] p {
 }
 .hg-legend-item { display: flex; align-items: baseline; gap: 0.42rem; font-size: 0.79rem; }
 .hg-legend-swatch {
-  width: 0.62rem; height: 0.62rem; border-radius: 2px;
-  align-self: center; flex: none;
+  width: 0.62rem; height: 0.62rem; border-radius: 2px; align-self: center; flex: none;
 }
 .hg-legend-label { font-weight: 620; color: var(--hg-ink); text-transform: capitalize; }
 .hg-legend-range { color: var(--hg-ink-faint); font-variant-numeric: tabular-nums; }
@@ -413,14 +458,15 @@ label, [data-testid="stWidgetLabel"] p {
 [data-testid="stAppViewContainer"] { overflow-x: hidden; }
 
 @media (max-width: 768px) {
-  .block-container, [data-testid="stMainBlockContainer"] {
+  [data-testid="stMainBlockContainer"] {
     padding-left: 1rem; padding-right: 1rem; padding-top: 1.4rem;
   }
   [data-testid="stHorizontalBlock"] { flex-direction: column; gap: 0.75rem; }
   [data-testid="stColumn"] { width: 100% !important; flex: 1 1 100% !important; min-width: 0; }
-  h1, [data-testid="stHeading"] h1 { font-size: 1.62rem; }
+  [data-testid="stHeading"] h1 { font-size: 1.62rem; }
   [data-testid="stMetricValue"] { font-size: 1.42rem; }
-  [data-testid="stTabs"] [data-baseweb="tab"] { padding: 0.45rem 0.7rem; font-size: 0.85rem; }
+  [data-testid="stTab"] { padding: 0.45rem 0.7rem; }
+  [data-testid="stTab"] [data-testid="stMarkdownContainer"] p { font-size: 0.85rem; }
   .hg-legend { gap: 0.3rem 0.8rem; }
 }
 

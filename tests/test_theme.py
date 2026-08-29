@@ -103,7 +103,7 @@ def test_a_chip_carries_its_colour_inline_not_only_in_a_variable():
     artefact judges are guaranteed to open, in whatever browser they happen to have."""
     html = theme.band_chip("danger", "Danger")
     assert "color-mix" not in theme.CSS, "color-mix() is back in the stylesheet"
-    assert "background:rgb(" in html and "border-color:rgb(" in html
+    assert "background:rgb(" in html and "border:1px solid rgb(" in html
     assert theme.HEAT_COLOURS["danger"] in html
 
 
@@ -158,20 +158,74 @@ def test_important_is_used_sparingly():
     assert count <= 12, f"{count} uses of !important — the selectors have gone wrong"
 
 
-@pytest.mark.parametrize("selector", [
-    '[data-testid="stMetric"]',
-    '[data-testid="stTabs"]',
-    '[data-testid="stAlert"]',
-    '[data-testid="stDataFrame"]',
-])
-def test_styling_targets_stable_test_ids_not_generated_class_names(selector):
-    """Streamlit's generated class names change between releases; `data-testid` is the
-    stable contract. A stylesheet keyed to class names breaks on upgrade and looks
-    identical to "the CSS did not load"."""
-    assert selector in theme.CSS
+# ------------------------------------------------- selectors must exist in the DOM
+#
+# These replace three earlier tests that asserted "the stylesheet mentions stMetric" and
+# similar. Those passed while the tab styling was entirely dead, because they checked that
+# a selector was PRESENT in the CSS, never that it MATCHED anything. Streamlit 1.62 had
+# removed BaseWeb, so `[data-baseweb="tab-list"]` and `[data-baseweb="tab"]` selected
+# nothing and the tab bar kept its stock appearance -- which looks exactly like "the CSS
+# did not load", which looks exactly like "this is how it was meant to look".
+
+def test_no_baseweb_selectors_survive():
+    """THE DEAD-SELECTOR REGRESSION.
+
+    Streamlit 1.62 removed BaseWeb entirely: on the deployed app
+    `document.querySelectorAll('[data-baseweb]')` returns zero elements. Any rule keyed to
+    one is silently inert. Tabs are react-aria now -- `[role="tablist"]` around
+    `[data-testid="stTab"]` divs carrying `aria-selected`.
+    """
+    assert "data-baseweb" not in theme.CSS, (
+        "a data-baseweb selector is back. BaseWeb is gone from Streamlit 1.62 and the "
+        "rule will do nothing while looking perfectly reasonable in the source."
+    )
+
+
+def test_every_testid_selector_is_one_verified_against_the_live_dom():
+    """An allow-list, not a spell-check.
+
+    `VERIFIED_TESTIDS` was read out of the deployed app on 2026-08-29 against Streamlit
+    1.62. Inventing a plausible-looking id is the failure this catches: it costs nothing
+    at import, nothing at render, and produces an app that quietly ignores the rule.
+    """
+    used = set(re.findall(r'data-testid="([^"]+)"', theme.CSS))
+    unverified = sorted(used - theme.VERIFIED_TESTIDS)
+    assert not unverified, (
+        f"{unverified} are not in VERIFIED_TESTIDS. Open the deployed app, confirm the "
+        f"selector matches something, then add it to the set with the date."
+    )
+
+
+def test_the_tab_bar_targets_the_react_aria_markup():
+    """The specific rules that were dead. Pin the shape, not just the absence."""
+    assert '[data-testid="stTabs"] [role="tablist"]' in theme.CSS
+    assert '[data-testid="stTab"][aria-selected="true"]' in theme.CSS
+    assert ".react-aria-SelectionIndicator" in theme.CSS, (
+        "the sliding indicator is still drawn under the segmented control")
 
 
 def test_no_emotion_hash_class_selectors():
-    """e.g. `.css-1d391kg` — these are build artefacts and differ per Streamlit release."""
-    hashed = re.findall(r"\.css-[0-9a-z]{5,}", theme.CSS)
+    """e.g. `.css-1d391kg` / `.st-emotion-cache-1ofqig9` -- build artefacts that differ
+    per Streamlit release. The live DOM is full of them; none may be depended on."""
+    hashed = re.findall(r"\.(?:css|st-emotion-cache)-[0-9a-z]{4,}", theme.CSS)
     assert not hashed, f"version-fragile class selectors: {hashed}"
+
+
+def test_a_chip_does_not_depend_on_a_custom_property_surviving_sanitisation():
+    """THE STRIPPED-VARIABLE REGRESSION.
+
+    The chip used to set `--chip` in its inline style and read it back from the stylesheet
+    with `color: var(--chip)`. Measured on the deployed app: the tint and border arrived,
+    the TEXT came back rgb(18, 24, 31) -- inherited ink. Streamlit sanitises HTML passed
+    under `unsafe_allow_html` and the custom property does not survive.
+
+    It still looked plausible, which is the whole problem: a red-tinted pill with black
+    text on a DANGER reading is a signal quietly not sent.
+    """
+    html = theme.band_chip("danger", "NWS danger")
+    colour = theme.HEAT_COLOURS["danger"]
+    assert "var(--chip)" not in theme.CSS, "the chip reads a custom property again"
+    assert "--chip:" not in html, "the chip writes a custom property again"
+    assert f"color:{colour}" in html, "the chip text is not explicitly coloured"
+    assert f'class="hg-chip-dot" style="background:{colour}"' in html, (
+        "the dot is not explicitly coloured")
