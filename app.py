@@ -51,6 +51,7 @@ from heatguard import agent                                    # noqa: E402
 from heatguard.agent import answer, load_sites                 # noqa: E402
 from heatguard import charts                                  # noqa: E402
 from heatguard.bands import action_for, band_for, load_thresholds  # noqa: E402
+from heatguard import theme                                    # noqa: E402
 from heatguard.router import AnalyticType, RefusalReason, route       # noqa: E402
 
 #: Nine real records, generated offline and committed, so the audit-trail view is
@@ -58,6 +59,7 @@ from heatguard.router import AnalyticType, RefusalReason, route       # noqa: E4
 DECISIONS_SAMPLE = Path(__file__).resolve().parent / "data" / "decisions.sample.jsonl"
 
 st.set_page_config(page_title="HeatGuard", page_icon="🌡️", layout="wide")
+theme.inject(st)
 
 # The demo day and the sites whose data is committed to the cache. Anything outside this
 # set cannot be answered offline, so the UI does not offer it.
@@ -180,6 +182,15 @@ st.markdown(
     "only **86 °F** — inside the *Caution* band. **Peak temperature is a poor predictor "
     "of harm. Duration above a threshold is the signal.**"
 )
+
+# The colour key for the whole app, shown ONCE, above the tabs, next to the sentence it
+# proves. Two jobs, and it would not be worth the pixels for either alone:
+#   1. It defines the vocabulary. Every severity chip below uses these colours and no
+#      others, so a reader learns the language here and never needs a legend again.
+#   2. It makes the argument visible. The claim is that people die at 86 °F. Seeing that
+#      86 falls in the SECOND of five bands -- amber, nowhere near the red end -- lands
+#      faster than the sentence does.
+st.markdown(theme.heat_scale_legend(), unsafe_allow_html=True)
 
 today_tab, decision_tab, trap_tab, method_tab = st.tabs(
     ["📋 The morning call", "Ask a question", "⚠️ The trap", "How it decides"]
@@ -462,6 +473,16 @@ def _render_answer(site: dict, site_id: str, date: str, question: str,
     cols[2].metric("NWS band", band.id.replace("_", " ").title())
 
     st.markdown(f"### Action — {action.action.replace('_', ' ')}")
+    # Colour is the fastest channel for severity, so it is spent here and only here: the
+    # band the forecast would report, and the OSHA action that is actually being called
+    # for. Chips rather than st.metric because metric cannot render HTML, and because the
+    # severity belongs next to the decision it qualifies, not stacked with two numbers.
+    st.markdown(
+        theme.band_chip(band.id, f"NWS {band.id.replace('_', ' ')}")
+        + "&nbsp;&nbsp;"
+        + theme.band_chip(action.id, f"OSHA {action.id.replace('_', ' ')} risk"),
+        unsafe_allow_html=True,
+    )
     st.markdown(action.label)
 
     # ----------------------------------------------- the routing decision itself

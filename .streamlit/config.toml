@@ -6,11 +6,23 @@ headless = true
 gatherUsageStats = false
 
 [theme]
-# Warm, high-contrast. Deliberately plain: the judge's own talk is called
-# "The Builder's Trap: escaping the hype", and time spent on custom CSS here would be
-# exactly the over-engineering it warns about. Legibility over decoration.
+# Legibility over decoration — but ONE of these values was a functional defect, not a
+# matter of taste, and it stood for four days.
+#
+# `primaryColor` was "#C1440E", a burnt orange. Streamlit paints every interactive
+# control in it: buttons, focus rings, selected radio dots, slider tracks, the active tab
+# marker. Burnt orange sits inside the heat ramp. So in a tool whose whole job is to
+# signal thermal danger, the colour of "danger" was also the colour of "this is a button",
+# and a supervisor scanning for red could not tell an alarm from a control.
+#
+# The accent is now teal — deliberately OUTSIDE the heat ramp, so amber/orange/red/magenta
+# are free to mean exactly one thing. The ramp itself lives in src/heatguard/theme.py,
+# keyed by the band ids in config/thresholds.yaml and checked against them by a test.
+#
+# base is pinned to light so the demo video and the judged screenshots match. Viewers can
+# still switch in the Streamlit menu.
 base = "light"
-primaryColor = "#C1440E"
+primaryColor = "#0E6E7E"
 backgroundColor = "#FFFFFF"
-secondaryBackgroundColor = "#F5F0E8"
-textColor = "#1A1A1A"
+secondaryBackgroundColor = "#F5F7F9"
+textColor = "#12181F"
