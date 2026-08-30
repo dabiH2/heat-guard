@@ -6,12 +6,13 @@
 # Expected total: 177 s (2:57) against a 3:00 HARD ceiling.
 # See ../video-script-v2.md for the narration, the screen state and the action per take.
 #
-# Recording order is NOT this order — record the four morning-call takes first
-# (T1, T2, T3, T9), then switch tabs ONCE and record the five Ask takes
-# (T4, T5, T6, T7, T8). One tab switch for the whole session.
+# Recording order is NOT this order. The app now OPENS on "Ask a question" (tab one),
+# so: click "The morning call" FIRST, record T1, T2, T3, T9 there, then switch back to
+# "Ask a question" and record T4, T5, T6, T7, T8. One switch inside the recorded material.
 #
 # The Ask tab was rebuilt 29 Aug 2026: no preset dropdown, crews are a multi-select,
 # questions are free text driven by four example chips. T5/T6 are chip clicks.
+# Ask is tab ONE on purpose: a chip press resets st.tabs, so it must reset to itself.
 
 file 'T1.mp4'   # who I am              · morning call · header quote        · 16.0 s
 file 'T2.mp4'   # how I do it today     · morning call · metric cards        · 21.0 s

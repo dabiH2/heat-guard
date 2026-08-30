@@ -952,14 +952,14 @@ def test_the_example_chips_do_not_use_an_on_click_callback():
     """MEASURED on the deployed app, 29 Aug 2026: clicking any example chip reset the
     page to the FIRST tab.
 
-    The chips wrote `st.session_state["ask_question"]` from an `on_click` callback, and
-    that string was the question box's own widget `key`. Mutating a widget's key from a
-    callback remounts the widget, and the remount takes `st.tabs` with it — whose selected
-    tab is client-side state with no server record. Pressing `Ask HeatGuard`, a plain
-    button with no callback, did NOT reset the tab, which is what isolated the cause.
+    `st.tabs` keeps its selection in the browser with no server record, and any
+    programmatic change to the question box remounts it and takes the tab strip with it.
+    Removing the `on_click` did NOT fix that — see `test_the_ask_tab_is_first`, which
+    pins the actual fix. This test survives because the callback was a fragile pattern on
+    its own terms and must not come back.
 
-    On camera this was fatal: three of the nine pitch-video takes are chip clicks, and
-    each one bounced the viewer out of the tab being demonstrated.
+    On camera the reset was fatal: three of the nine pitch-video takes are chip clicks,
+    and each one bounced the viewer out of the tab being demonstrated.
     """
     chips = _example_chip_button_calls()
     assert chips, "the example chips are gone entirely"
@@ -1002,3 +1002,29 @@ def test_the_question_box_is_not_keyed_to_mutated_state():
             break
     else:
         raise AssertionError("no text_input labelled 'Question' found at all")
+
+
+def test_the_ask_tab_is_first():
+    """THE FIX for the tab-reset defect, and the reason it cannot be reordered back.
+
+    Measured on the deployed app 29 Aug 2026: pressing an example chip threw the page to
+    whichever tab was FIRST, because changing the question box's contents remounts it and
+    `st.tabs` selection is browser state with no server record. Streamlit exposes no way
+    to say which tab is selected, so the remedy is to make the reset a no-op: put Ask
+    first, and bouncing to tab one lands where the reader already was.
+
+    Reordering is also the right product call — Ask is the tool, the morning call is its
+    report — but that is a bonus, not the reason. Move it back and the defect returns.
+    """
+    for node in ast.walk(TREE):
+        if (isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Attribute)
+                and node.func.attr == "tabs"):
+            labels = [e.value for e in node.args[0].elts]
+            assert labels[0] == "Ask a question", (
+                f"tab one is {labels[0]!r}. An example chip resets the page to tab one, "
+                f"so anything but the Ask tab there is a visible glitch mid-demo.")
+            assert "📋 The morning call" in labels, "the morning call tab vanished"
+            break
+    else:
+        raise AssertionError("no st.tabs call found")

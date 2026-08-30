@@ -253,8 +253,25 @@ st.caption(
     "under **Sources**, at the foot of the page."
 )
 
-today_tab, decision_tab, trap_tab, method_tab = st.tabs(
-    ["📋 The morning call", "Ask a question", "⚠️ The trap", "How it decides"]
+# ---------------------------------------------------------------------------
+# ASK IS FIRST, AND THAT ORDER IS LOAD-BEARING — NOT A PREFERENCE.
+# ---------------------------------------------------------------------------
+# MEASURED on the deployed app, 29 Aug 2026: pressing an example chip in the Ask tab
+# threw the page back to whichever tab was FIRST. `st.tabs` keeps its selection in the
+# browser with no server record, and any programmatic change to the question box's
+# contents remounts that widget and takes the tab strip with it. Both routes do it — the
+# original `on_click` writing the box's own `key`, and the `st.empty()` slot writing
+# `value=` — because what remounts is the box changing identity, not how it was changed.
+# `Ask HeatGuard` never resets it, because it does not touch the box. That asymmetry is
+# what isolated the cause.
+#
+# There is no supported way to tell `st.tabs` which tab to select, so the fix is to make
+# the reset land where the reader already is: Ask is tab one, so bouncing to tab one is
+# invisible. Reordering also happens to be the right product call — this tab is the tool
+# and the morning call is its report — but the reason it CANNOT be reordered back is the
+# defect above. Pinned by `test_the_ask_tab_is_first`.
+decision_tab, today_tab, trap_tab, method_tab = st.tabs(
+    ["Ask a question", "📋 The morning call", "⚠️ The trap", "How it decides"]
 )
 
 
@@ -1009,20 +1026,20 @@ with decision_tab:
     # ---------------------------------------------------------------------------
     # THE BOX RENDERS ABOVE THE CHIPS BUT IS CREATED AFTER THEM.
     # ---------------------------------------------------------------------------
-    # MEASURED, 29 Aug 2026, on the deployed app: clicking an example chip reset the
-    # whole page back to the FIRST tab. The chips used `on_click=` to write
-    # `st.session_state["ask_question"]` — which was the text box's own widget `key`.
-    # Mutating a widget's key from a callback remounts that widget, and the remount takes
-    # `st.tabs` with it, whose selected tab is client-side state. Pressing `Ask HeatGuard`
-    # — a plain button with no callback — did NOT reset it, which is what isolated the
-    # cause.
+    # This shape does NOT fix the tab-reset defect — that is handled by making Ask the
+    # first tab, see the comment on `st.tabs` above. Tried and measured: writing the box's
+    # own widget `key` from an `on_click` callback and writing `value=` from a plain
+    # `if button(...)` reset the tab strip identically, because what remounts the widget
+    # is its identity changing, not the mechanism that changed it. Recording the failed
+    # attempt because the next person will otherwise try the same thing.
     #
-    # The callback existed for a real reason: Streamlit refuses to write a widget's key
-    # after that widget has been instantiated in the same run, and the chips belong BELOW
-    # the box where a reader expects suggestions. `st.empty()` dissolves that constraint —
-    # it reserves the box's POSITION now and lets it be BUILT later, so the chips run
-    # first in code while still rendering second on screen. No callback, and the state
-    # they write is not a widget key.
+    # It is kept because it is better on its own terms. The callback existed to work
+    # around a real constraint — Streamlit refuses to write a widget's key after that
+    # widget has been instantiated in the same run, and the chips belong BELOW the box
+    # where a reader expects suggestions. `st.empty()` dissolves that constraint: it
+    # reserves the box's POSITION now and lets it be BUILT later, so the chips run first
+    # in code while still rendering second on screen. No callback, and no state written
+    # that some other widget owns.
     st.session_state.setdefault(ASK_TEXT_STATE, ask.DEFAULT_QUESTION)
     _q_slot = st.empty()
 

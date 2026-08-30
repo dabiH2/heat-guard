@@ -34,6 +34,36 @@ def run(**session_state) -> AppTest:
     return at.run()
 
 
+# --------------------------------------------------------------- locating a tab
+# BY LABEL, never by index. These were `ask_tab(at)` until the Ask tab had to become tab
+# one to defuse a tab-reset defect (see test_the_ask_tab_is_first), and every one of them
+# broke at once. A test that fails because the tabs were reordered is testing the order,
+# not the behaviour it claims to check.
+
+def _tab(at, fragment: str):
+    for t in at.tabs:
+        if fragment.lower() in t.label.lower():
+            return t
+    raise AssertionError(
+        f"no tab matching {fragment!r}; tabs are {[t.label for t in at.tabs]}")
+
+
+def ask_tab(at):
+    return _tab(at, "Ask a question")
+
+
+def morning_tab(at):
+    return _tab(at, "morning call")
+
+
+def trap_tab(at):
+    return _tab(at, "trap")
+
+
+def method_tab(at):
+    return _tab(at, "How it decides")
+
+
 @pytest.fixture(scope="module")
 def cold() -> AppTest:
     """A cold visit: the app as a judge first sees it, nothing clicked."""
@@ -75,7 +105,7 @@ def test_every_tab_has_content_on_a_cold_visit(cold):
 
 def test_the_last_tab_carries_the_engineering_evidence(cold):
     """'How it decides' is the 35%-criterion tab and was one of the two that went blank."""
-    last = cold.tabs[-1]
+    last = method_tab(cold)
     text = " ".join(m.value for m in last.markdown)
     for expected in ("Built to be relied on", "Refusals are a feature",
                      "does not choose the layer"):
@@ -83,7 +113,7 @@ def test_the_last_tab_carries_the_engineering_evidence(cold):
 
 
 def test_the_trap_tab_carries_the_seventeen_hours(cold):
-    trap = cold.tabs[2]
+    trap = trap_tab(cold)
     text = " ".join(m.value for m in trap.markdown)
     assert "17" in text and "0.0" in text, "the trap figures are missing"
 
@@ -136,7 +166,7 @@ def test_the_answer_actually_renders_after_the_press():
     at = run()
     after = [b for b in at.button if "Ask HeatGuard" in b.label][0].click().run(
         timeout=TIMEOUT)
-    ask = after.tabs[1]
+    ask = ask_tab(after)
     text = " ".join(m.value for m in ask.markdown)
 
     assert "### " in text, f"no answer headline rendered; markdown was {text[:200]!r}"
@@ -151,7 +181,7 @@ def test_the_answer_actually_renders_after_the_press():
 
 def test_the_headline_numbers_are_on_the_first_tab(cold):
     """701 -> 58 and 92% are the pitch. If they are missing, the demo has no argument."""
-    values = " ".join(str(m.value) for m in cold.tabs[0].metric)
+    values = " ".join(str(m.value) for m in morning_tab(cold).metric)
     assert "701" in values, f"701 missing from the first tab's metrics: {values}"
     assert "58" in values, f"58 missing: {values}"
     assert "92" in values, f"92% missing: {values}"
@@ -224,7 +254,7 @@ def test_the_decision_log_is_visible_and_downloadable(cold):
     """CLAUDE.md calls decisions.jsonl the compliance evidence. It was gitignored and the
     deployed copy lives in ephemeral container storage, so a judge could not reach it —
     the app asserted "Logged to data/decisions.jsonl" and offered no way to check."""
-    text = " ".join(m.value for m in cold.tabs[-1].markdown)
+    text = " ".join(m.value for m in method_tab(cold).markdown)
     assert "The audit trail" in text, "the audit-trail section is missing"
 
     names = [d.label for d in cold.download_button]
@@ -280,7 +310,7 @@ def test_an_unrecognised_question_refuses_in_the_ui_without_crashing():
 def test_the_morning_call_leads_with_a_call_per_crew(cold):
     """The landing tab used to open with a statistic about a methodology. A supervisor at
     04:40 needs the calls, without clicking anything."""
-    t0 = cold.tabs[0]
+    t0 = morning_tab(cold)
     text = " ".join(m.value for m in t0.markdown) + " ".join(s.value for s in t0.success)
     for expected in ("50:10 work/rest", "55:5 work/rest", "no reading"):
         assert expected in text, f"{expected!r} missing from the morning call"
@@ -298,7 +328,7 @@ def test_the_shift_plan_is_downloadable(cold):
 def test_the_empty_site_is_never_reported_as_safe(cold):
     """PHX-DVT returned zero tiles, Completed, and was billed 4,220 credits. A coverage
     gap must not be rendered as 0 hours, which reads as an all-clear."""
-    t0 = cold.tabs[0]
+    t0 = morning_tab(cold)
     warned = " ".join(w.value for w in t0.warning)
     assert "not an all-clear" in warned.lower()
     assert "4,220" in warned
@@ -307,7 +337,7 @@ def test_the_empty_site_is_never_reported_as_safe(cold):
 def test_the_headline_metrics_survive_the_rewrite(cold):
     """701 / 58 / 92% are pinned figures and the rewrite must not disturb them; they moved
     below the call sheet, they did not change."""
-    values = " ".join(str(m.value) for m in cold.tabs[0].metric)
+    values = " ".join(str(m.value) for m in morning_tab(cold).metric)
     for figure in ("701", "58", "92"):
         assert figure in values, f"{figure} lost in the rewrite: {values}"
 
@@ -338,7 +368,7 @@ def _ask(question: str, crews=None) -> AppTest:
 
 
 def _answer_text(at: AppTest) -> str:
-    tab = at.tabs[1]
+    tab = ask_tab(at)
     return " ".join(m.value for m in tab.markdown)
 
 
@@ -358,7 +388,7 @@ def test_three_questions_render_three_different_answers_for_one_crew():
         assert not at.exception, (
             f"{name} question raised: "
             f"{[f'{e.type}: {e.message}' for e in at.exception]}")
-        lines = [m.value for m in at.tabs[1].markdown if m.value.startswith("### ")]
+        lines = [m.value for m in ask_tab(at).markdown if m.value.startswith("### ")]
         assert lines, f"{name} question rendered no answer headline"
         headlines[name] = lines[0]
 
@@ -376,8 +406,8 @@ def test_a_snapshot_and_a_duration_answer_carry_different_numbers_of_tiles():
     to look identical in the first place."""
     snapshot = _ask(SNAPSHOT_Q, crews=["PHX-SKY"])
     duration = _ask(DURATION_Q, crews=["PHX-SKY"])
-    assert len(snapshot.tabs[1].metric) == 1, "a snapshot answer grew a second figure"
-    assert len(duration.tabs[1].metric) == 2, (
+    assert len(ask_tab(snapshot).metric) == 1, "a snapshot answer grew a second figure"
+    assert len(ask_tab(duration).metric) == 2, (
         "a duration answer must show the whole day AND the hours inside the shift")
 
 
@@ -386,7 +416,7 @@ def test_several_crews_render_a_ranked_table_not_a_card():
     asks which site is worst. Two or more crews is a ranking, worst first."""
     at = _ask(COMPARISON_Q, crews=["PHX-27TH", "PHX-CHASE", "PHX-UNHL"])
     assert not at.exception
-    frames = at.tabs[1].dataframe
+    frames = ask_tab(at).dataframe
     assert frames, "no ranked table rendered for three crews"
     table = frames[0].value
     assert len(table) == 3, f"expected one row per crew, got {len(table)}"
@@ -407,9 +437,9 @@ def test_a_refused_question_renders_a_refusal_and_spends_nothing():
     text = _answer_text(at)
     assert "Refused" in text, f"no refusal headline; markdown was {text[:200]!r}"
 
-    errors = " ".join(e.value for e in at.tabs[1].error)
+    errors = " ".join(e.value for e in ask_tab(at).error)
     assert "no credit was spent" in errors, "the refusal does not say nothing was spent"
-    assert not at.tabs[1].metric, "a refusal produced a figure, which it cannot have"
+    assert not ask_tab(at).metric, "a refusal produced a figure, which it cannot have"
     for tab in at.tabs:
         blocks = (len(tab.markdown) + len(tab.subheader)
                   + len(tab.metric) + len(tab.table))
@@ -421,7 +451,7 @@ def test_the_mechanism_sits_with_the_answer_and_names_the_layer():
     be a heading, an info box, a four-column parameter row and two expanders spread down
     the page."""
     at = _ask(DURATION_Q, crews=["PHX-SKY"])
-    tables = at.tabs[1].table
+    tables = ask_tab(at).table
     assert tables, "the mechanism definition list is missing from the Ask tab"
     rendered = tables[0].value.to_string()
     for field in ("filter_type", "analytic_type", "Unit conversion",
@@ -458,7 +488,7 @@ def test_the_ask_tab_is_lean_at_first_glance(cold):
     controls are below the fold again. Long COMMENTS in app.py are not counted; nothing
     here looks at the source.
     """
-    tab = cold.tabs[1]
+    tab = ask_tab(cold)
     rendered = "".join(
         [m.value for m in tab.markdown] + [c.value for c in tab.caption]
         + [i.value for i in tab.info] + [w.value for w in tab.warning]

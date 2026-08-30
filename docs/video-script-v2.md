@@ -55,7 +55,8 @@ thirty-three. The hours are measured; the rate is sourced; the range is honest."
 
 ### T1 · 0:00–0:16 — Who I am *(39 words · 16 s)*
 
-**Screen:** `📋 The morning call`, scrolled to the header blockquote. The **86 °F** line and
+**Screen:** the app now **opens on `Ask a question`** — `[CLICK]` **`📋 The morning call`**
+before you roll, so T1–T3 and T9 all sit on it. Then scroll to the header blockquote. The **86 °F** line and
 the OSHA *"do not rely solely on the Heat Index"* quote both readable. Cursor still.
 
 > I'm going to do this as a user, not a demo.
@@ -104,7 +105,8 @@ once. **Then freeze.**
 
 ### T4 · 1:00–1:13 — The crews I'm worried about *(32 words · 13 s)*
 
-**Screen:** `[CLICK]` the **`Ask a question`** tab. It opens on three crews already selected
+**Screen:** `[CLICK]` back to the **`Ask a question`** tab (it is tab one). Three crews are
+already selected
 in the **Crews** multi-select, each reading *name · N crew · shift window*, and **Chase Tower
 carries the 🌙 night flag**. Do not change the selection — the default is the shot.
 
@@ -212,12 +214,13 @@ little air and the finished cut sits **5.8 s under the 3:00 ceiling**.*
 **Record in this order** — three screen states, not nine:
 
 ```
+0. click "📋 The morning call"        ← the app opens on Ask; do this before you roll
 1. T1  morning call · header
 2. T2  morning call · metrics
 3. T3  morning call · the day
 4. T9  morning call · predictions     ← out of script order, on purpose
-   ── switch tab ──
-5. T4  Ask · site selected
+   ── switch back to "Ask a question" ──
+5. T4  Ask · three crews
 6. T5  Ask · snapshot badge
 7. T6  Ask · duration badge
 8. T7  Ask · answer panel

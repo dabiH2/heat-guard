@@ -468,7 +468,7 @@ function theDay(){
 }
 
 /* ============================================================ frame components */
-const TABS = sel => `<div class="tabs">${["📋 The morning call","Ask a question","⚠️ The trap","How it decides"]
+const TABS = sel => `<div class="tabs">${["Ask a question","📋 The morning call","⚠️ The trap","How it decides"]
   .map((t,i)=>`<span class="t${i===sel?" sel":""}">${t}</span>`).join("")}</div>`;
 
 /* ---------------------------------------------------- the Ask tab, top to bottom
@@ -617,7 +617,7 @@ const MECH_DURATION = [
 const FRAMES = {
 
 /* -------------------------------------------------------------------- T1 */
-header:()=>TABS(0)+
+header:()=>TABS(1)+
   `<div class="quote"><b>A safety manager with twelve Phoenix sites decides each morning
     where crews can work.</b> Today that decision comes from a single city-wide forecast
     high. OSHA records outdoor-worker heat-stroke deaths at a daily maximum heat index of
@@ -646,7 +646,7 @@ header:()=>TABS(0)+
      claim in the second blockquote.</p>`,
 
 /* -------------------------------------------------------------------- T2 */
-metrics:()=>TABS(0)+
+metrics:()=>TABS(1)+
   `<div class="h4">Why the calls differ from the forecast</div>
    <div style="font-size:12.5px;color:var(--ink2)">Every site on the roster peaked between
      <b>102.6 and 104.5 °F</b> — a spread of <b>1.9 °F</b>. By peak alone they are the same
@@ -676,7 +676,7 @@ metrics:()=>TABS(0)+
      $35,363 of v1. If a judge asks in Q&amp;A, the answer is at the top of the script file.</p>`,
 
 /* -------------------------------------------------------------------- T3 */
-theDay:()=>TABS(0)+
+theDay:()=>TABS(1)+
   `<div class="h4">The day, hour by hour</div>
    <div style="font-size:12px;color:var(--ink2);margin-bottom:8px">Each bar is one crew's
      shift. The red band is the only window that was actually above threshold.
@@ -690,7 +690,7 @@ theDay:()=>TABS(0)+
      is the one moment the viewer derives the conclusion instead of being told it.</p>`,
 
 /* -------------------------------------------------------------------- T4 */
-askCrews:()=>TABS(1)+askInput({
+askCrews:()=>TABS(0)+askInput({
     hotCrews:true,
     question:"Which of these crews is worst today?",
     readout:READ.comparison,
@@ -712,7 +712,7 @@ askCrews:()=>TABS(1)+askInput({
      Pull the current app before you record.</p>`,
 
 /* -------------------------------------------------------------------- T5 */
-askSnapshot:()=>TABS(1)+askInput({
+askSnapshot:()=>TABS(0)+askInput({
     chip:"Right now", hotQ:true, pressed:true,
     question:"How hot is it at this crew's site right now?",
     readout:READ.snapshot,
@@ -736,7 +736,7 @@ askSnapshot:()=>TABS(1)+askInput({
      — widen the window until they are, then <b>do not resize for the rest of the session</b>.</p>`,
 
 /* -------------------------------------------------------------------- T6 */
-askDuration:()=>TABS(1)+askInput({
+askDuration:()=>TABS(0)+askInput({
     chip:"Hours above", hotQ:true, pressed:true,
     question:"How many hours were they above the threshold today?",
     readout:READ.duration,
@@ -784,7 +784,7 @@ askDuration:()=>TABS(1)+askInput({
      Let the table sit. It is the only thing on screen that matters.</p>`,
 
 /* -------------------------------------------------------------------- T7 */
-askAnswer:()=>TABS(1)+askInput({
+askAnswer:()=>TABS(0)+askInput({
     question:"How many hours were they above the threshold today?",
     readout:READ.duration.replace(' shot"','"'),
     out:`<div class="headline">27th Avenue Resource Innovation Campus is worst of 3 crews
@@ -819,7 +819,7 @@ askAnswer:()=>TABS(1)+askInput({
      next person does not read it.</p>`,
 
 /* -------------------------------------------------------------------- T8 */
-askRefusal:()=>TABS(1)+askInput({
+askRefusal:()=>TABS(0)+askInput({
     chip:"Start and stop · refuses", hotQ:true,
     question:"When should we start and stop today?",
     readout:READ.refused,
@@ -846,7 +846,7 @@ askRefusal:()=>TABS(1)+askInput({
    <p class="note">${CHIPNOTE}</p>`,
 
 /* -------------------------------------------------------------------- T9 */
-predictions:()=>TABS(0)+
+predictions:()=>TABS(1)+
   `<div class="h4">The twelve sites and their predictions</div>
    <div style="font-size:12.5px;color:var(--ink2)">Each site carried a <b>falsifiable
      prediction</b> written before any data was fetched. <b>Two of eleven came true — worse
