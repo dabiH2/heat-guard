@@ -77,7 +77,7 @@ drop step 2 of Prompt 2.
 ### E. What does *not* change
 
 The measured result (1.96 °F peak spread, 2.62 h duration spread, 643 phantom worker-hours,
-92%), the unit trap, the six silent-failure modes, the deterministic router, the 349 tests, and
+92%), the unit trap, the six silent-failure modes, the deterministic router, the 475 tests, and
 the failed site-selection hypothesis. **All of that is your own measurement and it stands.**
 What changes is the framing around it and the sourcing beneath it.
 

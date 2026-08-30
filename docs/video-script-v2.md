@@ -261,10 +261,29 @@ strongest line:** *"every one of them is a hundred and four degrees — by peak 
 place"*, then *"it re-ranks on the one with twenty-two people in it."* That is the thesis, not
 a workaround.
 
-**2. The badge is the shot in T5 and T6.** Before recording, confirm the 🧭 info box is
-inside the frame at your window width. If the left column is narrow the badge can sit below
-the fold. Widen the window until badge and text box are visible together, then **do not
-resize again for the rest of the session.**
+**2. ⚠️ DO NOT RECORD FULL-SCREEN — set the window width first.** Observed on the deployed
+app 29 Aug: at a wide viewport the app drops its centred column and the **heat-scale legend
+stops rendering as coloured chips**, collapsing into five lines of plain text
+(`below caution< 80 °F`, `caution80–90 °F`, …). The legend is on screen for T1, T2 and T3.
+
+Narrow the window until the content sits in the **centred column** — the legend renders as
+chips, and the 🧭 readout and question box land in frame together, which is what T5 and T6
+need. Confirm the chips before you roll, then **do not move, resize or zoom the window again
+for the rest of the session.**
+
+**2b. What T5 and T6 actually render** — verified live, so you know when a take is right:
+
+| | T5 · `Right now` | T6 · `Hours above` |
+|---|---|---|
+| Headline | *Chase Tower block, N Central Ave **is hottest** of 3 crews · 104 °F peak* | *27th Avenue Resource Innovation Campus **is worst** of 3 crews · 7.0 h above 103 °F* |
+| Ranking column | `▸ Peak °F` | `▸ Hours ≥ 103 °F` |
+| Second column | `NWS band` | **`In shift`** ← the tie-break, visible |
+| Row 1 | Chase Tower 🌙 · 104.4 · size 6 | 27th Avenue · 7.0 h · **1.0 h in shift** · size 22 |
+| Row 2 | 27th Avenue · 104.4 · size 22 | Chase Tower 🌙 · 7.0 h · **0.0 h in shift** · size 6 |
+
+The headline verb changes from *hottest* to *worst*, the ▸ marker moves, and the columns swap
+so `In shift` replaces `NWS band`. **Three things move on one click** — more than the order
+alone. That is the take.
 
 **3. Use the chips, not the keyboard.** Each example chip writes its text into the question box
 and re-renders the 🧭 readout in **one click** — no typing, no Enter, no lag. That is why every
@@ -272,10 +291,16 @@ question change in T5, T6 and T8 is a chip click. **If you'd rather type**, know
 readout only updates on Enter or when the box loses focus, and typing on camera is slower and
 much easier to fumble.
 
-**4. Pick your T4 site deliberately.** Choose one with `night_shift = True` so the caption
-shows 🌙 **night** — it earns the "whether these are the people working nights" line and
-sets up why a daytime forecast high is the wrong instrument. Note the site name; you'll want
-it if a judge asks.
+**4. T4 needs no setup.** The three default crews are already the right ones — 27th Avenue
+(22, day), **Chase Tower (6, 21:00–05:30 🌙)** and Union Hills (9, day). Chase carries the
+night flag that earns the "whether these are the people working nights" line. Change nothing.
+
+**5. Ask is tab one, and that is a fix, not a preference.** Pressing an example chip resets
+`st.tabs` to whichever tab is first — Streamlit keeps that selection in the browser with no
+server record, and any programmatic change to the question box remounts it. Ask sits first so
+the reset lands on the tab you are already on and is invisible. **Verified on the deployed app
+29 Aug:** chip pressed, tab held, question and readout both updated. If a future build moves
+the morning call back to first, T5, T6 and T8 become unrecordable.
 
 ---
 
@@ -288,11 +313,17 @@ Unchanged from v1 except where noted.
 - **No terminal, no `.env`, no `.streamlit/secrets.toml`, no API key in frame at any point.
   Keys in frame are an explicit disqualifier.**
 - Browser at **100% zoom**, **light mode**, bookmarks bar hidden, Do Not Disturb on.
+- **Window narrow enough to keep the centred column** — see §3 item 2. Full-screen breaks the
+  heat-scale legend into plain text, and it is on screen for T1–T3.
 - **Click all four tabs once** before recording so Streamlit has them cached — tab switches
   must be instant on camera.
-- **New for v2:** in the Ask tab, click all four example chips once and press *Ask HeatGuard*
-  on each answerable one before recording, so every routing preview and every table is warm.
-  Then reload so the tab is back on its three default crews before T4.
+- **The app opens on `Ask a question`** (tab one, deliberately — see §3 item 5). Click
+  **`📋 The morning call`** before you roll T1.
+- **Warm the Ask tab:** click all four example chips once and press *Ask HeatGuard* on each
+  answerable one, so every routing preview and every table is cached. Then reload — the
+  question box returns to *Which of these crews is worst today?* and the three default crews.
+- **Streamlit Cloud sleeps.** If the app has been idle it takes ~30 s to wake. Load it once
+  and wait for the morning-call table before you start setting up.
 - **Do not move the window, change zoom, or resize between takes.** Everything else is
   recoverable; that is not.
 
